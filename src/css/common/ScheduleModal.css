@@ -1,0 +1,691 @@
+.schedule-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.schedule-modal-content {
+    background: white;
+    width: 90%;
+    max-width: 750px;
+    /* Increased width for side-by-side */
+    max-height: 90vh;
+    /* Safety constraint */
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.schedule-modal-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.schedule-modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.close-modal-btn {
+    background: #f1f5f9;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #64748b;
+    transition: all 0.2s;
+}
+
+.close-modal-btn:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+/* HORIZONTAL LAYOUT BODY */
+.schedule-modal-body {
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: row;
+    /* Side by side */
+    align-items: flex-start;
+    gap: 2rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ============================================
+   ANIMATED CLOCK (Left Side)
+   ============================================ */
+.clock-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding-top: 1rem;
+    flex: 0 0 auto;
+    /* Don't grow */
+}
+
+.clock-label {
+    text-align: center;
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+    max-width: 120px;
+}
+
+/* Compact Clock */
+.animated-clock {
+    width: 100px;
+    height: 100px;
+    border: 2px solid rgba(6, 182, 212, 0.5);
+    border-radius: 50%;
+    position: relative;
+    background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+    box-shadow:
+        0 0 30px rgba(6, 182, 212, 0.2),
+        inset 0 0 20px rgba(0, 0, 0, 0.8),
+        inset 0 0 10px rgba(6, 182, 212, 0.1);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+/* ... existing clock animations ... */
+.radar-sweep {
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    top: -50%;
+    left: -50%;
+    background: conic-gradient(from 0deg, rgba(6, 182, 212, 0.4) 0deg, rgba(6, 182, 212, 0.1) 20deg, transparent 90deg);
+    animation: clockRotate 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    pointer-events: none;
+    filter: blur(2px);
+}
+
+.radar-sweep::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.8), transparent);
+    transform-origin: center;
+}
+
+.clock-center {
+    width: 8px;
+    height: 8px;
+    background: #06b6d4;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    box-shadow: 0 0 15px #06b6d4, 0 0 30px rgba(6, 182, 212, 0.5);
+    animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.clock-hand-hour {
+    width: 3px;
+    height: 28px;
+    /* Scaled */
+    background: linear-gradient(to top, #06b6d4, rgba(6, 182, 212, 0.2));
+    position: absolute;
+    bottom: 50%;
+    left: calc(50% - 1.5px);
+    transform-origin: bottom center;
+    border-radius: 3px;
+    animation: clockRotate 20s linear infinite;
+    z-index: 5;
+}
+
+.clock-hand-minute {
+    width: 2px;
+    height: 40px;
+    /* Scaled */
+    background: linear-gradient(to top, #38bdf8, transparent);
+    position: absolute;
+    bottom: 50%;
+    left: calc(50% - 1px);
+    transform-origin: bottom center;
+    border-radius: 2px;
+    animation: clockRotate 3s linear infinite;
+    z-index: 4;
+}
+
+.clock-hand-minute::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -2px;
+    width: 6px;
+    height: 6px;
+    background: #38bdf8;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #38bdf8;
+}
+
+.clock-marker-outer {
+    position: absolute;
+    width: 140px;
+    /* Scaled */
+    height: 140px;
+    top: -20px;
+    left: -20px;
+    pointer-events: none;
+}
+
+.clock-tick-outer {
+    position: absolute;
+    width: 2px;
+    height: 8px;
+    background: rgba(6, 182, 212, 0.2);
+    left: calc(50% - 1px);
+    transform-origin: center 70px;
+    /* Scaled radius */
+    transition: all 0.3s ease;
+}
+
+.clock-tick {
+    position: absolute;
+    width: 1px;
+    height: 5px;
+    background: rgba(6, 182, 212, 0.4);
+    left: calc(50% - 0.5px);
+    transform-origin: center 45px;
+    /* Scaled radius */
+}
+
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.3);
+        opacity: 0.7;
+    }
+}
+
+@keyframes clockRotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ============================================
+   ANIMATED CALENDAR (Right Side)
+   ============================================ */
+
+.date-time {
+    width: 100%;
+}
+
+.calendar-view {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 0.75rem;
+    /* Reduced padding */
+    background: #f8fafc;
+    flex: 1;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    /* Reduced margin */
+}
+
+.calendar-month-title {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 1rem;
+}
+
+.calendar-nav-btn {
+    background: #f1f5f9;
+    border: none;
+    padding: 0.3rem;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.calendar-nav-btn:hover:not(:disabled) {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.calendar-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* ... existing button styles ... */
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    /* Tighter gap */
+}
+
+.calendar-day-label {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    padding-bottom: 0.25rem;
+}
+
+.calendar-day.disabled {
+    background: transparent;
+    color: #cbd5e1;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.calendar-day {
+    /* REMOVED aspect-ratio: 1 */
+    height: 36px;
+    /* Fixed compact height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #334155;
+    border-radius: 6px;
+    /* Slightly tighter radius */
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+    background: transparent;
+    border: 1px solid transparent;
+}
+
+.calendar-day:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.calendar-day.selected-start,
+.calendar-day.selected-end {
+    background: linear-gradient(135deg, #FF9900 0%, #FFB84D 100%);
+    color: white !important;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3);
+    z-index: 2;
+}
+
+.calendar-day.selected-start {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.calendar-day.selected-end {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.calendar-day.in-range {
+    background: rgba(255, 153, 0, 0.1);
+    border-radius: 0;
+    color: #FF9900;
+    font-weight: 600;
+}
+
+.calendar-day.today {
+    color: #FF9900;
+    font-weight: 800;
+    position: relative;
+    border: none;
+}
+
+.calendar-day.today::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: white;
+    border-radius: 50%;
+    z-index: 5;
+}
+
+.calendar-day.today.selected-start::after,
+.calendar-day.today.selected-end::after {
+    background: white;
+}
+
+.calendar-day.today.in-range::after {
+    background: #FF9900;
+}
+
+/* Modal Footer */
+.schedule-modal-footer {
+    padding: 1rem 1.5rem;
+    background: #f8fafc;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.btn-schedule-save {
+    background: #2563eb;
+    color: white;
+    padding: 0.6rem 1.25rem;
+    border-radius: 10px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-schedule-save:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.btn-schedule-remove {
+    background: transparent;
+    color: #ef4444;
+    padding: 0.6rem 1.25rem;
+    border-radius: 10px;
+    font-weight: 600;
+    border: 1px solid #fecaca;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: auto;
+}
+
+.btn-schedule-remove:hover {
+    background: #fef2f2;
+    border-color: #ef4444;
+}
+
+/* RESPONSIVE: Stack on Mobile */
+@media (max-width: 600px) {
+    .schedule-modal-body {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .clock-container {
+        padding-top: 0;
+    }
+
+    .calendar-view {
+        width: 100%;
+    }
+}
+
+/* ============================================
+   TIME RANGE SELECTOR
+   ============================================ */
+
+.time-range-panel {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem;
+}
+
+.time-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.time-field label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.time-field input[type="time"] {
+    padding: 0.45rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1e293b;
+    background: #f8fafc;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+
+.time-field input[type="time"]:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.time-field input[type="time"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* ==========================
+   Holiday Styling
+========================== */
+/* ==========================
+   Holiday Styling – Circular
+========================== */
+.calendar-day.holiday-day {
+    background: var(--gradient-secondary);
+    /* Keep background clear if you just want a border */
+    color: white !important;
+    /* Orange text for holiday */
+    font-weight: 700;
+    border-radius: 50%;
+    /* Makes it perfectly circular */
+    width: 36px;
+    /* Keep same as calendar-day height */
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.calendar-day.holiday-day:hover {
+    background: #f97316;
+    /* Fill on hover */
+    color: white !important;
+    /* Text turns white on hover */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3);
+}
+
+
+
+
+@media (max-width: 600px) {
+    .time-range-panel {
+        flex-direction: column;
+    }
+}
+
+/* Thunderbolt Premium Animation */
+
+.thunderbolt-premium-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.bolt-small {
+    width: 32px;
+    height: 32px;
+}
+
+.bolt-medium {
+    width: 48px;
+    height: 48px;
+}
+
+.bolt-large {
+    width: 80px;
+    height: 80px;
+}
+
+.bolt-svg-premium {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 5px rgba(99, 102, 241, 0.4));
+}
+
+.bolt-draw-line {
+    fill: none;
+    stroke: #6366f1;
+    stroke-width: 2;
+    stroke-dasharray: 60;
+    stroke-dashoffset: 60;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    animation: boltStrikeDraw 5s infinite cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Lightning Strike "Draw" Animation */
+@keyframes boltStrikeDraw {
+    0% {
+        stroke-dashoffset: 60;
+        opacity: 0;
+        fill: transparent;
+    }
+
+    5% {
+        opacity: 1;
+        stroke-dashoffset: 0;
+        fill: rgba(99, 102, 241, 0.1);
+    }
+
+    7% {
+        opacity: 0.2;
+    }
+
+    9% {
+        opacity: 0.9;
+        fill: rgba(168, 85, 247, 0.3);
+    }
+
+    11% {
+        opacity: 0.1;
+    }
+
+    13% {
+        opacity: 1;
+        fill: rgba(255, 255, 255, 0.5);
+        stroke: #ffffff;
+        filter: drop-shadow(0 0 10px #ffffff);
+    }
+
+    /* 
+    10% {
+        opacity: 0;
+        stroke-dashoffset: -60;
+        fill: transparent;
+    } */
+
+    100% {
+        opacity: 0;
+    }
+}
+
+/* Strike Flash Background */
+.strike-flash {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, transparent 70%);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    animation: flashImpact 5s infinite linear;
+}
+
+@keyframes flashImpact {
+
+    0%,
+    12% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+
+    13% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(2.5);
+    }
+
+    10% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.5);
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+/* Color Variations */
+.active .bolt-draw-line {
+    stroke: #6366f1;
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.8));
+}
+
+.success .bolt-draw-line {
+    stroke: #10b981;
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8));
+}
