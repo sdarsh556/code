@@ -12,7 +12,8 @@ import {
     LogOut,
     User,
     ChevronRight,
-    Settings
+    Settings,
+    BarChart3
 } from 'lucide-react';
 import '../css/Layout.css';
 import '../css/body-theme.css';
@@ -75,6 +76,7 @@ function Layout() {
         { path: '/ecs', icon: ECSIcon, label: 'ECS Clusters', isCustomIcon: true },
         { path: '/eks', icon: Boxes, label: 'EKS Clusters' },
         { path: '/rds', icon: Database, label: 'RDS Databases' },
+        { path: '/analytics', icon: BarChart3, label: 'Analytics' },
     ];
 
     const getCurrentPageTitle = () => {

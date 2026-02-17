@@ -13,6 +13,10 @@ import EKS from './components/eks/EKS';
 // import RDS from './components/rds/components/RDS';
 // import NeverStartPage from './components/rds/components/NeverStartPage';
 // import TwentyFourSevenPage from './components/rds/components/TwentyFourSevenPage';
+import Analytics from './components/analytics/Analytics';
+import ECSAnalytics from './components/analytics/ecs/ECSAnalytics';
+import ClusterDetails from './components/analytics/ecs/ClusterDetails';
+import ServiceDetails from './components/analytics/ecs/ServiceDetails';
 import AuthGuard from './components/routes/AuthGuard';
 import useSessionTimeout from './components/hooks/useSessionTimeout';
 
@@ -43,6 +47,12 @@ function App() {
             {/* <Route path="rds" element={<RDS />} /> */}
             {/* <Route path="rds/never-start" element={<NeverStartPage />} /> */}
             {/* <Route path="rds/24x7" element={<TwentyFourSevenPage />} /> */}
+
+            {/* ANALYTICS */}
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="analytics/ecs" element={<ECSAnalytics />} />
+            <Route path="analytics/ecs/cluster/:clusterName" element={<ClusterDetails />} />
+            <Route path="analytics/ecs/cluster/:clusterName/services" element={<ServiceDetails />} />
           </Route>
         </Route>
 
