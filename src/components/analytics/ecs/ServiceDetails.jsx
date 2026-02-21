@@ -3,10 +3,11 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowLeft, Calendar, Cpu, Activity, BarChart3, Zap,
     CheckCircle, AlertCircle, ChevronRight, MemoryStick,
-    ArrowUpDown, Trophy, Medal, Award
+    ArrowUpDown, Trophy, Medal, Award, ChevronUp, ChevronDown, Download
 } from 'lucide-react';
 import CPUGraphModal from './CPUGraphModal';
 import '../../../css/analytics/ecs/ServiceDetails.css';
+import '../../../css/analytics/ecs/comparison-table.css';
 
 function ServiceDetails() {
     const { clusterName } = useParams();
@@ -258,78 +259,98 @@ function ServiceDetails() {
 
                 {/* ── Service Comparison Table ── */}
                 <div className="sd-comparison-section">
-                    <div className="sd-comparison-header">
-                        <div className="sd-section-label" style={{ margin: 0 }}>
-                            <ArrowUpDown size={15} />
-                            <span>Service Comparison — click column headers to sort</span>
+                    <div className="cmp-panel-header">
+                        <div className="cmp-panel-title">
+                            <div className="cmp-panel-icon"><ArrowUpDown size={16} /></div>
+                            <div>
+                                <div className="cmp-panel-label">Service Comparison</div>
+                                <div className="cmp-panel-sub">Click any column header to sort · {sortedServices.length} services</div>
+                            </div>
                         </div>
+                        <button
+                            className="cmp-download-btn"
+                            onClick={() => {
+                                const rows = [['Rank', 'Service', 'CPU (%)', 'Memory (%)', 'Tasks', 'Status']];
+                                sortedServices.forEach((s, i) => rows.push([i + 1, s.serviceName, s.cpu, s.memory, s.taskCount, s.status]));
+                                const csv = rows.map(r => r.join(',')).join('\n');
+                                const a = document.createElement('a');
+                                a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+                                a.download = 'service-comparison.csv';
+                                a.click();
+                            }}
+                        >
+                            <Download size={14} />
+                            <span>Export Excel</span>
+                        </button>
                     </div>
 
-                    <div className="sd-comparison-table">
+                    <div className="cmp-table-wrap">
                         {/* Table Head */}
-                        <div className="sd-table-head">
-                            <div className="sd-th rank-col">#</div>
-                            <div className="sd-th name-col">Service</div>
-                            <div className={`sd-th metric-col sortable ${sortBy === 'cpu' ? 'active-col' : ''}`} onClick={() => handleSort('cpu')}>
-                                CPU <SortIcon col="cpu" />
-                            </div>
-                            <div className={`sd-th metric-col sortable ${sortBy === 'memory' ? 'active-col' : ''}`} onClick={() => handleSort('memory')}>
-                                Memory <SortIcon col="memory" />
-                            </div>
-                            <div className={`sd-th tasks-col sortable ${sortBy === 'taskCount' ? 'active-col' : ''}`} onClick={() => handleSort('taskCount')}>
-                                Tasks <SortIcon col="taskCount" />
-                            </div>
+                        <div className="cmp-thead cmp-service-grid">
+                            <div className="cmp-th cmp-th-rank">#</div>
+                            <div className="cmp-th cmp-th-name">Service</div>
+                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'cpu' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('cpu')}>
+                                <Cpu size={12} />
+                                <span>CPU</span>
+                                <span className="cmp-sort-icons">
+                                    <ChevronUp size={11} className={sortBy === 'cpu' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    <ChevronDown size={11} className={sortBy === 'cpu' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                </span>
+                            </button>
+                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'memory' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('memory')}>
+                                <MemoryStick size={12} />
+                                <span>Memory</span>
+                                <span className="cmp-sort-icons">
+                                    <ChevronUp size={11} className={sortBy === 'memory' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    <ChevronDown size={11} className={sortBy === 'memory' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                </span>
+                            </button>
+                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'taskCount' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('taskCount')}>
+                                <Zap size={12} />
+                                <span>Tasks</span>
+                                <span className="cmp-sort-icons">
+                                    <ChevronUp size={11} className={sortBy === 'taskCount' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    <ChevronDown size={11} className={sortBy === 'taskCount' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                </span>
+                            </button>
                         </div>
 
                         {/* Table Rows */}
-                        {sortedServices.map((service, rank) => (
-                            <div
-                                key={service.serviceName}
-                                className={`sd-table-row ${rank === 0 ? 'top-rank' : ''} ${service.status}`}
-                                style={{ animationDelay: `${rank * 0.06}s` }}
-                            >
-                                {/* Rank */}
-                                <div className="sd-td rank-col">
-                                    {getRankIcon(rank)}
-                                </div>
+                        <div className="cmp-tbody">
+                            {sortedServices.map((service, rank) => (
+                                <div
+                                    key={service.serviceName}
+                                    className={`cmp-row cmp-service-grid ${rank === 0 ? 'cmp-row-top' : ''} ${rank % 2 === 1 ? 'cmp-row-alt' : ''}`}
+                                    style={{ animationDelay: `${rank * 0.06}s` }}
+                                >
+                                    <div className="cmp-td cmp-td-rank">{getRankIcon(rank)}</div>
 
-                                {/* Name */}
-                                <div className="sd-td name-col">
-                                    <div className={`sd-row-dot ${service.status}`} />
-                                    <span className="sd-row-name">{service.serviceName}</span>
-                                </div>
-
-                                {/* CPU */}
-                                <div className="sd-td metric-col">
-                                    <div className="sd-inline-bar-wrap">
-                                        <div
-                                            className={`sd-inline-bar ${getBarColor(service.cpu, 'cpu')}`}
-                                            style={{ width: `${(service.cpu / maxCpu) * 100}%` }}
-                                        />
+                                    <div className="cmp-td cmp-td-name">
+                                        <div className={`cmp-status-dot ${service.status}`} />
+                                        <span className="cmp-name-text">{service.serviceName}</span>
                                     </div>
-                                    <span className="sd-metric-val">{service.cpu}%</span>
-                                </div>
 
-                                {/* Memory */}
-                                <div className="sd-td metric-col">
-                                    <div className="sd-inline-bar-wrap">
-                                        <div
-                                            className={`sd-inline-bar mem ${getBarColor(service.memory, 'memory')}`}
-                                            style={{ width: `${(service.memory / maxMem) * 100}%` }}
-                                        />
+                                    <div className="cmp-td">
+                                        <span className={`cmp-chip cmp-chip-cpu ${service.cpu > 55 ? 'cmp-chip-warn' : ''} ${service.cpu > 70 ? 'cmp-chip-danger' : ''}`}>
+                                            {service.cpu}%
+                                        </span>
                                     </div>
-                                    <span className="sd-metric-val">{service.memory}%</span>
-                                </div>
 
-                                {/* Tasks */}
-                                <div className="sd-td tasks-col">
-                                    <div className="sd-task-badge">
-                                        <Zap size={12} />
-                                        <span>{service.taskCount}</span>
+                                    <div className="cmp-td">
+                                        <span className={`cmp-chip cmp-chip-mem ${service.memory > 65 ? 'cmp-chip-warn' : ''} ${service.memory > 80 ? 'cmp-chip-danger' : ''}`}>
+                                            {service.memory}%
+                                        </span>
+                                    </div>
+
+                                    <div className="cmp-td">
+                                        <div className="cmp-task-badge">
+                                            <Zap size={11} />
+                                            <span>{service.taskCount}</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

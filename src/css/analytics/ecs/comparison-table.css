@@ -1,0 +1,459 @@
+/* ═══════════════════════════════════════════════════════════
+   COMPARISON TABLE — SHARED DESIGN SYSTEM
+   Used by: ECSAnalytics, ClusterDetails, ServiceDetails
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes cmp-row-in {
+    from {
+        opacity: 0;
+        transform: translateX(-12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ── Section wrapper ── */
+.ecs-comparison-section,
+.cd-comparison-section,
+.sd-comparison-section {
+    margin-top: 2.5rem;
+    animation: cmp-row-in 0.5s ease-out 0.2s backwards;
+}
+
+/* ── Panel Header ── */
+.cmp-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.125rem 1.75rem;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.09) 0%, rgba(59, 130, 246, 0.06) 100%);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-bottom: none;
+    border-radius: 1.25rem 1.25rem 0 0;
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+}
+
+.cmp-panel-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2.5px;
+    background: linear-gradient(90deg, #8b5cf6 0%, #3b82f6 50%, #06b6d4 100%);
+    border-radius: 4px 4px 0 0;
+}
+
+.cmp-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.cmp-panel-icon {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.15) 100%);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 10px;
+    color: #8b5cf6;
+}
+
+.cmp-panel-label {
+    font-size: 0.975rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.cmp-panel-sub {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+/* ── Export button ── */
+.cmp-download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.125rem;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.08) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 999px;
+    font-size: 0.775rem;
+    font-weight: 800;
+    color: #10b981;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.cmp-download-btn:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.55);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.25);
+}
+
+.cmp-download-btn:active {
+    transform: translateY(0);
+}
+
+/* ── Table wrapper ── */
+.cmp-table-wrap {
+    background: var(--surface-card);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 0 0 1.25rem 1.25rem;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Table header ── */
+.cmp-thead {
+    display: grid;
+    align-items: stretch;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-light);
+    padding: 0 1rem;
+    min-height: 48px;
+}
+
+/* Grid layouts */
+.cmp-cluster-grid {
+    grid-template-columns: 52px 1fr 130px 130px 110px 100px;
+}
+
+.cmp-day-grid {
+    grid-template-columns: 52px 110px 100px 130px 130px 100px 100px;
+}
+
+.cmp-service-grid {
+    grid-template-columns: 52px 1fr 130px 130px 110px;
+}
+
+/* ── Column header cells ── */
+.cmp-th {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.67rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: default;
+}
+
+.cmp-th-rank {
+    justify-content: center;
+    font-size: 0.67rem;
+}
+
+.cmp-th-name {
+    padding-left: 0.25rem;
+}
+
+/* Sortable column buttons */
+.cmp-th-sortable {
+    cursor: pointer;
+    padding: 0.325rem 0.625rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all 0.18s ease;
+    user-select: none;
+    margin: 6px 4px 6px 0;
+    background: transparent;
+}
+
+.cmp-th-sortable:hover {
+    background: rgba(139, 92, 246, 0.08);
+    border-color: rgba(139, 92, 246, 0.2);
+    color: #8b5cf6;
+}
+
+.cmp-th-sortable.cmp-th-active {
+    background: rgba(139, 92, 246, 0.12);
+    border-color: rgba(139, 92, 246, 0.3);
+    color: #8b5cf6;
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.15);
+}
+
+.cmp-sort-icons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    line-height: 0;
+    margin-left: 2px;
+}
+
+.cmp-sort-on {
+    color: #8b5cf6;
+    opacity: 1;
+}
+
+.cmp-sort-off {
+    color: var(--text-muted);
+    opacity: 0.35;
+}
+
+
+
+/* ── Table rows ── */
+.cmp-row {
+    display: grid;
+    align-items: center;
+    min-height: 58px;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    position: relative;
+    animation: cmp-row-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+
+.cmp-row:last-child {
+    border-bottom: none;
+}
+
+.cmp-row:hover {
+    background: rgba(139, 92, 246, 0.04);
+}
+
+.cmp-row:hover::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #8b5cf6, #3b82f6);
+    border-radius: 0 2px 2px 0;
+}
+
+/* Alternating rows */
+.cmp-row-alt {
+    background: rgba(99, 102, 241, 0.025);
+}
+
+/* Top-ranked row */
+.cmp-row-top {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.07) 0%, transparent 60%) !important;
+}
+
+.cmp-row-top::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #f59e0b, #fbbf24);
+    border-radius: 0 2px 2px 0;
+}
+
+/* ── Table cell ── */
+.cmp-td {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.cmp-td-rank {
+    justify-content: center;
+}
+
+.cmp-td-name {
+    gap: 0.525rem;
+    overflow: hidden;
+}
+
+/* ── Name cell ── */
+.cmp-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.cmp-status-dot.healthy {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.55);
+}
+
+.cmp-status-dot.warning {
+    background: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.55);
+}
+
+.cmp-status-dot.danger {
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.55);
+}
+
+.cmp-name-text {
+    font-size: 0.825rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Date / Day labels ── */
+.cmp-date-label {
+    font-size: 0.825rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+}
+
+.cmp-day-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.65rem;
+    background: rgba(99, 102, 241, 0.09);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #6366f1;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* ── Metric chips ── */
+.cmp-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.625rem;
+    border-radius: 7px;
+    font-size: 0.79rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid;
+    letter-spacing: 0.01em;
+    min-width: 58px;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+/* CPU chip — default blue/ok */
+.cmp-chip-cpu {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.22);
+    color: #3b82f6;
+}
+
+/* CPU chip — medium warning */
+.cmp-chip-cpu.cmp-chip-warn {
+    background: rgba(245, 158, 11, 0.09);
+    border-color: rgba(245, 158, 11, 0.25);
+    color: #d97706;
+}
+
+/* CPU chip — danger */
+.cmp-chip-cpu.cmp-chip-danger {
+    background: rgba(239, 68, 68, 0.09);
+    border-color: rgba(239, 68, 68, 0.28);
+    color: #dc2626;
+}
+
+/* Memory chip — default purple/ok */
+.cmp-chip-mem {
+    background: rgba(139, 92, 246, 0.08);
+    border-color: rgba(139, 92, 246, 0.22);
+    color: #7c3aed;
+}
+
+/* Memory chip — medium warning */
+.cmp-chip-mem.cmp-chip-warn {
+    background: rgba(245, 158, 11, 0.09);
+    border-color: rgba(245, 158, 11, 0.25);
+    color: #d97706;
+}
+
+/* Memory chip — danger */
+.cmp-chip-mem.cmp-chip-danger {
+    background: rgba(239, 68, 68, 0.09);
+    border-color: rgba(239, 68, 68, 0.28);
+    color: #dc2626;
+}
+
+/* ── Cost pill ── */
+.cmp-cost-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    color: #10b981;
+    letter-spacing: 0.01em;
+}
+
+/* ── Services badge ── */
+.cmp-svc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.28rem 0.65rem;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #3b82f6;
+}
+
+/* ── Tasks badge ── */
+.cmp-task-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.28rem 0.65rem;
+    background: rgba(139, 92, 246, 0.08);
+    border: 1px solid rgba(139, 92, 246, 0.22);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #8b5cf6;
+}
+
+/* ── Rank icons (shared) ── */
+.rank-icon.gold {
+    color: #f59e0b;
+}
+
+.rank-icon.silver {
+    color: #94a3b8;
+}
+
+.rank-icon.bronze {
+    color: #b06020;
+}
+
+.rank-num {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--text-muted);
+}

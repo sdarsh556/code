@@ -514,11 +514,11 @@
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
 }
 
-/* Grid: rank(48) | name(200) | cpu(1fr) | memory(1fr) | tasks(90) */
+/* Grid: rank(48) | name(200) | cpu(110) | memory(110) | tasks(90) */
 .sd-table-head,
 .sd-table-row {
     display: grid;
-    grid-template-columns: 48px 200px 1fr 1fr 90px;
+    grid-template-columns: 48px 1fr 110px 110px 90px;
     align-items: center;
     gap: 0;
 }
@@ -643,51 +643,19 @@
     max-width: 165px;
 }
 
-/* ── Metric cell: bar + value side-by-side ── */
+/* ── Metric cell: just the value, centered ── */
 .sd-td.metric-col {
-    display: grid;
-    grid-template-columns: 1fr 40px;
+    display: flex;
     align-items: center;
-    gap: 8px;
-    padding-right: 1rem;
-}
-
-.sd-inline-bar-wrap {
-    height: 8px;
-    background: rgba(148, 163, 184, 0.12);
-    border-radius: 99px;
-    overflow: hidden;
-}
-
-.sd-inline-bar {
-    height: 100%;
-    border-radius: 99px;
-    transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sd-inline-bar.bar-ok {
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
-}
-
-.sd-inline-bar.bar-warning {
-    background: linear-gradient(90deg, #f59e0b, #fbbf24);
-}
-
-.sd-inline-bar.bar-danger {
-    background: linear-gradient(90deg, #ef4444, #f87171);
-}
-
-.sd-inline-bar.mem.bar-ok {
-    background: linear-gradient(90deg, #06b6d4, #3b82f6);
+    padding-right: 0.5rem;
 }
 
 .sd-metric-val {
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-weight: 800;
     color: var(--text-primary);
-    text-align: right;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+    letter-spacing: 0.01em;
 }
 
 /* ── Tasks cell ── */

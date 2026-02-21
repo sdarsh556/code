@@ -982,11 +982,11 @@
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
 }
 
-/* Grid: rank(48) | name(200) | cpu(1fr) | mem(1fr) | cost(100) | svc(90) */
+/* Grid: rank(48) | name(1fr) | cpu(110) | mem(110) | cost(100) | svc(90) */
 .ecs-table-head,
 .ecs-table-row {
     display: grid;
-    grid-template-columns: 48px 200px 1fr 1fr 100px 90px;
+    grid-template-columns: 48px 1fr 110px 110px 100px 90px;
     align-items: center;
     gap: 0;
 }
@@ -1096,51 +1096,19 @@
     max-width: 165px;
 }
 
-/* ── Metric cell: bar fills + value fixed ── */
+/* ── Metric cell: just the value ── */
 .ecs-td.metric-col {
-    display: grid;
-    grid-template-columns: 1fr 40px;
+    display: flex;
     align-items: center;
-    gap: 9px;
-    padding-right: 0.75rem;
-}
-
-.ecs-tbl-bar-wrap {
-    height: 8px;
-    background: rgba(148, 163, 184, 0.12);
-    border-radius: 99px;
-    overflow: hidden;
-}
-
-.ecs-tbl-bar {
-    height: 100%;
-    border-radius: 99px;
-    transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.ecs-tbl-bar.bar-ok {
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
-}
-
-.ecs-tbl-bar.bar-warning {
-    background: linear-gradient(90deg, #f59e0b, #fbbf24);
-}
-
-.ecs-tbl-bar.bar-danger {
-    background: linear-gradient(90deg, #ef4444, #f87171);
-}
-
-.ecs-tbl-bar.mem.bar-ok {
-    background: linear-gradient(90deg, #06b6d4, #3b82f6);
+    padding-right: 0.5rem;
 }
 
 .ecs-tbl-val {
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-weight: 800;
     color: var(--text-primary);
-    text-align: right;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+    letter-spacing: 0.01em;
 }
 
 /* ── Cost ── */

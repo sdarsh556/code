@@ -2,9 +2,11 @@ import { useState, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, Activity, DollarSign, Calendar, Cpu, TrendingUp, TrendingDown,
-    Minus, ChevronRight, MemoryStick, Clock, Server, ArrowUpDown, Trophy, Medal, Award
+    Minus, ChevronRight, MemoryStick, Clock, Server, ArrowUpDown, Trophy, Medal, Award,
+    ChevronUp, ChevronDown, Download
 } from 'lucide-react';
 import '../../../css/analytics/ecs/ClusterDetails.css';
+import '../../../css/analytics/ecs/comparison-table.css';
 
 function ClusterDetails() {
     const { clusterName } = useParams();
@@ -233,78 +235,130 @@ function ClusterDetails() {
 
                 {/* ── Day Comparison Table ── */}
                 <div className="cd-comparison-section">
-                    <div className="cd-comparison-header">
-                        <div className="cd-section-label" style={{ margin: 0 }}>
-                            <ArrowUpDown size={15} />
-                            <span>Day Comparison — click column headers to sort</span>
+                    <div className="cmp-panel-header">
+                        <div className="cmp-panel-title">
+                            <div className="cmp-panel-icon"><ArrowUpDown size={16} /></div>
+                            <div>
+                                <div className="cmp-panel-label">Day Comparison</div>
+                                <div className="cmp-panel-sub">Click any column header to sort · {sortedDays.length} days</div>
+                            </div>
                         </div>
+                        <button
+                            className="cmp-download-btn"
+                            onClick={() => {
+                                const rows = [['Rank', 'Date', 'Day', 'CPU (%)', 'Memory (%)', 'Services', 'Cost ($)']];
+                                sortedDays.forEach((d, i) => {
+                                    const dateObj = new Date(d.date);
+                                    rows.push([
+                                        i + 1,
+                                        dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                                        d.day,
+                                        d.avgCpu,
+                                        d.avgMemory,
+                                        d.servicesActive,
+                                        d.approxCost.toFixed(2)
+                                    ]);
+                                });
+                                const csv = rows.map(r => r.join(',')).join('\n');
+                                const a = document.createElement('a');
+                                a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+                                a.download = 'day-comparison.csv';
+                                a.click();
+                            }}
+                        >
+                            <Download size={14} />
+                            <span>Export Excel</span>
+                        </button>
                     </div>
 
-                    <div className="cd-comparison-table">
+                    <div className="cmp-table-wrap">
                         {/* Head */}
-                        <div className="cd-table-head">
-                            <div className="cd-th rank-col">#</div>
-                            <div className="cd-th date-col">Date</div>
-                            <div className={`cd-th metric-col sortable ${sortBy === 'cpu' ? 'active-col' : ''}`} onClick={() => handleSort('cpu')}>
-                                CPU <SortIcon col="cpu" />
-                            </div>
-                            <div className={`cd-th metric-col sortable ${sortBy === 'memory' ? 'active-col' : ''}`} onClick={() => handleSort('memory')}>
-                                Memory <SortIcon col="memory" />
-                            </div>
-                            <div className={`cd-th svc-col sortable ${sortBy === 'services' ? 'active-col' : ''}`} onClick={() => handleSort('services')}>
-                                Services <SortIcon col="services" />
-                            </div>
-                            <div className={`cd-th cost-col sortable ${sortBy === 'cost' ? 'active-col' : ''}`} onClick={() => handleSort('cost')}>
-                                Cost <SortIcon col="cost" />
-                            </div>
+                        <div className="cmp-thead cmp-day-grid">
+                            <div className="cmp-th cmp-th-rank">#</div>
+                            <div className="cmp-th cmp-th-name">Date</div>
+                            <div className="cmp-th cmp-th-name">Day</div>
+                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'cpu' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('cpu')}>
+                                <Cpu size={12} />
+                                <span>CPU</span>
+                                <span className="cmp-sort-icons">
+                                    <ChevronUp size={11} className={sortBy === 'cpu' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    <ChevronDown size={11} className={sortBy === 'cpu' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                </span>
+                            </button>
+                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'memory' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('memory')}>
+                                <MemoryStick size={12} />
+                                <span>Memory</span>
+                                <span className="cmp-sort-icons">
+                                    <ChevronUp size={11} className={sortBy === 'memory' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    <ChevronDown size={11} className={sortBy === 'memory' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                </span>
+                            </button>
+                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'services' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('services')}>
+                                <Server size={12} />
+                                <span>Services</span>
+                                <span className="cmp-sort-icons">
+                                    <ChevronUp size={11} className={sortBy === 'services' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    <ChevronDown size={11} className={sortBy === 'services' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                </span>
+                            </button>
+                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'cost' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('cost')}>
+                                <DollarSign size={12} />
+                                <span>Cost</span>
+                                <span className="cmp-sort-icons">
+                                    <ChevronUp size={11} className={sortBy === 'cost' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    <ChevronDown size={11} className={sortBy === 'cost' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                </span>
+                            </button>
                         </div>
 
                         {/* Rows */}
-                        {sortedDays.map((day, rank) => (
-                            <div
-                                key={day.date}
-                                className={`cd-table-row ${rank === 0 ? 'top-rank' : ''}`}
-                                onClick={() => handleDateClick(day)}
-                                style={{ animationDelay: `${rank * 0.05}s` }}
-                            >
-                                <div className="cd-td rank-col">{getRankIcon(rank)}</div>
+                        <div className="cmp-tbody">
+                            {sortedDays.map((day, rank) => {
+                                const dateObj = new Date(day.date);
+                                const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                return (
+                                    <div
+                                        key={day.date}
+                                        className={`cmp-row cmp-day-grid ${rank === 0 ? 'cmp-row-top' : ''} ${rank % 2 === 1 ? 'cmp-row-alt' : ''}`}
+                                        onClick={() => handleDateClick(day)}
+                                        style={{ animationDelay: `${rank * 0.06}s` }}
+                                    >
+                                        <div className="cmp-td cmp-td-rank">{getRankIcon(rank)}</div>
 
-                                <div className="cd-td date-col">
-                                    <div className="cd-row-date-num">{new Date(day.date).getDate()}</div>
-                                    <div className="cd-row-date-info">
-                                        <span className="cd-row-month">{new Date(day.date).toLocaleDateString('en-US', { month: 'short' })}</span>
-                                        <span className="cd-row-day">{day.day.slice(0, 3)}</span>
+                                        <div className="cmp-td cmp-td-name">
+                                            <span className="cmp-date-label">{dateLabel}</span>
+                                        </div>
+
+                                        <div className="cmp-td cmp-td-name">
+                                            <span className="cmp-day-badge">{day.day.slice(0, 3)}</span>
+                                        </div>
+
+                                        <div className="cmp-td">
+                                            <span className={`cmp-chip cmp-chip-cpu ${day.avgCpu > 55 ? 'cmp-chip-warn' : ''} ${day.avgCpu > 80 ? 'cmp-chip-danger' : ''}`}>
+                                                {day.avgCpu}%
+                                            </span>
+                                        </div>
+
+                                        <div className="cmp-td">
+                                            <span className={`cmp-chip cmp-chip-mem ${day.avgMemory > 65 ? 'cmp-chip-warn' : ''} ${day.avgMemory > 85 ? 'cmp-chip-danger' : ''}`}>
+                                                {day.avgMemory}%
+                                            </span>
+                                        </div>
+
+                                        <div className="cmp-td">
+                                            <div className="cmp-svc-badge">
+                                                <Server size={11} />
+                                                <span>{day.servicesActive}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="cmp-td">
+                                            <span className="cmp-cost-pill">${day.approxCost.toFixed(0)}</span>
+                                        </div>
                                     </div>
-                                </div>
-
-                                <div className="cd-td metric-col">
-                                    <div className="cd-tbl-bar-wrap">
-                                        <div className={`cd-tbl-bar ${getBarClass(day.avgCpu, maxCpu)}`}
-                                            style={{ width: `${(day.avgCpu / maxCpu) * 100}%` }} />
-                                    </div>
-                                    <span className="cd-tbl-val">{day.avgCpu}%</span>
-                                </div>
-
-                                <div className="cd-td metric-col">
-                                    <div className="cd-tbl-bar-wrap">
-                                        <div className={`cd-tbl-bar mem ${getBarClass(day.avgMemory, maxMem)}`}
-                                            style={{ width: `${(day.avgMemory / maxMem) * 100}%` }} />
-                                    </div>
-                                    <span className="cd-tbl-val">{day.avgMemory}%</span>
-                                </div>
-
-                                <div className="cd-td svc-col">
-                                    <div className="cd-svc-badge">
-                                        <Server size={11} />
-                                        <span>{day.servicesActive}</span>
-                                    </div>
-                                </div>
-
-                                <div className="cd-td cost-col">
-                                    <span className="cd-cost-val">${day.approxCost.toFixed(0)}</span>
-                                </div>
-                            </div>
-                        ))}
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

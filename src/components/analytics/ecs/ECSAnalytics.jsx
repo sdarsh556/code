@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
     Container, Clock, DollarSign, Activity, Cpu, TrendingUp, Zap,
     ArrowRight, ChevronLeft, ChevronRight, Calendar, MemoryStick, Server,
-    SearchX, RefreshCw, ArrowUpDown, Trophy, Medal, Award, TrendingDown, Minus
+    SearchX, RefreshCw, ArrowUpDown, Trophy, Medal, Award, TrendingDown, Minus,
+    ChevronUp, ChevronDown, Download
 } from 'lucide-react';
 import '../../../css/analytics/ecs/ECSAnalytics.css';
+import '../../../css/analytics/ecs/comparison-table.css';
 
 // ─── Custom Calendar Picker ───────────────────────────────────────────────────
 function CalendarPicker({ onRangeSelect, onClose }) {
@@ -438,75 +440,111 @@ function ECSAnalytics() {
                 {/* ── Cluster Comparison Table ── */}
                 {clusterData.length > 0 && (
                     <div className="ecs-comparison-section">
-                        <div className="ecs-comparison-header">
-                            <div className="ecs-comp-label">
-                                <ArrowUpDown size={15} />
-                                <span>Cluster Comparison — click column headers to sort</span>
+                        <div className="cmp-panel-header">
+                            <div className="cmp-panel-title">
+                                <div className="cmp-panel-icon"><ArrowUpDown size={16} /></div>
+                                <div>
+                                    <div className="cmp-panel-label">Cluster Comparison</div>
+                                    <div className="cmp-panel-sub">Click any column header to sort · {sortedClusters.length} clusters</div>
+                                </div>
                             </div>
+                            <button
+                                className="cmp-download-btn"
+                                onClick={() => {
+                                    const rows = [['Rank', 'Cluster', 'CPU (%)', 'Memory (%)', 'Cost ($)', 'Services']];
+                                    sortedClusters.forEach((c, i) => rows.push([i + 1, c.clusterName, c.avgCpu, c.avgMemory, c.approxCost.toFixed(2), c.totalServices]));
+                                    const csv = rows.map(r => r.join(',')).join('\n');
+                                    const a = document.createElement('a');
+                                    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+                                    a.download = 'cluster-comparison.csv';
+                                    a.click();
+                                }}
+                            >
+                                <Download size={14} />
+                                <span>Export Excel</span>
+                            </button>
                         </div>
 
-                        <div className="ecs-comparison-table">
+                        <div className="cmp-table-wrap">
                             {/* Head */}
-                            <div className="ecs-table-head">
-                                <div className="ecs-th rank-col">#</div>
-                                <div className="ecs-th name-col">Cluster</div>
-                                <div className={`ecs-th metric-col sortable ${clusterSortBy === 'cpu' ? 'active-col' : ''}`} onClick={() => handleClusterSort('cpu')}>
-                                    CPU <ClusterSortIcon col="cpu" />
-                                </div>
-                                <div className={`ecs-th metric-col sortable ${clusterSortBy === 'memory' ? 'active-col' : ''}`} onClick={() => handleClusterSort('memory')}>
-                                    Memory <ClusterSortIcon col="memory" />
-                                </div>
-                                <div className={`ecs-th cost-col sortable ${clusterSortBy === 'cost' ? 'active-col' : ''}`} onClick={() => handleClusterSort('cost')}>
-                                    Cost <ClusterSortIcon col="cost" />
-                                </div>
-                                <div className={`ecs-th svc-col sortable ${clusterSortBy === 'services' ? 'active-col' : ''}`} onClick={() => handleClusterSort('services')}>
-                                    Services <ClusterSortIcon col="services" />
-                                </div>
+                            <div className="cmp-thead cmp-cluster-grid">
+                                <div className="cmp-th cmp-th-rank">#</div>
+                                <div className="cmp-th cmp-th-name">Cluster</div>
+                                <button className={`cmp-th cmp-th-sortable ${clusterSortBy === 'cpu' ? 'cmp-th-active' : ''}`} onClick={() => handleClusterSort('cpu')}>
+                                    <Cpu size={12} />
+                                    <span>CPU</span>
+                                    <span className="cmp-sort-icons">
+                                        <ChevronUp size={11} className={clusterSortBy === 'cpu' && clusterSortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                        <ChevronDown size={11} className={clusterSortBy === 'cpu' && clusterSortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    </span>
+                                </button>
+                                <button className={`cmp-th cmp-th-sortable ${clusterSortBy === 'memory' ? 'cmp-th-active' : ''}`} onClick={() => handleClusterSort('memory')}>
+                                    <MemoryStick size={12} />
+                                    <span>Memory</span>
+                                    <span className="cmp-sort-icons">
+                                        <ChevronUp size={11} className={clusterSortBy === 'memory' && clusterSortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                        <ChevronDown size={11} className={clusterSortBy === 'memory' && clusterSortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    </span>
+                                </button>
+                                <button className={`cmp-th cmp-th-sortable ${clusterSortBy === 'cost' ? 'cmp-th-active' : ''}`} onClick={() => handleClusterSort('cost')}>
+                                    <DollarSign size={12} />
+                                    <span>Cost</span>
+                                    <span className="cmp-sort-icons">
+                                        <ChevronUp size={11} className={clusterSortBy === 'cost' && clusterSortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                        <ChevronDown size={11} className={clusterSortBy === 'cost' && clusterSortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    </span>
+                                </button>
+                                <button className={`cmp-th cmp-th-sortable ${clusterSortBy === 'services' ? 'cmp-th-active' : ''}`} onClick={() => handleClusterSort('services')}>
+                                    <Server size={12} />
+                                    <span>Services</span>
+                                    <span className="cmp-sort-icons">
+                                        <ChevronUp size={11} className={clusterSortBy === 'services' && clusterSortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                        <ChevronDown size={11} className={clusterSortBy === 'services' && clusterSortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    </span>
+                                </button>
                             </div>
 
                             {/* Rows */}
-                            {sortedClusters.map((cluster, rank) => (
-                                <div
-                                    key={cluster.clusterName}
-                                    className={`ecs-table-row ${rank === 0 ? 'top-rank' : ''} ${cluster.status}`}
-                                    onClick={() => handleClusterClick(cluster)}
-                                    style={{ animationDelay: `${rank * 0.05}s` }}
-                                >
-                                    <div className="ecs-td rank-col">{getRankIcon(rank)}</div>
+                            <div className="cmp-tbody">
+                                {sortedClusters.map((cluster, rank) => (
+                                    <div
+                                        key={cluster.clusterName}
+                                        className={`cmp-row cmp-cluster-grid ${rank === 0 ? 'cmp-row-top' : ''} ${rank % 2 === 1 ? 'cmp-row-alt' : ''}`}
+                                        onClick={() => handleClusterClick(cluster)}
+                                        style={{ animationDelay: `${rank * 0.06}s` }}
+                                    >
+                                        <div className="cmp-td cmp-td-rank">{getRankIcon(rank)}</div>
 
-                                    <div className="ecs-td name-col">
-                                        <div className={`ecs-row-dot ${cluster.status}`} />
-                                        <span className="ecs-row-name">{cluster.clusterName}</span>
-                                    </div>
-
-                                    <div className="ecs-td metric-col">
-                                        <div className="ecs-tbl-bar-wrap">
-                                            <div className={`ecs-tbl-bar ${getClusterBarClass(cluster.avgCpu, maxClusterCpu)}`}
-                                                style={{ width: `${(cluster.avgCpu / maxClusterCpu) * 100}%` }} />
+                                        <div className="cmp-td cmp-td-name">
+                                            <div className={`cmp-status-dot ${cluster.status}`} />
+                                            <span className="cmp-name-text">{cluster.clusterName}</span>
                                         </div>
-                                        <span className="ecs-tbl-val">{cluster.avgCpu}%</span>
-                                    </div>
 
-                                    <div className="ecs-td metric-col">
-                                        <div className="ecs-tbl-bar-wrap">
-                                            <div className={`ecs-tbl-bar mem ${getClusterBarClass(cluster.avgMemory, maxClusterMem)}`}
-                                                style={{ width: `${(cluster.avgMemory / maxClusterMem) * 100}%` }} />
+                                        <div className="cmp-td">
+                                            <span className={`cmp-chip cmp-chip-cpu ${cluster.avgCpu > 55 ? 'cmp-chip-warn' : ''} ${cluster.avgCpu > 80 ? 'cmp-chip-danger' : ''}`}>
+                                                {cluster.avgCpu}%
+                                            </span>
                                         </div>
-                                        <span className="ecs-tbl-val">{cluster.avgMemory}%</span>
-                                    </div>
 
-                                    <div className="ecs-td cost-col">
-                                        <span className="ecs-cost-val">${cluster.approxCost.toFixed(0)}</span>
-                                    </div>
+                                        <div className="cmp-td">
+                                            <span className={`cmp-chip cmp-chip-mem ${cluster.avgMemory > 65 ? 'cmp-chip-warn' : ''} ${cluster.avgMemory > 85 ? 'cmp-chip-danger' : ''}`}>
+                                                {cluster.avgMemory}%
+                                            </span>
+                                        </div>
 
-                                    <div className="ecs-td svc-col">
-                                        <div className="ecs-svc-badge">
-                                            <Server size={11} />
-                                            <span>{cluster.totalServices}</span>
+                                        <div className="cmp-td">
+                                            <span className="cmp-cost-pill">${cluster.approxCost.toFixed(0)}</span>
+                                        </div>
+
+                                        <div className="cmp-td">
+                                            <div className="cmp-svc-badge">
+                                                <Server size={11} />
+                                                <span>{cluster.totalServices}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}
