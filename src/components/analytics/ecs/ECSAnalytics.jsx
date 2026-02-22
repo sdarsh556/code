@@ -235,6 +235,73 @@ function ECSAnalytics() {
         return datePresets.find(p => p.id === selectedRange)?.label || '';
     };
 
+    const handleExportAll = () => {
+        // We'll simulate the nested data structure for the export
+        // In a real app, this would fetch from an API or use a more robust data store
+        const headers = ['Cluster', 'Date', 'Day', 'Service Name', 'Tasks', 'CPU (%)', 'Memory (%)', 'Daily Cost ($)'];
+        const csvRows = [headers.join(',')];
+
+        const mockDates = sortedClusters.flatMap(c => {
+            // Simulate 7 days of data for each cluster
+            return [
+                { date: '2026-02-22', day: 'Sunday' },
+                { date: '2026-02-21', day: 'Saturday' },
+                { date: '2026-02-20', day: 'Friday' },
+                { date: '2026-02-19', day: 'Thursday' },
+                { date: '2026-02-18', day: 'Wednesday' },
+                { date: '2026-02-17', day: 'Tuesday' },
+                { date: '2026-02-16', day: 'Monday' }
+            ];
+        });
+
+        const mockServices = [
+            { name: 'api-gateway', tasks: 8, cpu: 62.4, mem: 74.2 },
+            { name: 'auth-service', tasks: 4, cpu: 45.8, mem: 58.6 },
+            { name: 'payment-processor', tasks: 6, cpu: 71.3, mem: 82.1 },
+            { name: 'notification-service', tasks: 3, cpu: 38.2, mem: 51.4 }
+        ];
+
+        sortedClusters.forEach(cluster => {
+            // For each cluster, we iterate through the days in the range
+            const daysInRange = [
+                { date: '2026-02-22', day: 'Sunday', cost: cluster.approxCost / 7 },
+                { date: '2026-02-21', day: 'Saturday', cost: cluster.approxCost / 7 },
+                { date: '2026-02-20', day: 'Friday', cost: cluster.approxCost / 7 },
+                { date: '2026-02-19', day: 'Thursday', cost: cluster.approxCost / 7 },
+                { date: '2026-02-18', day: 'Wednesday', cost: cluster.approxCost / 7 },
+                { date: '2026-02-17', day: 'Tuesday', cost: cluster.approxCost / 7 },
+                { date: '2026-02-16', day: 'Monday', cost: cluster.approxCost / 7 }
+            ];
+
+            daysInRange.forEach(day => {
+                mockServices.forEach(svc => {
+                    const row = [
+                        `"${cluster.clusterName}"`,
+                        day.date,
+                        day.day,
+                        `"${svc.name}"`,
+                        svc.tasks,
+                        svc.cpu,
+                        svc.mem,
+                        day.cost.toFixed(2)
+                    ];
+                    csvRows.push(row.join(','));
+                });
+            });
+        });
+
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `ecs-comprehensive-export-${selectedRange}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const metricCards = [
         { label: 'Active Clusters', value: summaryStats.totalClusters, icon: Container, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', bars: [65, 45, 78, 90, 55] },
         { label: 'Total Services', value: summaryStats.totalServices, icon: Activity, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', trend: '+12%' },
@@ -259,7 +326,29 @@ function ECSAnalytics() {
                     </div>
 
                     {/* Time Selector */}
-                    <div className="time-selector-wrap">
+                    <div className="time-selector-wrap" style={{ gap: '1rem' }}>
+                        <button
+                            className="ecs-export-all-btn"
+                            onClick={handleExportAll}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.625rem',
+                                padding: '0.75rem 1.25rem',
+                                background: 'rgba(139, 92, 246, 0.1)',
+                                border: '1px solid rgba(139, 92, 246, 0.25)',
+                                borderRadius: '1rem',
+                                color: '#8b5cf6',
+                                fontSize: '0.85rem',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
+                        >
+                            <Download size={16} />
+                            <span>Export Comprehensive Insight</span>
+                        </button>
+
                         <div className="time-selector">
                             {datePresets.map(p => (
                                 <button

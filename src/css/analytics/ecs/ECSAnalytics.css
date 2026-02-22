@@ -247,6 +247,17 @@
     text-overflow: ellipsis;
 }
 
+.ecs-export-all-btn:hover {
+    background: #8b5cf6 !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.35);
+    transform: translateY(-2px);
+}
+
+.ecs-export-all-btn:active {
+    transform: translateY(0);
+}
+
 /* ── Metric Cards ── */
 .metric-cards-row {
     display: grid;
