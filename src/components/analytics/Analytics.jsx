@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { BarChart3, Server, Container, Boxes, Database, TrendingUp, Zap, Activity, ArrowRight, Sparkles } from 'lucide-react';
 import '../../css/analytics/Analytics.css';
@@ -66,93 +66,30 @@ function Analytics() {
         }
     ];
 
-    const overviewStats = [
-        { label: 'Total Services Tracked', value: '156', icon: Activity, color: '#8b5cf6', change: '+12%' },
-        { label: 'Active Clusters', value: '24', icon: Zap, color: '#3b82f6', change: '+5%' },
-        { label: 'Monthly Cost Savings', value: '$12.4K', icon: TrendingUp, color: '#10b981', change: '+18%' },
-    ];
+    // const overviewStats = [
+    //     { label: 'Total Services Tracked', value: '156', icon: Activity, color: '#8b5cf6', change: '+12%' },
+    //     { label: 'Active Clusters', value: '24', icon: Zap, color: '#3b82f6', change: '+5%' },
+    //     { label: 'Monthly Cost Savings', value: '$12.4K', icon: TrendingUp, color: '#10b981', change: '+18%' },
+    // ];
+
+    const { setBgContext } = useOutletContext();
 
     useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        let animationId;
-        let particles = [];
-
-        const resize = () => {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-        };
-        resize();
-        window.addEventListener('resize', resize);
-
-        for (let i = 0; i < 60; i++) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 2 + 0.5,
-                dx: (Math.random() - 0.5) * 0.4,
-                dy: (Math.random() - 0.5) * 0.4,
-                opacity: Math.random() * 0.5 + 0.1,
-                color: ['#8b5cf6', '#3b82f6', '#ec4899', '#10b981'][Math.floor(Math.random() * 4)]
-            });
-        }
-
-        const animate = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => {
-                p.x += p.dx;
-                p.y += p.dy;
-                if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
-                if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.opacity;
-                ctx.fill();
-            });
-            // Draw connections
-            ctx.globalAlpha = 1;
-            for (let i = 0; i < particles.length; i++) {
-                for (let j = i + 1; j < particles.length; j++) {
-                    const dist = Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y);
-                    if (dist < 100) {
-                        ctx.beginPath();
-                        ctx.moveTo(particles[i].x, particles[i].y);
-                        ctx.lineTo(particles[j].x, particles[j].y);
-                        ctx.strokeStyle = `rgba(139, 92, 246, ${0.08 * (1 - dist / 100)})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.stroke();
-                    }
-                }
-            }
-            animationId = requestAnimationFrame(animate);
-        };
-        animate();
-
-        return () => {
-            cancelAnimationFrame(animationId);
-            window.removeEventListener('resize', resize);
-        };
-    }, []);
+        setBgContext('analytics');
+        return () => setBgContext('default');
+    }, [setBgContext]);
 
     return (
         <div className="analytics-page">
-            {/* Particle Canvas */}
-            <canvas ref={canvasRef} className="analytics-canvas" />
-
-            {/* Ambient Orbs */}
-            <div className="orb orb-1" />
-            <div className="orb orb-2" />
-            <div className="orb orb-3" />
+            {/* Local background orbs removed - using global DynamicBackground */}
 
             <div className="analytics-content">
                 {/* Hero */}
                 <div className="analytics-hero">
-                    <div className="hero-badge">
+                    {/* <div className="hero-badge">
                         <Sparkles size={14} />
                         <span>AWS Infrastructure Intelligence</span>
-                    </div>
+                    </div> */}
                     <h1 className="hero-title">
                         <span className="title-word">Analytics</span>
                         <span className="title-word accent">Hub</span>
@@ -162,7 +99,7 @@ function Analytics() {
                     </p>
                 </div>
 
-                {/* Overview Stats Strip */}
+                {/* Overview Stats Strip
                 <div className="overview-strip">
                     {overviewStats.map((stat, i) => {
                         const Icon = stat.icon;
@@ -179,7 +116,7 @@ function Analytics() {
                             </div>
                         );
                     })}
-                </div>
+                </div> */}
 
                 {/* Service Cards */}
                 <div className="services-section">

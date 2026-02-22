@@ -1,31 +1,26 @@
-import { useState, useMemo } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import {
     ArrowLeft, Activity, DollarSign, Calendar, Cpu, TrendingUp, TrendingDown,
-    Minus, ChevronRight, MemoryStick, Clock, Server, ArrowUpDown, Trophy, Medal, Award,
+    Minus, ChevronRight, MemoryStick, Clock, Server, ArrowUpDown,
     ChevronUp, ChevronDown, Download
 } from 'lucide-react';
+import CPUGraphModal from './CPUGraphModal';
+import ComparisonTable from '../ComparisonTable';
 import '../../../css/analytics/ecs/ClusterDetails.css';
-import '../../../css/analytics/ecs/comparison-table.css';
+import '../../../css/analytics/comparison-table.css';
 
 function ClusterDetails() {
     const { clusterName } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
     const { cluster, selectedRange } = location.state || {};
+    const { setBgContext } = useOutletContext();
 
-    const [sortBy, setSortBy] = useState('cpu');
-    const [sortDir, setSortDir] = useState('desc');
-
-    const handleSort = (col) => {
-        if (sortBy === col) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
-        else { setSortBy(col); setSortDir('desc'); }
-    };
-
-    const SortIcon = ({ col }) => {
-        const active = sortBy === col;
-        return <span className={`sort-arrow ${active ? 'active' : ''}`}>{active && sortDir === 'asc' ? '↑' : '↓'}</span>;
-    };
+    useEffect(() => {
+        setBgContext('analytics');
+        return () => setBgContext('default');
+    }, [setBgContext]);
 
     const dailyData = [
         { date: '2026-02-16', day: 'Sunday', servicesActive: 18, avgCpu: 52.3, avgMemory: 68.4, approxCost: 187.50, trend: 'up' },
@@ -36,17 +31,6 @@ function ClusterDetails() {
         { date: '2026-02-11', day: 'Tuesday', servicesActive: 19, avgCpu: 51.2, avgMemory: 66.5, approxCost: 195.30, trend: 'down' },
         { date: '2026-02-10', day: 'Monday', servicesActive: 20, avgCpu: 54.8, avgMemory: 68.9, approxCost: 205.70, trend: 'up' },
     ];
-
-    const sortedDays = useMemo(() => {
-        return [...dailyData].sort((a, b) => {
-            let av, bv;
-            if (sortBy === 'cpu') { av = a.avgCpu; bv = b.avgCpu; }
-            else if (sortBy === 'memory') { av = a.avgMemory; bv = b.avgMemory; }
-            else if (sortBy === 'services') { av = a.servicesActive; bv = b.servicesActive; }
-            else { av = a.approxCost; bv = b.approxCost; }
-            return sortDir === 'desc' ? bv - av : av - bv;
-        });
-    }, [sortBy, sortDir]);
 
     const maxCpu = Math.max(...dailyData.map(d => d.avgCpu));
     const maxMem = Math.max(...dailyData.map(d => d.avgMemory));
@@ -74,20 +58,9 @@ function ClusterDetails() {
         return 'bar-ok';
     };
 
-    const getRankIcon = (rank) => {
-        if (rank === 0) return <Trophy size={14} className="rank-icon gold" />;
-        if (rank === 1) return <Medal size={14} className="rank-icon silver" />;
-        if (rank === 2) return <Award size={14} className="rank-icon bronze" />;
-        return <span className="rank-num">#{rank + 1}</span>;
-    };
 
     return (
         <div className="cluster-details-page">
-            {/* Background */}
-            <div className="cd-bg-grid" />
-            <div className="cd-ambient-1" />
-            <div className="cd-ambient-2" />
-
             <div className="cd-content">
                 {/* Breadcrumb */}
                 <div className="cd-breadcrumb">
@@ -132,7 +105,7 @@ function ClusterDetails() {
                 </div>
 
                 {/* Mini Sparkline Chart */}
-                <div className="cd-sparkline-panel">
+                {/* <div className="cd-sparkline-panel">
                     <div className="sparkline-header">
                         <span className="sparkline-title">CPU Trend — Last 7 Days</span>
                         <span className="sparkline-hint">Click any day card below for details</span>
@@ -149,9 +122,9 @@ function ClusterDetails() {
                                 </div>
                                 <div className="sparkline-label">{formatDate(day.date)}</div>
                             </div>
-                        ))}
-                    </div>
-                </div>
+                        ))} */}
+                {/* </div>
+                </div> */}
 
                 {/* Day Cards */}
                 <div className="cd-section-label">
@@ -233,134 +206,63 @@ function ClusterDetails() {
                     ))}
                 </div>
 
-                {/* ── Day Comparison Table ── */}
-                <div className="cd-comparison-section">
-                    <div className="cmp-panel-header">
-                        <div className="cmp-panel-title">
-                            <div className="cmp-panel-icon"><ArrowUpDown size={16} /></div>
-                            <div>
-                                <div className="cmp-panel-label">Day Comparison</div>
-                                <div className="cmp-panel-sub">Click any column header to sort · {sortedDays.length} days</div>
-                            </div>
-                        </div>
-                        <button
-                            className="cmp-download-btn"
-                            onClick={() => {
-                                const rows = [['Rank', 'Date', 'Day', 'CPU (%)', 'Memory (%)', 'Services', 'Cost ($)']];
-                                sortedDays.forEach((d, i) => {
-                                    const dateObj = new Date(d.date);
-                                    rows.push([
-                                        i + 1,
-                                        dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                                        d.day,
-                                        d.avgCpu,
-                                        d.avgMemory,
-                                        d.servicesActive,
-                                        d.approxCost.toFixed(2)
-                                    ]);
-                                });
-                                const csv = rows.map(r => r.join(',')).join('\n');
-                                const a = document.createElement('a');
-                                a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-                                a.download = 'day-comparison.csv';
-                                a.click();
-                            }}
-                        >
-                            <Download size={14} />
-                            <span>Export Excel</span>
-                        </button>
-                    </div>
+                <ComparisonTable
+                    title="Day Comparison"
+                    subtitle="Click any col header to sort"
+                    data={dailyData}
+                    exportFilename="day-comparison.csv"
+                    gridTemplateColumns="52px 1fr 100px 120px 120px 120px 120px"
+                    onRowClick={handleDateClick}
+                    columns={[
+                        {
+                            key: 'date',
+                            label: 'Date',
+                            sortable: true,
+                            type: 'date'
+                        },
+                        {
+                            key: 'day',
+                            label: 'Day',
+                            type: 'day',
+                            align: 'right'
+                        },
+                        {
+                            key: 'avgCpu',
+                            label: 'CPU',
+                            icon: Cpu,
+                            sortable: true,
+                            align: 'right',
+                            type: 'cpu',
+                            noThreshold: true
+                        },
+                        {
+                            key: 'avgMemory',
+                            label: 'Memory',
+                            icon: MemoryStick,
+                            sortable: true,
+                            align: 'right',
+                            type: 'memory',
+                            noThreshold: true
+                        },
+                        {
+                            key: 'servicesActive',
+                            label: 'Services',
+                            icon: Server,
+                            sortable: true,
+                            align: 'right',
+                            type: 'badge-svc'
+                        },
+                        {
+                            key: 'approxCost',
+                            label: 'Cost',
+                            icon: DollarSign,
+                            sortable: true,
+                            align: 'right',
+                            type: 'cost'
+                        }
+                    ]}
+                />
 
-                    <div className="cmp-table-wrap">
-                        {/* Head */}
-                        <div className="cmp-thead cmp-day-grid">
-                            <div className="cmp-th cmp-th-rank">#</div>
-                            <div className="cmp-th cmp-th-name">Date</div>
-                            <div className="cmp-th cmp-th-name">Day</div>
-                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'cpu' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('cpu')}>
-                                <Cpu size={12} />
-                                <span>CPU</span>
-                                <span className="cmp-sort-icons">
-                                    <ChevronUp size={11} className={sortBy === 'cpu' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                    <ChevronDown size={11} className={sortBy === 'cpu' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                </span>
-                            </button>
-                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'memory' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('memory')}>
-                                <MemoryStick size={12} />
-                                <span>Memory</span>
-                                <span className="cmp-sort-icons">
-                                    <ChevronUp size={11} className={sortBy === 'memory' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                    <ChevronDown size={11} className={sortBy === 'memory' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                </span>
-                            </button>
-                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'services' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('services')}>
-                                <Server size={12} />
-                                <span>Services</span>
-                                <span className="cmp-sort-icons">
-                                    <ChevronUp size={11} className={sortBy === 'services' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                    <ChevronDown size={11} className={sortBy === 'services' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                </span>
-                            </button>
-                            <button className={`cmp-th cmp-th-sortable ${sortBy === 'cost' ? 'cmp-th-active' : ''}`} onClick={() => handleSort('cost')}>
-                                <DollarSign size={12} />
-                                <span>Cost</span>
-                                <span className="cmp-sort-icons">
-                                    <ChevronUp size={11} className={sortBy === 'cost' && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                    <ChevronDown size={11} className={sortBy === 'cost' && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                </span>
-                            </button>
-                        </div>
-
-                        {/* Rows */}
-                        <div className="cmp-tbody">
-                            {sortedDays.map((day, rank) => {
-                                const dateObj = new Date(day.date);
-                                const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                                return (
-                                    <div
-                                        key={day.date}
-                                        className={`cmp-row cmp-day-grid ${rank === 0 ? 'cmp-row-top' : ''} ${rank % 2 === 1 ? 'cmp-row-alt' : ''}`}
-                                        onClick={() => handleDateClick(day)}
-                                        style={{ animationDelay: `${rank * 0.06}s` }}
-                                    >
-                                        <div className="cmp-td cmp-td-rank">{getRankIcon(rank)}</div>
-
-                                        <div className="cmp-td cmp-td-name">
-                                            <span className="cmp-date-label">{dateLabel}</span>
-                                        </div>
-
-                                        <div className="cmp-td cmp-td-name">
-                                            <span className="cmp-day-badge">{day.day.slice(0, 3)}</span>
-                                        </div>
-
-                                        <div className="cmp-td">
-                                            <span className={`cmp-chip cmp-chip-cpu ${day.avgCpu > 55 ? 'cmp-chip-warn' : ''} ${day.avgCpu > 80 ? 'cmp-chip-danger' : ''}`}>
-                                                {day.avgCpu}%
-                                            </span>
-                                        </div>
-
-                                        <div className="cmp-td">
-                                            <span className={`cmp-chip cmp-chip-mem ${day.avgMemory > 65 ? 'cmp-chip-warn' : ''} ${day.avgMemory > 85 ? 'cmp-chip-danger' : ''}`}>
-                                                {day.avgMemory}%
-                                            </span>
-                                        </div>
-
-                                        <div className="cmp-td">
-                                            <div className="cmp-svc-badge">
-                                                <Server size={11} />
-                                                <span>{day.servicesActive}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="cmp-td">
-                                            <span className="cmp-cost-pill">${day.approxCost.toFixed(0)}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

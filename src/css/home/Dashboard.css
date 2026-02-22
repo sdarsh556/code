@@ -5,6 +5,7 @@
 .dashboard-page {
     max-width: 100%;
     margin: 0 auto;
+    padding: 2rem;
     animation: fadeIn 0.5s ease;
 }
 

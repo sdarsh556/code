@@ -1,13 +1,14 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import {
     Container, Clock, DollarSign, Activity, Cpu, TrendingUp, Zap,
     ArrowRight, ChevronLeft, ChevronRight, Calendar, MemoryStick, Server,
-    SearchX, RefreshCw, ArrowUpDown, Trophy, Medal, Award, TrendingDown, Minus,
+    SearchX, RefreshCw, ArrowUpDown, TrendingDown, Minus,
     ChevronUp, ChevronDown, Download
 } from 'lucide-react';
 import '../../../css/analytics/ecs/ECSAnalytics.css';
-import '../../../css/analytics/ecs/comparison-table.css';
+import '../../../css/analytics/comparison-table.css';
+import ComparisonTable from '../ComparisonTable';
 
 // ─── Custom Calendar Picker ───────────────────────────────────────────────────
 function CalendarPicker({ onRangeSelect, onClose }) {
@@ -162,6 +163,13 @@ function ECSAnalytics() {
         { clusterName: 'testing-cluster', totalServices: 6, approxCost: 89.40, activeDays: 2, avgCpu: 18.9, avgMemory: 35.6, status: 'healthy', trend: 'up', minDays: 30 },
     ];
 
+    const { setBgContext } = useOutletContext();
+
+    useEffect(() => {
+        setBgContext('analytics');
+        return () => setBgContext('default');
+    }, [setBgContext]);
+
     // Filter clusters based on selected range (simulate empty state for '24h')
     const clusterData = useMemo(() => {
         const days = selectedRange === 'custom'
@@ -202,12 +210,6 @@ function ECSAnalytics() {
         return 'bar-ok';
     };
 
-    const getRankIcon = (rank) => {
-        if (rank === 0) return <Trophy size={14} className="rank-icon gold" />;
-        if (rank === 1) return <Medal size={14} className="rank-icon silver" />;
-        if (rank === 2) return <Award size={14} className="rank-icon bronze" />;
-        return <span className="rank-num">#{rank + 1}</span>;
-    };
 
     const getTrendIcon = (trend) => {
         if (trend === 'up') return <TrendingUp size={13} />;
@@ -242,13 +244,6 @@ function ECSAnalytics() {
 
     return (
         <div className="ecs-analytics-page">
-            {/* Background grid */}
-            <div className="ecs-grid-bg" />
-
-            {/* Ambient glow */}
-            <div className="ecs-ambient-1" />
-            <div className="ecs-ambient-2" />
-
             <div className="ecs-analytics-content">
                 {/* ── Header ── */}
                 <div className="ecs-page-header">
@@ -439,114 +434,57 @@ function ECSAnalytics() {
 
                 {/* ── Cluster Comparison Table ── */}
                 {clusterData.length > 0 && (
-                    <div className="ecs-comparison-section">
-                        <div className="cmp-panel-header">
-                            <div className="cmp-panel-title">
-                                <div className="cmp-panel-icon"><ArrowUpDown size={16} /></div>
-                                <div>
-                                    <div className="cmp-panel-label">Cluster Comparison</div>
-                                    <div className="cmp-panel-sub">Click any column header to sort · {sortedClusters.length} clusters</div>
-                                </div>
-                            </div>
-                            <button
-                                className="cmp-download-btn"
-                                onClick={() => {
-                                    const rows = [['Rank', 'Cluster', 'CPU (%)', 'Memory (%)', 'Cost ($)', 'Services']];
-                                    sortedClusters.forEach((c, i) => rows.push([i + 1, c.clusterName, c.avgCpu, c.avgMemory, c.approxCost.toFixed(2), c.totalServices]));
-                                    const csv = rows.map(r => r.join(',')).join('\n');
-                                    const a = document.createElement('a');
-                                    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-                                    a.download = 'cluster-comparison.csv';
-                                    a.click();
-                                }}
-                            >
-                                <Download size={14} />
-                                <span>Export Excel</span>
-                            </button>
-                        </div>
-
-                        <div className="cmp-table-wrap">
-                            {/* Head */}
-                            <div className="cmp-thead cmp-cluster-grid">
-                                <div className="cmp-th cmp-th-rank">#</div>
-                                <div className="cmp-th cmp-th-name">Cluster</div>
-                                <button className={`cmp-th cmp-th-sortable ${clusterSortBy === 'cpu' ? 'cmp-th-active' : ''}`} onClick={() => handleClusterSort('cpu')}>
-                                    <Cpu size={12} />
-                                    <span>CPU</span>
-                                    <span className="cmp-sort-icons">
-                                        <ChevronUp size={11} className={clusterSortBy === 'cpu' && clusterSortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                        <ChevronDown size={11} className={clusterSortBy === 'cpu' && clusterSortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                    </span>
-                                </button>
-                                <button className={`cmp-th cmp-th-sortable ${clusterSortBy === 'memory' ? 'cmp-th-active' : ''}`} onClick={() => handleClusterSort('memory')}>
-                                    <MemoryStick size={12} />
-                                    <span>Memory</span>
-                                    <span className="cmp-sort-icons">
-                                        <ChevronUp size={11} className={clusterSortBy === 'memory' && clusterSortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                        <ChevronDown size={11} className={clusterSortBy === 'memory' && clusterSortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                    </span>
-                                </button>
-                                <button className={`cmp-th cmp-th-sortable ${clusterSortBy === 'cost' ? 'cmp-th-active' : ''}`} onClick={() => handleClusterSort('cost')}>
-                                    <DollarSign size={12} />
-                                    <span>Cost</span>
-                                    <span className="cmp-sort-icons">
-                                        <ChevronUp size={11} className={clusterSortBy === 'cost' && clusterSortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                        <ChevronDown size={11} className={clusterSortBy === 'cost' && clusterSortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                    </span>
-                                </button>
-                                <button className={`cmp-th cmp-th-sortable ${clusterSortBy === 'services' ? 'cmp-th-active' : ''}`} onClick={() => handleClusterSort('services')}>
-                                    <Server size={12} />
-                                    <span>Services</span>
-                                    <span className="cmp-sort-icons">
-                                        <ChevronUp size={11} className={clusterSortBy === 'services' && clusterSortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                        <ChevronDown size={11} className={clusterSortBy === 'services' && clusterSortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                    </span>
-                                </button>
-                            </div>
-
-                            {/* Rows */}
-                            <div className="cmp-tbody">
-                                {sortedClusters.map((cluster, rank) => (
-                                    <div
-                                        key={cluster.clusterName}
-                                        className={`cmp-row cmp-cluster-grid ${rank === 0 ? 'cmp-row-top' : ''} ${rank % 2 === 1 ? 'cmp-row-alt' : ''}`}
-                                        onClick={() => handleClusterClick(cluster)}
-                                        style={{ animationDelay: `${rank * 0.06}s` }}
-                                    >
-                                        <div className="cmp-td cmp-td-rank">{getRankIcon(rank)}</div>
-
-                                        <div className="cmp-td cmp-td-name">
-                                            <div className={`cmp-status-dot ${cluster.status}`} />
-                                            <span className="cmp-name-text">{cluster.clusterName}</span>
-                                        </div>
-
-                                        <div className="cmp-td">
-                                            <span className={`cmp-chip cmp-chip-cpu ${cluster.avgCpu > 55 ? 'cmp-chip-warn' : ''} ${cluster.avgCpu > 80 ? 'cmp-chip-danger' : ''}`}>
-                                                {cluster.avgCpu}%
-                                            </span>
-                                        </div>
-
-                                        <div className="cmp-td">
-                                            <span className={`cmp-chip cmp-chip-mem ${cluster.avgMemory > 65 ? 'cmp-chip-warn' : ''} ${cluster.avgMemory > 85 ? 'cmp-chip-danger' : ''}`}>
-                                                {cluster.avgMemory}%
-                                            </span>
-                                        </div>
-
-                                        <div className="cmp-td">
-                                            <span className="cmp-cost-pill">${cluster.approxCost.toFixed(0)}</span>
-                                        </div>
-
-                                        <div className="cmp-td">
-                                            <div className="cmp-svc-badge">
-                                                <Server size={11} />
-                                                <span>{cluster.totalServices}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                    <ComparisonTable
+                        title="Cluster Comparison"
+                        subtitle="Click any column header to sort"
+                        data={clusterData.map(c => ({
+                            ...c,
+                            id: c.clusterName
+                        }))}
+                        exportFilename="cluster-comparison.csv"
+                        gridTemplateColumns="52px 1fr 120px 120px 120px 120px"
+                        onRowClick={handleClusterClick}
+                        columns={[
+                            {
+                                key: 'clusterName',
+                                label: 'Cluster',
+                                type: 'status-name',
+                                sortable: true
+                            },
+                            {
+                                key: 'avgCpu',
+                                label: 'CPU',
+                                icon: Cpu,
+                                type: 'cpu',
+                                sortable: true,
+                                align: 'right'
+                            },
+                            {
+                                key: 'avgMemory',
+                                label: 'Memory',
+                                icon: MemoryStick,
+                                type: 'memory',
+                                sortable: true,
+                                align: 'right'
+                            },
+                            {
+                                key: 'approxCost',
+                                label: 'Cost',
+                                icon: DollarSign,
+                                type: 'cost',
+                                sortable: true,
+                                align: 'right'
+                            },
+                            {
+                                key: 'totalServices',
+                                label: 'Services',
+                                icon: Server,
+                                type: 'badge-svc',
+                                sortable: true,
+                                align: 'right'
+                            }
+                        ]}
+                    />
                 )}
             </div>
 
