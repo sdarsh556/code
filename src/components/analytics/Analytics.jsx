@@ -10,17 +10,17 @@ function Analytics() {
     const services = [
         {
             id: 'ec2',
-            name: 'EC2',
+            name: 'EC2 Analytics',
             subtitle: 'Compute Analytics',
             description: 'Instance performance, utilization trends & cost optimization insights',
             icon: Server,
-            available: false,
+            available: true,
             accentColor: '#3b82f6',
             glowColor: 'rgba(59, 130, 246, 0.4)',
             gradient: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 50%, #06b6d4 100%)',
             bgGradient: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(6,182,212,0.05) 100%)',
-            stat: '—',
-            statLabel: 'Coming Soon'
+            stat: 'LIVE',
+            statLabel: 'Active'
         },
         {
             id: 'ecs',
