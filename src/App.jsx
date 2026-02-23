@@ -10,14 +10,14 @@ import ECSServiceUpdates from './components/ecs/ECSServiceUpdates';
 import ECSASG from './components/ecs/ECSASG';
 import EKS from './components/eks/EKS';
 // import EBS from './components/ebs/EBS';
-// import RDS from './components/rds/components/RDS';
-// import NeverStartPage from './components/rds/components/NeverStartPage';
-// import TwentyFourSevenPage from './components/rds/components/TwentyFourSevenPage';
+import RDS from './components/rds/RDS';
 import Analytics from './components/analytics/Analytics';
 import EC2Analytics from './components/analytics/ec2/EC2Analytics';
 import ECSAnalytics from './components/analytics/ecs/ECSAnalytics';
 import ClusterDetails from './components/analytics/ecs/ClusterDetails';
 import ServiceDetails from './components/analytics/ecs/ServiceDetails';
+import EKSAnalytics from './components/analytics/eks/EKSAnalytics';
+import RDSAnalytics from './components/analytics/rds/RDSAnalytics';
 import AuthGuard from './components/routes/AuthGuard';
 import useSessionTimeout from './components/hooks/useSessionTimeout';
 
@@ -45,7 +45,7 @@ function App() {
             <Route path="ecs/:clusterName" element={<ECSServices />} />
             <Route path="ecs/asg/:clusterName" element={<ECSASG />} />
             <Route path="eks" element={<EKS />} />
-            {/* <Route path="rds" element={<RDS />} /> */}
+            <Route path="rds" element={<RDS />} />
             {/* <Route path="rds/never-start" element={<NeverStartPage />} /> */}
             {/* <Route path="rds/24x7" element={<TwentyFourSevenPage />} /> */}
 
@@ -55,6 +55,8 @@ function App() {
             <Route path="analytics/ecs" element={<ECSAnalytics />} />
             <Route path="analytics/ecs/cluster/:clusterName" element={<ClusterDetails />} />
             <Route path="analytics/ecs/cluster/:clusterName/services" element={<ServiceDetails />} />
+            <Route path="analytics/eks" element={<EKSAnalytics />} />
+            <Route path="analytics/rds" element={<RDSAnalytics />} />
           </Route>
         </Route>
 

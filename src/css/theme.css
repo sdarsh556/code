@@ -17,8 +17,8 @@
     --bg-primary: #F8FAFC;
     --bg-secondary: #F1F5F9;
     --bg-gradient:
-        radial-gradient(at 0% 0%, rgba(255, 204, 172, 0.75) 0%, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(255, 242, 172, 0.65) 0%, transparent 50%),
+        radial-gradient(at 0% 0%, rgba(224, 231, 255, 0.7) 0%, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(224, 242, 254, 0.6) 0%, transparent 50%),
         radial-gradient(at 100% 100%, rgba(186, 230, 253, 0.65) 0%, transparent 50%),
         radial-gradient(at 0% 100%, rgba(252, 211, 236, 0.75) 0%, transparent 50%),
         #FFFFFF;

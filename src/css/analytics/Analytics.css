@@ -169,7 +169,6 @@
     background: radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, transparent 70%);
     top: -100px;
     left: -100px;
-    animation: orb-float-1 18s ease-in-out infinite;
 }
 
 .orb-2 {
@@ -178,7 +177,6 @@
     background: radial-gradient(circle, rgba(59, 130, 246, 0.14) 0%, transparent 70%);
     bottom: -150px;
     right: -100px;
-    animation: orb-float-2 22s ease-in-out infinite;
 }
 
 .orb-3 {
@@ -187,7 +185,6 @@
     background: radial-gradient(circle, rgba(236, 72, 153, 0.1) 0%, transparent 70%);
     top: 40%;
     left: 40%;
-    animation: orb-float-3 15s ease-in-out infinite;
 }
 
 /* ---- Content ---- */
