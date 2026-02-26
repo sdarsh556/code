@@ -378,6 +378,18 @@
     box-shadow: 0 2px 10px rgba(79, 70, 229, 0.08);
 }
 
+.cmp-active-days-pill {
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.775rem;
+    font-weight: 800;
+    background: rgba(139, 92, 246, 0.15);
+    /* Purple */
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: #8b5cf6;
+    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.08);
+}
+
 .cmp-svc-badge,
 .cmp-task-badge {
     display: inline-flex;

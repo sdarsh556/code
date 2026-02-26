@@ -1,15 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
-    Activity, Clock, DollarSign, Cpu, TrendingUp, Zap, Server,
-    ChevronLeft, ChevronRight, Calendar, MemoryStick, SearchX, BarChart3
+    Clock, DollarSign, Activity, Cpu, TrendingUp, Zap,
+    ArrowRight, ChevronLeft, ChevronRight, Calendar, Server,
+    SearchX, RefreshCw, TrendingDown, Minus, Download, BarChart3
 } from 'lucide-react';
 import '../../../css/analytics/ec2/EC2Analytics.css';
 import '../../../css/analytics/comparison-table.css';
 import ComparisonTable from '../ComparisonTable';
-import EC2GraphModal from './EC2GraphModal';
 
-// ─── Custom Calendar Picker (Same as ECS) ─────────────────────────────────────
+// ─── Custom Calendar Picker ───────────────────────────────────────────────────
 function CalendarPicker({ onRangeSelect, onClose }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -132,18 +132,10 @@ function CalendarPicker({ onRangeSelect, onClose }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 function EC2Analytics() {
     const navigate = useNavigate();
-    const { setBgContext } = useOutletContext();
     const [selectedRange, setSelectedRange] = useState('7d');
     const [showCalendar, setShowCalendar] = useState(false);
     const [customRange, setCustomRange] = useState(null);
-    const [selectedInstance, setSelectedInstance] = useState(null);
-    const [showGraphModal, setShowGraphModal] = useState(false);
-    const [activeDate, setActiveDate] = useState(null);
-
-    useEffect(() => {
-        setBgContext('analytics');
-        return () => setBgContext('default');
-    }, [setBgContext]);
+    const [selectedDaysInfo, setSelectedDaysInfo] = useState(null);
 
     const datePresets = [
         { id: '24h', label: '24H', days: 1 },
@@ -152,71 +144,42 @@ function EC2Analytics() {
         { id: '30d', label: '30D', days: 30 },
     ];
 
-    // MOCK DATA: For each date, list Instances running on that day
-    const allDailyInstanceData = {
-        '2026-02-22': [
-            { id: 1, instanceName: 'prod-api-i1', computeType: 't3.xlarge', cpu: 42.5, memory: 58.2, cost: 0.12, status: 'healthy' },
-            { id: 2, instanceName: 'prod-api-i2', computeType: 't3.xlarge', cpu: 48.1, memory: 61.4, cost: 0.12, status: 'healthy' },
-            { id: 3, instanceName: 'worker-node-01', computeType: 'c5.large', cpu: 75.2, memory: 42.9, cost: 0.08, status: 'warning' }
-        ],
-        '2026-02-21': [
-            { id: 1, instanceName: 'prod-api-i1', computeType: 't3.xlarge', cpu: 40.2, memory: 55.4, cost: 0.12, status: 'healthy' },
-            { id: 4, instanceName: 'db-replica-01', computeType: 'r5.large', cpu: 22.8, memory: 85.2, cost: 0.25, status: 'healthy' }
-        ],
-        '2026-02-20': [
-            { id: 1, instanceName: 'prod-api-i1', computeType: 't3.xlarge', cpu: 44.8, memory: 61.2, cost: 0.12, status: 'healthy' }
-        ],
-        '2026-02-19': [
-            { id: 1, instanceName: 'prod-api-i1', computeType: 't3.xlarge', cpu: 43.2, memory: 59.5, cost: 0.12, status: 'healthy' },
-            { id: 5, instanceName: 'payment-svc-01', computeType: 't3.medium', cpu: 34.5, memory: 47.1, cost: 0.04, status: 'healthy' }
-        ],
-        '2026-02-18': [
-            { id: 5, instanceName: 'payment-svc-01', computeType: 't3.medium', cpu: 36.7, memory: 50.1, cost: 0.04, status: 'healthy' }
-        ],
-        '2026-02-17': [
-            { id: 1, instanceName: 'prod-api-i1', computeType: 't3.xlarge', cpu: 38.9, memory: 52.3, cost: 0.12, status: 'healthy' }
-        ],
-        '2026-02-16': [
-            { id: 6, instanceName: 'legacy-app-i1', computeType: 'm4.large', cpu: 75.2, memory: 82.5, cost: 0.20, status: 'warning' }
-        ],
-        '2026-02-15': [
-            { id: 1, instanceName: 'prod-api-i1', computeType: 't3.xlarge', cpu: 45.2, memory: 62.8, cost: 0.12, status: 'healthy' }
-        ]
-    };
+    const allInstanceData = [
+        { instanceName: 'prod-api-server', instanceId: 'i-0a2b3c4d5e6f7g8h9', approxCost: 1247.50, activeDays: 7, avgCpu: 45.2, status: 'healthy', trend: 'up', minDays: 1 },
+        { instanceName: 'staging-worker-01', instanceId: 'i-1a2b3c4d5e6f7g8h9', approxCost: 423.20, activeDays: 5, avgCpu: 32.1, status: 'healthy', trend: 'stable', minDays: 7 },
+        { instanceName: 'dev-db-replica', instanceId: 'i-2a2b3c4d5e6f7g8h9', approxCost: 156.80, activeDays: 3, avgCpu: 28.5, status: 'warning', trend: 'down', minDays: 15 },
+        { instanceName: 'test-cache-node', instanceId: 'i-3a2b3c4d5e6f7g8h9', approxCost: 89.40, activeDays: 2, avgCpu: 18.9, status: 'healthy', trend: 'up', minDays: 30 },
+    ];
 
-    const getDatesInRange = (start, end) => {
-        const dates = [];
-        let current = new Date(start);
-        while (current <= end) {
-            dates.push(new Date(current).toISOString().split('T')[0]);
-            current.setDate(current.getDate() + 1);
-        }
-        return dates.reverse();
-    };
+    const { setBgContext } = useOutletContext();
 
-    const selectedDates = useMemo(() => {
-        let start, end;
-        if (selectedRange === 'custom' && customRange) {
-            start = customRange.start;
-            end = customRange.end;
-        } else {
-            const days = datePresets.find(p => p.id === selectedRange)?.days || 7;
-            end = new Date();
-            start = new Date();
-            start.setDate(end.getDate() - (days - 1));
-        }
-        return getDatesInRange(start, end);
+    useEffect(() => {
+        setBgContext('analytics');
+        return () => setBgContext('default');
+    }, [setBgContext]);
+
+    // Filter instances based on selected range
+    const instanceData = useMemo(() => {
+        const days = selectedRange === 'custom'
+            ? (customRange ? Math.ceil((customRange.end - customRange.start) / (1000 * 60 * 60 * 24)) : 0)
+            : (datePresets.find(p => p.id === selectedRange)?.days || 7);
+        if (selectedRange === '24h') return [];
+        return allInstanceData.filter(c => c.minDays <= days);
     }, [selectedRange, customRange]);
+
+    const summaryStats = useMemo(() => ({
+        totalInstances: instanceData.length,
+        totalCost: instanceData.reduce((s, c) => s + c.approxCost, 0),
+        avgCpu: instanceData.length ? (instanceData.reduce((s, c) => s + c.avgCpu, 0) / instanceData.length).toFixed(1) : 0,
+    }), [instanceData]);
+
+    const handleInstanceClick = (instance) => {
+        navigate(`/analytics/ec2/instance/${instance.instanceId}`, { state: { instance } });
+    };
 
     const handleCustomRange = (range) => {
         setCustomRange(range);
         setSelectedRange('custom');
-    };
-
-    const handleViewGraph = (instance, date) => {
-        setSelectedInstance(instance);
-        setActiveDate(date);
-        setShowGraphModal(true);
     };
 
     const getActiveLabel = () => {
@@ -227,22 +190,18 @@ function EC2Analytics() {
     };
 
     const handleExportAll = () => {
-        const headers = ['Date', 'Instance Name', 'Compute Type', 'Avg CPU (%)', 'Avg Memory (%)', 'Hourly Cost ($)'];
+        const headers = ['Instance Name', 'Instance ID', 'Active Days', 'CPU (%)', 'Total Cost ($)'];
         const csvRows = [headers.join(',')];
 
-        selectedDates.forEach(dateStr => {
-            const dayData = allDailyInstanceData[dateStr] || [];
-            dayData.forEach(item => {
-                const row = [
-                    dateStr,
-                    `"${item.instanceName}"`,
-                    item.computeType,
-                    item.cpu,
-                    item.memory,
-                    item.cost
-                ];
-                csvRows.push(row.join(','));
-            });
+        instanceData.forEach(inst => {
+            const row = [
+                `"${inst.instanceName}"`,
+                `"${inst.instanceId}"`,
+                inst.activeDays,
+                inst.avgCpu,
+                inst.approxCost.toFixed(2)
+            ];
+            csvRows.push(row.join(','));
         });
 
         const csvContent = csvRows.join('\n');
@@ -257,6 +216,13 @@ function EC2Analytics() {
         document.body.removeChild(link);
     };
 
+    const metricCards = [
+        { label: 'Active Instances', value: summaryStats.totalInstances, icon: Server, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', bars: [65, 45, 78, 90, 55] },
+        { label: 'Total active days', value: instanceData.reduce((s, c) => s + c.activeDays, 0), icon: Activity, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', trend: '+12%' },
+        { label: 'Total Cost', value: `$${summaryStats.totalCost.toFixed(0)}`, icon: DollarSign, color: '#10b981', bg: 'rgba(16,185,129,0.1)', progress: 68 },
+        { label: 'Avg CPU', value: `${summaryStats.avgCpu}%`, icon: Cpu, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', circle: summaryStats.avgCpu },
+    ];
+
     return (
         <div className="ec2-analytics-page">
             <div className="ec2-analytics-content">
@@ -269,14 +235,31 @@ function EC2Analytics() {
                         </div>
                         <div>
                             <h1 className="ec2-page-title">EC2 Analytics</h1>
-                            <p className="ec2-page-sub">Instance fleet performance & resource usage</p>
+                            <p className="ec2-page-sub">Instance fleet performance & cost intelligence</p>
                         </div>
                     </div>
 
                     <div className="time-selector-wrap" style={{ gap: '1rem' }}>
-                        <button className="ec2-export-all-btn" onClick={handleExportAll}>
-                            <BarChart3 size={16} />
-                            <span>Export Range Data</span>
+                        <button
+                            className="ec2-export-all-btn"
+                            onClick={handleExportAll}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.625rem',
+                                padding: '0.75rem 1.25rem',
+                                background: 'rgba(139, 92, 246, 0.1)',
+                                border: '1px solid rgba(139, 92, 246, 0.25)',
+                                borderRadius: '1rem',
+                                color: '#8b5cf6',
+                                fontSize: '0.85rem',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
+                        >
+                            <Download size={16} />
+                            <span>Export Comprehensive Insight</span>
                         </button>
 
                         <div className="time-selector">
@@ -300,106 +283,220 @@ function EC2Analytics() {
                     </div>
                 </div>
 
-                {/* ── Daily Breakdown Sections ── */}
-                <div className="daily-sections-list">
-                    {selectedDates.map((dateStr, idx) => {
-                        const dayData = allDailyInstanceData[dateStr] || [];
-                        const dateObj = new Date(dateStr);
-                        const formattedDate = dateObj.toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            month: 'long',
-                            day: 'numeric'
-                        });
-
+                {/* ── Metric Cards ── */}
+                <div className="metric-cards-row">
+                    {metricCards.map((card, i) => {
+                        const Icon = card.icon;
                         return (
-                            <div key={dateStr} className="daily-section-card" style={{ animationDelay: `${idx * 0.1}s` }}>
-                                <div className="daily-section-header">
-                                    <div className="date-badge">
-                                        <Calendar size={16} />
-                                        <span>{formattedDate}</span>
+                            <div key={i} className="metric-card-new" style={{ '--mc': card.color, '--mc-bg': card.bg, animationDelay: `${i * 0.1}s` }}>
+                                <div className="mc-top-accent" />
+                                <div className="mc-icon"><Icon size={24} /></div>
+                                <div className="mc-value">{card.value}</div>
+                                <div className="mc-label">{card.label}</div>
+                                {card.bars && (
+                                    <div className="mc-mini-bars">
+                                        {card.bars.map((h, j) => (
+                                            <div key={j} className="mc-bar" style={{ height: `${h}%` }} />
+                                        ))}
                                     </div>
-                                    <div className="clusters-count">
-                                        <Activity size={14} />
-                                        <span>{dayData.length} Instances Active</span>
+                                )}
+                                {card.trend && (
+                                    <div className="mc-trend">
+                                        <TrendingUp size={14} />
+                                        {card.trend}
                                     </div>
-                                </div>
-
-                                {dayData.length > 0 ? (
-                                    <ComparisonTable
-                                        title={`Instance Performance — ${dateStr}`}
-                                        subtitle="Resource utilization and hourly cost"
-                                        data={dayData}
-                                        exportFilename={`ec2-instances-${dateStr}.csv`}
-                                        gridTemplateColumns="52px 1.5fr 120px 100px 100px 100px 120px"
-                                        columns={[
-                                            {
-                                                key: 'instanceName',
-                                                label: 'Instance Name',
-                                                type: 'status-name',
-                                                sortable: true
-                                            },
-                                            {
-                                                key: 'computeType',
-                                                label: 'Compute Type',
-                                                sortable: true,
-                                                render: (val) => <span style={{ fontWeight: 700, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{val}</span>
-                                            },
-                                            {
-                                                key: 'cpu',
-                                                label: 'Avg CPU',
-                                                icon: Cpu,
-                                                type: 'cpu',
-                                                sortable: true,
-                                                align: 'right',
-                                                noThreshold: true
-                                            },
-                                            {
-                                                key: 'memory',
-                                                label: 'Avg Memory',
-                                                icon: MemoryStick,
-                                                type: 'memory',
-                                                sortable: true,
-                                                align: 'right',
-                                                noThreshold: true
-                                            },
-                                            {
-                                                key: 'cost',
-                                                label: 'Approx Cost',
-                                                icon: DollarSign,
-                                                type: 'cost',
-                                                sortable: true,
-                                                align: 'right'
-                                            },
-                                            {
-                                                key: 'actions',
-                                                label: 'View Trend',
-                                                align: 'center',
-                                                render: (_, item) => (
-                                                    <button
-                                                        className="sd-graph-btn"
-                                                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '8px', gap: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(59, 130, 246, 0.3)', background: 'rgba(59, 130, 246, 0.08)', color: '#3b82f6', cursor: 'pointer' }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleViewGraph(item, dateStr);
-                                                        }}
-                                                    >
-                                                        <BarChart3 size={14} />
-                                                        <span style={{ fontWeight: 700 }}>Trend</span>
-                                                    </button>
-                                                )
-                                            }
-                                        ]}
-                                    />
-                                ) : (
-                                    <div className="no-data-day">
-                                        <SearchX size={32} />
-                                        <p>No instance activity recorded for this date.</p>
+                                )}
+                                {card.progress !== undefined && (
+                                    <div className="mc-progress-track">
+                                        <div className="mc-progress-fill" style={{ width: `${card.progress}%` }} />
                                     </div>
+                                )}
+                                {card.circle !== undefined && (
+                                    <svg className="mc-circle-svg" viewBox="0 0 36 36">
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                            fill="none" stroke="rgba(245,158,11,0.15)" strokeWidth="3" />
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                            fill="none" stroke="#f59e0b" strokeWidth="3"
+                                            strokeDasharray={`${card.circle}, 100`}
+                                            strokeLinecap="round" />
+                                    </svg>
                                 )}
                             </div>
                         );
                     })}
                 </div>
+
+                {/* ── Instances Panel ── */}
+                <div className="ec2-instances-panel">
+                    <div className="panel-header-new">
+                        <div className="panel-title-group">
+                            <Zap size={20} className="panel-title-icon" />
+                            <h2>Active Instances</h2>
+                            <span className="panel-period-badge">{getActiveLabel()}</span>
+                        </div>
+                        <div className="panel-subtitle">Click an instance to view detailed metrics</div>
+                    </div>
+
+                    <div className="instances-grid">
+                        {instanceData.length === 0 ? (
+                            <div className="instances-empty-state">
+                                <div className="empty-icon-wrap">
+                                    <SearchX size={48} className="empty-icon" />
+                                    <div className="empty-icon-ring" />
+                                </div>
+                                <h3 className="empty-title">No instances found</h3>
+                                <p className="empty-desc">
+                                    No EC2 instances were active during the selected time range.<br />
+                                    Try expanding the date range or selecting a different period.
+                                </p>
+                                <button
+                                    className="empty-reset-btn"
+                                    onClick={() => { setSelectedRange('7d'); setCustomRange(null); }}
+                                >
+                                    <RefreshCw size={15} />
+                                    Reset to Last 7 Days
+                                </button>
+                            </div>
+                        ) : (
+                            instanceData.map((instance, index) => (
+                                <div
+                                    key={instance.instanceId}
+                                    className={`instance-card ${instance.status}`}
+                                    onClick={() => handleInstanceClick(instance)}
+                                    style={{ animationDelay: `${0.3 + index * 0.1}s`, cursor: 'pointer' }}
+                                >
+                                    <div className={`instance-status-glow ${instance.status}`} />
+
+                                    <div className="instance-card-top">
+                                        <div className="instance-name-info">
+                                            <div className="instance-status-row">
+                                                <div className={`instance-status-dot ${instance.status}`} />
+                                                <span
+                                                    className="instance-name-text"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleInstanceClick(instance);
+                                                    }}
+                                                >
+                                                    {instance.instanceName}
+                                                </span>
+                                            </div>
+                                            <div className="instance-id-text">{instance.instanceId}</div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <button
+                                                className="instance-graph-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleInstanceClick(instance);
+                                                }}
+                                                title="View 30-Day Trend"
+                                            >
+                                                <BarChart3 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="instance-stats-row">
+                                        <div className="instance-stat-item">
+                                            <div className="isi-icon"><Clock size={14} /></div>
+                                            <div className="isi-value">{instance.activeDays}d</div>
+                                            <div className="isi-label">Active</div>
+                                        </div>
+                                        <div className="instance-stat-divider" />
+                                        <div
+                                            className="instance-stat-item clickable-calendar"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                // Calculate dates for the display
+                                                const dates = [];
+                                                for (let i = 0; i < instance.activeDays; i++) {
+                                                    const d = new Date();
+                                                    d.setDate(d.getDate() - i);
+                                                    dates.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+                                                }
+                                                setSelectedDaysInfo({
+                                                    name: instance.instanceName,
+                                                    id: instance.instanceId,
+                                                    days: instance.activeDays,
+                                                    dates: dates
+                                                });
+                                            }}
+                                        >
+                                            <div className="isi-icon"><Calendar size={14} /></div>
+                                            <div className="isi-value">View</div>
+                                            <div className="isi-label">Days Active</div>
+                                        </div>
+                                        <div className="instance-stat-divider" />
+                                        <div className="instance-stat-item">
+                                            <div className="isi-icon"><DollarSign size={14} /></div>
+                                            <div className="isi-value">${instance.approxCost.toFixed(0)}</div>
+                                            <div className="isi-label">Instance Cost</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="instance-resource-bars">
+                                        <div className="resource-bar-item">
+                                            <div className="rb-header">
+                                                <span className="rb-label"><Cpu size={12} /> CPU Bar</span>
+                                                <span className="rb-value">{instance.avgCpu}%</span>
+                                            </div>
+                                            <div className="rb-track">
+                                                <div className="rb-fill cpu-fill" style={{ width: `${instance.avgCpu}%` }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                {/* ── Table ── */}
+                {instanceData.length > 0 && (
+                    <ComparisonTable
+                        title="Instance Comparison"
+                        subtitle="Click any column header to sort"
+                        data={instanceData.map(c => ({
+                            ...c,
+                            id: c.instanceId
+                        }))}
+                        exportFilename="instance-comparison.csv"
+                        gridTemplateColumns="52px 2fr 1fr 1fr 1.2fr"
+                        columns={[
+                            {
+                                key: 'instanceName',
+                                label: 'Instance',
+                                type: 'status-name',
+                                sortable: true
+                            },
+                            {
+                                key: 'avgCpu',
+                                label: 'CPU Usage',
+                                icon: Cpu,
+                                type: 'cpu',
+                                sortable: true,
+                                align: 'center'
+                            },
+                            {
+                                key: 'approxCost',
+                                label: 'Cost',
+                                icon: DollarSign,
+                                type: 'cost',
+                                sortable: true,
+                                align: 'center'
+                            },
+                            {
+                                key: 'activeDays',
+                                label: 'Days Active',
+                                icon: Clock,
+                                sortable: true,
+                                align: 'center',
+                                render: (val) => <span className="cmp-active-days-pill">{val}d</span>
+                            }
+                        ]}
+                    />
+                )}
             </div>
 
             {showCalendar && (
@@ -409,12 +506,28 @@ function EC2Analytics() {
                 />
             )}
 
-            {showGraphModal && selectedInstance && (
-                <EC2GraphModal
-                    instance={selectedInstance}
-                    selectedDate={activeDate}
-                    onClose={() => { setShowGraphModal(false); setSelectedInstance(null); }}
-                />
+            {selectedDaysInfo && (
+                <div className="days-info-overlay" onClick={() => setSelectedDaysInfo(null)}>
+                    <div className="days-info-modal" onClick={e => e.stopPropagation()}>
+                        <div className="dim-header">
+                            <Calendar size={24} className="dim-icon" />
+                            <div>
+                                <div className="dim-title">Active Timeline</div>
+                                <div className="dim-subtitle">{selectedDaysInfo.name}</div>
+                            </div>
+                        </div>
+                        <div className="dim-content">
+                            <div className="dim-value">{selectedDaysInfo.days}</div>
+                            <div className="dim-label">Days Active</div>
+                            <div className="dim-dates-list">
+                                {selectedDaysInfo.dates.map((date, idx) => (
+                                    <div key={idx} className="dim-date-chip">{date}</div>
+                                ))}
+                            </div>
+                        </div>
+                        <button className="dim-close-btn" onClick={() => setSelectedDaysInfo(null)}>Got it</button>
+                    </div>
+                </div>
             )}
         </div>
     );

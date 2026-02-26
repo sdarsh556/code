@@ -13,6 +13,7 @@ import EKS from './components/eks/EKS';
 import RDS from './components/rds/RDS';
 import Analytics from './components/analytics/Analytics';
 import EC2Analytics from './components/analytics/ec2/EC2Analytics';
+import EC2GraphModal from './components/analytics/ec2/EC2GraphModal';
 import ECSAnalytics from './components/analytics/ecs/ECSAnalytics';
 import ClusterDetails from './components/analytics/ecs/ClusterDetails';
 import ServiceDetails from './components/analytics/ecs/ServiceDetails';
@@ -52,6 +53,7 @@ function App() {
             {/* ANALYTICS */}
             <Route path="analytics" element={<Analytics />} />
             <Route path="analytics/ec2" element={<EC2Analytics />} />
+            <Route path="analytics/ec2/instance/:instanceId" element={<EC2GraphModal />} />
             <Route path="analytics/ecs" element={<ECSAnalytics />} />
             <Route path="analytics/ecs/cluster/:clusterName" element={<ClusterDetails />} />
             <Route path="analytics/ecs/cluster/:clusterName/services" element={<ServiceDetails />} />

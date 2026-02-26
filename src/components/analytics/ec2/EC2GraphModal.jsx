@@ -1,8 +1,23 @@
-import { useState, useMemo } from 'react';
-import { X, TrendingUp, Activity, Cpu, Calendar, MemoryStick } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
+import { X, TrendingUp, Activity, Cpu, Calendar, MemoryStick, ArrowLeft } from 'lucide-react';
 import '../../../css/analytics/ecs/CPUGraphModal.css'; // Reusing the same beautiful styles
 
-function EC2GraphModal({ instance, selectedDate, onClose }) {
+function EC2GraphModal() {
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { setBgContext } = useOutletContext();
+    const instance = location.state?.instance || { instanceName: 'Unknown Instance', cpu: 0, memory: 0 };
+
+    useEffect(() => {
+        if (setBgContext) {
+            setBgContext('analytics');
+            return () => setBgContext('default');
+        }
+    }, [setBgContext]);
+
+    const onClose = () => navigate(-1);
+
     const [tooltip, setTooltip] = useState(null);
     const [hoveredIdx, setHoveredIdx] = useState(null);
     const [activeMetric, setActiveMetric] = useState('cpu'); // 'cpu' | 'memory'
@@ -10,7 +25,7 @@ function EC2GraphModal({ instance, selectedDate, onClose }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const selectedDateObj = selectedDate ? new Date(selectedDate) : null;
+    const selectedDateObj = location.state?.selectedDate ? new Date(location.state.selectedDate) : null;
     if (selectedDateObj) selectedDateObj.setHours(0, 0, 0, 0);
 
     // Generate 30-day data for both CPU and Memory (stable with useMemo)
@@ -61,8 +76,8 @@ function EC2GraphModal({ instance, selectedDate, onClose }) {
     const metricColorLight = activeMetric === 'cpu' ? 'rgba(59,130,246,0.3)' : 'rgba(236,72,153,0.3)';
 
     return (
-        <div className="graph-modal-overlay" onClick={onClose}>
-            <div className="graph-modal" onClick={e => e.stopPropagation()} style={{ '--accent-primary': '#3b82f6' }}>
+        <div className="ec2-analytics-page" style={{ padding: '2rem' }}>
+            <div className="graph-modal" style={{ position: 'relative', width: '100%', maxWidth: '1200px', margin: '0 auto', '--accent-primary': '#3b82f6' }}>
 
                 {/* Header */}
                 <div className="gm-header">
@@ -95,8 +110,8 @@ function EC2GraphModal({ instance, selectedDate, onClose }) {
                                 Memory
                             </button>
                         </div>
-                        <button className="gm-close-btn" onClick={onClose}>
-                            <X size={20} />
+                        <button className="gm-close-btn" onClick={onClose} title="Go Back">
+                            <ArrowLeft size={20} />
                         </button>
                     </div>
                 </div>
