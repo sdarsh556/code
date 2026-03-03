@@ -1,0 +1,111 @@
+/* =========================================
+   WRAPPER
+   ========================================= */
+
+.resizable-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* =========================================
+   TABLE BASE
+   ========================================= */
+
+.resizable-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+/* =========================================
+   HEADER
+   ========================================= */
+
+.resizable-table th {
+    padding: 1.5rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+    background: var(--surface-elevated);
+    border-bottom: 2px solid var(--border-light);
+    position: relative;
+    white-space: nowrap;
+    user-select: none;
+}
+
+/* Header content wrapper */
+.th-content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* =========================================
+   RESIZE HANDLE
+   ========================================= */
+
+.resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 2;
+}
+
+/* Visible divider */
+.resize-handle::after {
+    content: "";
+    position: absolute;
+    right: 3px;
+    top: 20%;
+    height: 60%;
+    width: 2px;
+    background: rgba(148, 163, 184, 0.4);
+    transition: background 0.2s ease;
+}
+
+/* Highlight on hover */
+.resize-handle:hover::after {
+    background: #2563eb;
+}
+
+/* =========================================
+   BODY CELLS
+   ========================================= */
+
+.resizable-table td {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resizable-table tbody tr:hover {
+    background: var(--surface-glass-hover);
+}
+
+/* =========================================
+   DARK MODE
+   ========================================= */
+
+.layout-container[data-theme="dark"] .resizable-table th {
+    background: rgba(51, 65, 85, 0.6);
+    border-bottom: 2px solid rgba(148, 163, 184, 0.2);
+}
+
+.layout-container[data-theme="dark"] .resizable-table td {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.layout-container[data-theme="dark"] .resize-handle::after {
+    background: rgba(148, 163, 184, 0.3);
+}
