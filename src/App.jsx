@@ -11,6 +11,7 @@ import ECSASG from './components/ecs/ECSASG';
 import EKS from './components/eks/EKS';
 // import EBS from './components/ebs/EBS';
 import RDS from './components/rds/RDS';
+import RDSUpdates from './components/rds/RDSUpdates';
 import Analytics from './components/analytics/Analytics';
 import EC2Analytics from './components/analytics/ec2/EC2Analytics';
 import EC2GraphModal from './components/analytics/ec2/EC2GraphModal';
@@ -47,6 +48,7 @@ function App() {
             <Route path="ecs/asg/:clusterName" element={<ECSASG />} />
             <Route path="eks" element={<EKS />} />
             <Route path="rds" element={<RDS />} />
+            <Route path="rds/updates" element={<RDSUpdates />} />
             {/* <Route path="rds/never-start" element={<NeverStartPage />} /> */}
             {/* <Route path="rds/24x7" element={<TwentyFourSevenPage />} /> */}
 

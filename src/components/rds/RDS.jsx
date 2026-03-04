@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Database, Server, HardDrive, Play, Square, RotateCw, RefreshCw, Upload, DownloadCloud,
     Search, Plus, Minus, Settings, Shield, Clock, Sun, Moon, Pencil, FileUp, Activity, X
@@ -6,6 +7,8 @@ import {
 import '../../css/rds/rds.css';
 // import axiosClient from '../api/axiosClient'; // Uncomment when ready
 import ScheduleModal from '../common/ScheduleModal'; // Assuming ScheduleModal exists
+import RDSBulkActionModal from './RDSBulkActionModal';
+import ConfirmActionModal from '../common/ConfirmActionModal';
 
 const mockData = [
     {
@@ -22,7 +25,11 @@ const mockData = [
         memory: 8,
         is_24_7: true,
         never_start: false,
-        daily_exception: false
+        daily_exception: false,
+        schedule: {
+            from_date: '2026-03-01',
+            to_date: '2026-03-10'
+        }
     },
     {
         id: 'aurora-1',
@@ -36,6 +43,10 @@ const mockData = [
         is_24_7: false,
         never_start: false,
         daily_exception: false,
+        schedule: {
+            from_date: '2026-03-04',
+            to_date: '2026-03-04'
+        },
         writer_instance: 'prod-aurora-instance-1',
         instances: [
             {
@@ -73,6 +84,21 @@ const mockData = [
         is_24_7: false,
         never_start: true,
         daily_exception: false
+    },
+    {
+        id: 'rds-3',
+        db_identifier: 'staging-aurora-cluster',
+        is_aurora: true,
+        engine: 'aurora-mysql',
+        engine_version: '8.0.23',
+        storage_allocated: null,
+        storage_used: 150,
+        status: 'available',
+        vcpu: 2,
+        memory: 8,
+        is_24_7: false,
+        never_start: false,
+        daily_exception: true
     }
 ];
 
@@ -94,24 +120,99 @@ const getStatusColor = (status) => {
 };
 
 // Helper to format status label based on resource type
-const formatStatus = (status, isAurora) => {
+const formatStatus = (status) => {
     const s = status?.toLowerCase();
     if (s === 'available' || s === 'running') {
-        return isAurora ? 'Available' : 'Running';
+        return 'Available';
     }
     if (s === 'stopped') return 'Stopped';
     return status;
 };
 
+const getScheduleStatus = (db) => {
+    if (!db.schedule?.from_date || !db.schedule?.to_date) return null;
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const from = new Date(db.schedule.from_date);
+    const to = new Date(db.schedule.to_date);
+
+    if (today >= from && today <= to) {
+        const diffTime = to - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Include today
+        return {
+            isActive: true,
+            days: diffDays,
+            isUrgent: diffDays === 1,
+            label: `${diffDays} ${diffDays === 1 ? 'Day' : 'Days'}`
+        };
+    }
+    return null;
+};
+
 export default function RDS() {
+    const navigate = useNavigate();
     const [databases, setDatabases] = useState(mockData);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState('all'); // 'all', 'rds', 'aurora'
+    const [activeStatFilter, setActiveStatFilter] = useState(null); // 'available', 'stopped', '247', 'never', 'exception'
     const [selectedRows, setSelectedRows] = useState([]);
     const [expandedClusters, setExpandedClusters] = useState({});
 
+    // --- Resizable Table Logic ---
+    const initialWidths = {
+        checkbox: 40,
+        identifier: 280,
+        role: 120,
+        engine: 150,
+        class: 150,
+        storage: 200,
+        status: 130,
+        actions: 140,
+        policies: 180,
+        schedule: 120,
+        edit: 60
+    };
+
+    const [columnWidths, setColumnWidths] = useState(initialWidths);
+    const resizingColumn = useRef(null);
+    const fileInputRef = useRef(null);
+    const startX = useRef(0);
+    const startWidth = useRef(0);
+
+    const handleResizeMouseDown = (e, column) => {
+        e.preventDefault();
+        resizingColumn.current = column;
+        startX.current = e.pageX;
+        startWidth.current = columnWidths[column];
+
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        const onMouseMove = (moveEvent) => {
+            if (!resizingColumn.current) return;
+            const diff = moveEvent.pageX - startX.current;
+            const newWidth = Math.max(initialWidths[resizingColumn.current], startWidth.current + diff);
+            setColumnWidths(prev => ({
+                ...prev,
+                [resizingColumn.current]: newWidth
+            }));
+        };
+
+        const onMouseUp = () => {
+            resizingColumn.current = null;
+            document.body.style.cursor = 'default';
+            document.body.style.userSelect = 'auto';
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+    };
+
     // Upload state
-    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [uploadedFile, setUploadedFile] = useState(null);
 
     // Edit Modal state
     const [editModal, setEditModal] = useState({ open: false, db: null });
@@ -119,6 +220,151 @@ export default function RDS() {
     // Schedule Modal state
     const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
     const [scheduleTarget, setScheduleTarget] = useState(null);
+
+    // Bulk Action Modal state
+    const [bulkModalOpen, setBulkModalOpen] = useState(false);
+    const [bulkAction, setBulkAction] = useState(null); // 'START' or 'STOP'
+
+    // Sync state
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
+
+    const closeConfirmModal = () => setConfirmModal({ open: false, message: '', onConfirm: null });
+
+    const handleSync = async () => {
+        try {
+            setIsSyncing(true);
+            console.log("RDS Sync started...");
+            // Add actual API call here later
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Mock delay
+            console.log("RDS Sync completed.");
+        } catch (error) {
+            console.error("RDS Sync failed:", error);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const handleSyncWithConfirm = () => {
+        setConfirmModal({
+            open: true,
+            message: 'Syncing clusters may take a few minutes and refresh all database data. Are you sure you want to proceed?',
+            onConfirm: async () => {
+                closeConfirmModal();
+                await handleSync();
+            }
+        });
+    };
+
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        setConfirmModal({
+            open: true,
+            message: `Are you sure you want to upload "${file.name}"?`,
+            onConfirm: async () => {
+                closeConfirmModal();
+                await executeFileUpload(file);
+                // Reset input
+                event.target.value = '';
+            }
+        });
+    };
+
+    const executeFileUpload = async (file) => {
+        try {
+            console.log(`📤 Uploading file: ${file.name}...`);
+            setUploadedFile(file);
+            // Add actual API call here
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.log("✅ File uploaded successfully.");
+        } catch (error) {
+            console.error("❌ File upload failed:", error);
+        }
+    };
+
+    const handleBulkConfirm = (action, mode) => {
+        const actionLower = action.toLowerCase();
+        const message = `This will ${actionLower} ${mode === 'ALL' ? 'all the' : 'selected'} databases.`;
+
+        setConfirmModal({
+            open: true,
+            message: message,
+            onConfirm: async () => {
+                closeConfirmModal();
+                await executeBulkAction(action, mode);
+            }
+        });
+    };
+
+    const handleRowActionWithConfirm = (db, action) => {
+        const actionLower = action.toLowerCase();
+        setConfirmModal({
+            open: true,
+            message: `Are you sure you want to ${actionLower} database "${db.db_identifier}"?`,
+            onConfirm: async () => {
+                closeConfirmModal();
+                console.log(`Executing ${action} on ${db.db_identifier}`);
+                // Mock status change
+                setDatabases(prev => prev.map(item => {
+                    if (item.id === db.id) {
+                        let newStatus = item.status;
+                        if (action === 'START') newStatus = 'available';
+                        if (action === 'STOP') newStatus = 'stopped';
+                        return { ...item, status: newStatus };
+                    }
+                    return item;
+                }));
+            }
+        });
+    };
+
+    const handlePolicyWithConfirm = (db, field, label) => {
+        const isActive = db[field];
+        const message = isActive
+            ? `Are you sure you want to remove ${label} from "${db.db_identifier}"?`
+            : `Are you sure you want to mark "${db.db_identifier}" as ${label}?`;
+
+        setConfirmModal({
+            open: true,
+            message: message,
+            onConfirm: async () => {
+                closeConfirmModal();
+                setDatabases(prev => prev.map(item => {
+                    if (item.id === db.id) {
+                        if (isActive) {
+                            return { ...item, [field]: false };
+                        } else {
+                            // Turn on this policy, turn off others
+                            return {
+                                ...item,
+                                is_24_7: field === 'is_24_7',
+                                never_start: field === 'never_start',
+                                daily_exception: field === 'daily_exception'
+                            };
+                        }
+                    }
+                    return item;
+                }));
+            }
+        });
+    };
+
+    const executeBulkAction = async (action, mode) => {
+        try {
+            console.log(`🚀 Executing Bulk ${action} for ${mode} databases...`);
+            // Add actual API call here
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Mock delay
+            console.log(`✅ Bulk ${action} completed.`);
+        } catch (error) {
+            console.error(`❌ Bulk ${action} failed:`, error);
+        }
+    };
 
     const handleScheduleConfirm = async (range) => {
         console.log('Confirmed schedule for:', scheduleTarget, range);
@@ -144,23 +390,31 @@ export default function RDS() {
         let stoppedCount = 0;
         let is247Count = 0;
         let neverStartCount = 0;
+        let exceptionCount = 0;
 
-        databases.forEach(db => {
+        const countDb = (db) => {
             if (db.is_aurora) {
                 auroraCount++;
                 auroraUsed += (db.storage_used || 0);
-                auroraAllocated += (db.storage_allocated || 2000); // Default to 2000 if null for mock
+                auroraAllocated += (db.storage_allocated || 2000);
             } else {
                 rdsCount++;
                 rdsAllocated += (db.storage_allocated || 0);
                 rdsUsed += (db.storage_used || 0);
             }
 
-            if (['available', 'running'].includes(db.status.toLowerCase())) runningCount++;
-            if (['stopped'].includes(db.status.toLowerCase())) stoppedCount++;
+            if (db.status.toLowerCase() === 'available') runningCount++;
+            if (db.status.toLowerCase() === 'stopped') stoppedCount++;
 
             if (db.is_24_7) is247Count++;
             if (db.never_start) neverStartCount++;
+            if (db.daily_exception) exceptionCount++;
+        };
+
+        databases.forEach(db => {
+            countDb(db);
+            // If it's a cluster, we don't necessarily count its instances for high-level policy stats
+            // but the user logic usually acts on the DB identifier shown in the main rows.
         });
 
         return {
@@ -168,20 +422,39 @@ export default function RDS() {
             rdsCount, auroraCount,
             rdsAllocated, rdsUsed, auroraUsed, auroraAllocated,
             runningCount, stoppedCount,
-            customSchedules: 2, // Mocked
-            is247Count, neverStartCount
+            is247Count, neverStartCount, exceptionCount
         };
     }, [databases]);
 
     // Filtering
     const filteredDatabases = useMemo(() => {
         return databases.filter(db => {
+            // Type Filter (RDS/Aurora)
             if (filterType === 'rds' && db.is_aurora) return false;
             if (filterType === 'aurora' && !db.is_aurora) return false;
+
+            // Search Filter
             if (searchQuery && !db.db_identifier.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+
+            // Stat Card Filter
+            if (activeStatFilter) {
+                switch (activeStatFilter) {
+                    case 'available': if (db.status.toLowerCase() !== 'available') return false; break;
+                    case 'stopped': if (db.status.toLowerCase() !== 'stopped') return false; break;
+                    case '247': if (!db.is_24_7) return false; break;
+                    case 'never': if (!db.never_start) return false; break;
+                    case 'exception': if (!db.daily_exception) return false; break;
+                    default: break;
+                }
+            }
+
             return true;
         });
-    }, [databases, filterType, searchQuery]);
+    }, [databases, filterType, searchQuery, activeStatFilter]);
+
+    const toggleStatFilter = (filter) => {
+        setActiveStatFilter(prev => prev === filter ? null : filter);
+    };
 
     const toggleCluster = (id) => {
         setExpandedClusters(prev => ({
@@ -206,7 +479,7 @@ export default function RDS() {
 
     const FilterButton = ({ type, label, active }) => (
         <button
-            className={`filter-toggle-btn ${active ? 'active' : ''}`}
+            className={`rds-filter-toggle-btn ${active ? 'active' : ''}`}
             onClick={() => {
                 if (filterType === type) setFilterType('all');
                 else setFilterType(type);
@@ -242,12 +515,14 @@ export default function RDS() {
                     </div>
 
                     <button
-                        className="btn-delta-updates sync-btn-rds"
+                        className={`btn-delta-updates sync-btn-rds ${isSyncing ? 'syncing' : ''}`}
+                        onClick={handleSyncWithConfirm}
+                        disabled={isSyncing}
                     >
                         <div className="icon-wrapper">
-                            <RefreshCw size={20} />
+                            <RefreshCw size={20} className={isSyncing ? 'spinning' : ''} />
                         </div>
-                        <span>Sync Clusters</span>
+                        <span>{isSyncing ? 'Syncing...' : 'Sync Clusters'}</span>
                     </button>
                 </div>
             </div>
@@ -288,15 +563,21 @@ export default function RDS() {
                     <div className="stat-subtext-ec2 mt-auto">Active Clusters: {stats.auroraCount}</div>
                 </div>
 
-                <div className="stat-card glass-card ec2-card">
+                <div
+                    className={`stat-card glass-card ec2-card clickable-stat ${activeStatFilter === 'available' ? 'active-filter-green' : ''}`}
+                    onClick={() => toggleStatFilter('available')}
+                >
                     <div className="stat-header-ec2">
-                        <span className="stat-title-ec2">Running</span>
+                        <span className="stat-title-ec2">Available</span>
                         <Activity size={24} className="stat-icon-ec2 green" />
                     </div>
                     <div className="stat-value-ec2 green-text">{stats.runningCount}</div>
                 </div>
 
-                <div className="stat-card glass-card ec2-card">
+                <div
+                    className={`stat-card glass-card ec2-card clickable-stat ${activeStatFilter === 'stopped' ? 'active-filter-red' : ''}`}
+                    onClick={() => toggleStatFilter('stopped')}
+                >
                     <div className="stat-header-ec2">
                         <span className="stat-title-ec2">Stopped</span>
                         <Activity size={24} className="stat-icon-ec2 red" />
@@ -307,7 +588,10 @@ export default function RDS() {
 
             {/* EC2 Style Stats & Actions Grid - Row 2 */}
             <div className="rds-stats-grid ec2-style">
-                <div className="stat-card glass-card ec2-card">
+                <div
+                    className={`stat-card glass-card ec2-card clickable-stat ${activeStatFilter === '247' ? 'active-filter-blue' : ''}`}
+                    onClick={() => toggleStatFilter('247')}
+                >
                     <div className="stat-header-ec2">
                         <span className="stat-title-ec2">24/7 Protected</span>
                         <Shield size={24} className="stat-icon-ec2 blue" />
@@ -315,7 +599,10 @@ export default function RDS() {
                     <div className="stat-value-ec2 blue-text">{stats.is247Count}</div>
                 </div>
 
-                <div className="stat-card glass-card ec2-card">
+                <div
+                    className={`stat-card glass-card ec2-card clickable-stat ${activeStatFilter === 'never' ? 'active-filter-orange' : ''}`}
+                    onClick={() => toggleStatFilter('never')}
+                >
                     <div className="stat-header-ec2">
                         <span className="stat-title-ec2">Never-Start</span>
                         <X size={24} className="stat-icon-ec2 orange" />
@@ -323,46 +610,78 @@ export default function RDS() {
                     <div className="stat-value-ec2 orange-text">{stats.neverStartCount}</div>
                 </div>
 
-                <div className="stat-card glass-card ec2-card">
+                <div
+                    className={`stat-card glass-card ec2-card clickable-stat ${activeStatFilter === 'exception' ? 'active-filter-yellow' : ''}`}
+                    onClick={() => toggleStatFilter('exception')}
+                >
                     <div className="stat-header-ec2">
                         <span className="stat-title-ec2">Daily Exceptions</span>
                         <FileUp size={24} className="stat-icon-ec2 yellow" />
                     </div>
-                    <div className="stat-value-ec2 yellow-text">{stats.customSchedules}</div>
+                    <div className="stat-value-ec2 yellow-text">{stats.exceptionCount}</div>
                 </div>
 
                 {/* Stack 1: Start/Stop */}
                 <div className="button-stack-card">
-                    <button className="btn-stack start-btn">
-                        <Play size={16} /> Start Selected
+                    <button
+                        className="btn-stack btn-delta-updates start-btn"
+                        onClick={() => { setBulkAction('START'); setBulkModalOpen(true); }}
+                    >
+                        <div className="icon-wrapper">
+                            <Play size={16} />
+                        </div>
+                        <span>Start</span>
                     </button>
-                    <button className="btn-stack stop-btn">
-                        <Square size={16} /> Stop Selected
+                    <button
+                        className="btn-stack btn-delta-updates stop-btn"
+                        onClick={() => { setBulkAction('STOP'); setBulkModalOpen(true); }}
+                    >
+                        <div className="icon-wrapper">
+                            <Square size={16} />
+                        </div>
+                        <span>Stop</span>
                     </button>
                 </div>
 
                 {/* Stack 2: Updates/Upload */}
                 <div className="button-stack-card">
-                    <button className="btn-stack update-btn">
-                        <Activity size={16} /> Updates
+                    <button
+                        className="btn-stack btn-delta-updates update-btn"
+                        onClick={() => navigate('/rds/updates')}
+                    >
+                        <div className="icon-wrapper">
+                            <Activity size={16} />
+                        </div>
+                        <span>Updates</span>
                     </button>
-                    <button className="btn-stack upload-btn" onClick={() => setShowUploadModal(true)}>
-                        <FileUp size={16} /> Upload Exceptions
+                    <button className="btn-stack btn-delta-updates upload-btn" onClick={handleUploadClick}>
+                        <div className="icon-wrapper">
+                            <FileUp size={16} />
+                        </div>
+                        <span>Upload Exceptions</span>
                     </button>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        onChange={handleFileChange}
+                        accept=".csv,.xlsx,.json"
+                    />
                 </div>
             </div>
 
             {/* Filter and Search */}
-            <div className="table-controls glass-panel">
-                <div className="toggle-filters">
+            <div className="rds-controls-container glass-panel">
+                <div className="rds-filter-group">
                     <FilterButton type="rds" label="RDS Instances" active={filterType === 'rds'} />
                     <FilterButton type="aurora" label="Aurora Clusters" active={filterType === 'aurora'} />
                 </div>
-                <div className="search-bar-modern">
-                    <Search size={18} />
+                <div className="rds-search-bar-new">
+                    <Search className="rds-search-icon" size={18} />
                     <input
                         type="text"
                         placeholder="Search databases..."
+                        className="rds-search-input-new"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -371,33 +690,81 @@ export default function RDS() {
 
             {/* Main Data Table */}
             <div className="rds-table-container glass-panel">
-                <table className="rds-table-glass">
+                <table className="rds-table-glass" style={{ tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
                     <thead>
                         <tr>
-                            <th className="checkbox-col">
+                            <th className="checkbox-col" style={{ width: columnWidths.checkbox }}>
                                 <input
                                     type="checkbox"
                                     checked={selectedRows.length === filteredDatabases.length && filteredDatabases.length > 0}
                                     onChange={handleSelectAll}
                                 />
                             </th>
-                            <th>Identifier</th>
-                            <th>Role</th>
-                            <th>Engine</th>
-                            <th>Class</th>
-                            <th className="storage-header-cell">
-                                <div className="storage-header-main">Storage</div>
-                                <div className="storage-header-labels-box">
-                                    <span className="label-item">Used</span>
-                                    <span className="label-sep"></span>
-                                    <span className="label-item">Alloc</span>
+                            <th style={{ width: columnWidths.identifier }}>
+                                <div className="resizer-wrapper">
+                                    Identifier
+                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'identifier')}></div>
                                 </div>
                             </th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                            <th>Scheduling Policies</th>
-                            <th>Schedule</th>
-                            <th>Edit</th>
+                            <th style={{ width: columnWidths.role }}>
+                                <div className="resizer-wrapper">
+                                    Role
+                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'role')}></div>
+                                </div>
+                            </th>
+                            <th style={{ width: columnWidths.engine }}>
+                                <div className="resizer-wrapper">
+                                    Engine
+                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'engine')}></div>
+                                </div>
+                            </th>
+                            <th style={{ width: columnWidths.class }}>
+                                <div className="resizer-wrapper">
+                                    Class
+                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'class')}></div>
+                                </div>
+                            </th>
+                            <th style={{ width: columnWidths.storage }} className="storage-header-cell">
+                                <div className="resizer-wrapper">
+                                    <div className="storage-header-main">Storage</div>
+                                    <div className="storage-header-labels-box">
+                                        <span className="label-item">Used</span>
+                                        <span className="label-sep"></span>
+                                        <span className="label-item">Alloc</span>
+                                    </div>
+                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'storage')}></div>
+                                </div>
+                            </th>
+                            <th style={{ width: columnWidths.status }}>
+                                <div className="resizer-wrapper">
+                                    Status
+                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'status')}></div>
+                                </div>
+                            </th>
+                            <th style={{ width: columnWidths.actions }}>
+                                <div className="resizer-wrapper">
+                                    Actions
+                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'actions')}></div>
+                                </div>
+                            </th>
+                            <th style={{ width: columnWidths.policies }}>
+                                <div className="resizer-wrapper">
+                                    Scheduling Policies
+                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'policies')}></div>
+                                </div>
+                            </th>
+                            <th style={{ width: columnWidths.schedule }}>
+                                <div className="resizer-wrapper">
+                                    Schedule
+                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'schedule')}></div>
+                                </div>
+                            </th>
+                            <th style={{ width: columnWidths.edit }}>
+                                <div className="resizer-wrapper">
+                                    Edit
+                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'edit')}></div>
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -412,19 +779,34 @@ export default function RDS() {
                                         />
                                     </td>
                                     <td className="identifier-col">
-                                        <div className="expand-control-wrapper">
-                                            {db.is_aurora ? (
-                                                <button className="expand-btn" onClick={() => toggleCluster(db.id)}>
-                                                    {expandedClusters[db.id] ? <Minus size={14} /> : <Plus size={14} />}
-                                                </button>
-                                            ) : (
-                                                <div className="expand-spacer"></div>
-                                            )}
+                                        <div className="identifier-wrapper">
+                                            <div className="expand-control-wrapper">
+                                                {db.is_aurora ? (
+                                                    <button className="expand-btn" onClick={() => toggleCluster(db.id)}>
+                                                        {expandedClusters[db.id] ? <Minus size={14} /> : <Plus size={14} />}
+                                                    </button>
+                                                ) : (
+                                                    <div className="expand-spacer"></div>
+                                                )}
+                                            </div>
+                                            <div className="db-info-content">
+                                                <strong>{db.db_identifier}</strong>
+                                                {(() => {
+                                                    const status = getScheduleStatus(db);
+                                                    if (!status) return null;
+                                                    return (
+                                                        <div className={`active-schedule-tag ${status.isUrgent ? 'urgent' : ''}`}>
+                                                            <span className="breathing-dot"></span>
+                                                            <Clock size={10} />
+                                                            <span>Active {status.label}</span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
                                         </div>
-                                        <strong>{db.db_identifier}</strong>
                                     </td>
                                     <td>
-                                        <span className={`db-type-badge ${db.is_aurora ? 'aurora' : 'rds'}`}>
+                                        <span className="role-text-display">
                                             {db.is_aurora ? 'Cluster' : 'Instance'}
                                         </span>
                                     </td>
@@ -442,14 +824,35 @@ export default function RDS() {
                                     </td>
                                     <td>
                                         <span className={`status-badge ${getStatusColor(db.status)}`}>
-                                            {formatStatus(db.status, db.is_aurora)}
+                                            {formatStatus(db.status)}
                                         </span>
                                     </td>
                                     <td>
                                         <div className="row-actions">
-                                            <button className="icon-btn play" title="Start"><Play size={16} /></button>
-                                            <button className="icon-btn stop" title="Stop"><Square size={16} /></button>
-                                            <button className="icon-btn reboot" title="Reboot"><RotateCw size={16} /></button>
+                                            <button
+                                                className="icon-btn play"
+                                                title="Start"
+                                                disabled={db.status.toLowerCase() === 'available'}
+                                                onClick={() => handleRowActionWithConfirm(db, 'START')}
+                                            >
+                                                <Play size={16} />
+                                            </button>
+                                            <button
+                                                className="icon-btn stop"
+                                                title="Stop"
+                                                disabled={db.status.toLowerCase() === 'stopped'}
+                                                onClick={() => handleRowActionWithConfirm(db, 'STOP')}
+                                            >
+                                                <Square size={16} />
+                                            </button>
+                                            <button
+                                                className="icon-btn reboot"
+                                                title="Reboot"
+                                                disabled={db.status.toLowerCase() === 'stopped'}
+                                                onClick={() => handleRowActionWithConfirm(db, 'REBOOT')}
+                                            >
+                                                <RotateCw size={16} />
+                                            </button>
                                         </div>
                                     </td>
                                     <td>
@@ -457,33 +860,43 @@ export default function RDS() {
                                             <button
                                                 className={`policy-btn ${db.is_24_7 ? 'active-247' : ''}`}
                                                 title="24/7 Protected"
+                                                disabled={!db.is_24_7 && (db.never_start || db.daily_exception)}
+                                                onClick={() => handlePolicyWithConfirm(db, 'is_24_7', '24/7 Protected')}
                                             >
                                                 <Shield size={16} />
                                             </button>
                                             <button
                                                 className={`policy-btn ${db.never_start ? 'active-never' : ''}`}
                                                 title="Never Start"
+                                                disabled={!db.never_start && (db.is_24_7 || db.daily_exception)}
+                                                onClick={() => handlePolicyWithConfirm(db, 'never_start', 'Never Start')}
                                             >
                                                 <X size={16} />
                                             </button>
                                             <button
                                                 className={`policy-btn ${db.daily_exception ? 'active-exc' : ''}`}
                                                 title="Daily Exception"
+                                                disabled={!db.daily_exception && (db.is_24_7 || db.never_start)}
+                                                onClick={() => handlePolicyWithConfirm(db, 'daily_exception', 'Daily Exception')}
                                             >
                                                 <FileUp size={16} />
                                             </button>
                                         </div>
                                     </td>
                                     <td>
-                                        <button className="btn-set-schedule" onClick={() => {
-                                            setScheduleTarget({
-                                                label: db.db_identifier,
-                                                resourceType: 'RDS',
-                                                scope: db.db_identifier,
-                                                db: db
-                                            });
-                                            setScheduleModalOpen(true);
-                                        }}>
+                                        <button
+                                            className="btn-set-schedule"
+                                            disabled={db.is_24_7 || db.never_start}
+                                            onClick={() => {
+                                                setScheduleTarget({
+                                                    label: db.db_identifier,
+                                                    resourceType: 'RDS',
+                                                    scope: db.db_identifier,
+                                                    db: db
+                                                });
+                                                setScheduleModalOpen(true);
+                                            }}
+                                        >
                                             <Clock size={14} /> Schedule
                                         </button>
                                     </td>
@@ -503,18 +916,20 @@ export default function RDS() {
                                     <tr key={inst.id} className="sub-row">
                                         <td></td>
                                         <td className="identifier-col sub">
-                                            <span className="tree-line"></span>
-                                            {inst.db_identifier}
+                                            <div className="identifier-wrapper">
+                                                <span className="tree-line"></span>
+                                                {inst.db_identifier}
+                                            </div>
                                         </td>
                                         <td>
-                                            <span className={`role-badge ${inst.role.toLowerCase()}`}>{inst.role}</span>
+                                            <span className="role-text-display">{inst.role}</span>
                                         </td>
                                         <td>-</td>
                                         <td><span className="instance-class-badge">{inst.instance_class}</span></td>
                                         <td>-</td>
                                         <td>
                                             <span className={`status-badge ${getStatusColor(inst.status)}`}>
-                                                {formatStatus(inst.status, true)}
+                                                {formatStatus(inst.status)}
                                             </span>
                                         </td>
                                         <td colSpan="5" className="sub-actions-info">
@@ -574,6 +989,16 @@ export default function RDS() {
                     </div>
                 </div>
             )}
+            {/* Bulk Action Modal */}
+            <RDSBulkActionModal
+                isOpen={bulkModalOpen}
+                onClose={() => setBulkModalOpen(false)}
+                action={bulkAction}
+                selectedCount={selectedRows.length}
+                totalCount={databases.length}
+                onConfirm={handleBulkConfirm}
+            />
+
             {/* Schedule Modal */}
             <ScheduleModal
                 isOpen={scheduleModalOpen}
@@ -581,6 +1006,13 @@ export default function RDS() {
                 target={scheduleTarget}
                 onConfirm={handleScheduleConfirm}
                 onRemove={handleScheduleRemove}
+            />
+
+            <ConfirmActionModal
+                isOpen={confirmModal.open}
+                message={confirmModal.message}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={closeConfirmModal}
             />
         </div>
     );
