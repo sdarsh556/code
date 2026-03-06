@@ -212,19 +212,47 @@ function RDSAnalytics() {
         ],
         aurora: [
             {
-                db_identifier: "cluster-prod-01",
-                db_name: "global-aurora-prod",
-                instance_class: "db.r6g.xlarge",
-                engine: "aurora-mysql",
-                avg_cpu_utilization: 38.2,
-                avg_connections: 1250,
-                avg_read_iops: 1200,
-                avg_write_iops: 600,
-                approx_cost: 240.00,
-                active_days_count: 30,
-                active_dates: ["2026-02-01", "2026-03-05"],
-                status: 'available'
+                cluster_name: "aurora-prod-cluster",
+                db_name: "prod-global-db",
+                instances_count: 3,
+                avg_cpu_utilization: 42.5,
+                avg_connections: 85,
+                avg_read_iops: 450,
+                avg_write_iops: 220,
+                approx_cost: 84.50,
+                active_days_count: 28,
+                active_dates: ["2026-03-01", "2026-03-05"],
+                status: 'available',
+                trend: 'up'
             },
+            {
+                cluster_name: "aurora-staging-cluster",
+                db_name: "staging-db",
+                instances_count: 2,
+                avg_cpu_utilization: 22.8,
+                avg_connections: 15,
+                avg_read_iops: 120,
+                avg_write_iops: 45,
+                approx_cost: 32.20,
+                active_days_count: 7,
+                active_dates: ["2026-03-01", "2026-03-02"],
+                status: 'available',
+                trend: 'stable'
+            },
+            {
+                cluster_name: "aurora-dev-cluster",
+                db_name: "dev-sandbox",
+                instances_count: 1,
+                avg_cpu_utilization: 15.2,
+                avg_connections: 4,
+                avg_read_iops: 45,
+                avg_write_iops: 12,
+                approx_cost: 15.30,
+                active_days_count: 15,
+                active_dates: ["2026-02-15", "2026-03-01"],
+                status: 'available',
+                trend: 'down'
+            }
         ]
     };
 
@@ -232,13 +260,23 @@ function RDSAnalytics() {
 
     const stats = useMemo(() => {
         const count = currentData.length;
+        if (viewMode === 'aurora') {
+            return {
+                count: 5,
+                avgCpu: 32.5,
+                avgConn: 45,
+                avgRead: 250,
+                avgWrite: 120,
+                totalCost: 132
+            };
+        }
         const avgCpu = (currentData.reduce((acc, item) => acc + item.avg_cpu_utilization, 0) / (count || 1)).toFixed(1);
         const avgConn = Math.round(currentData.reduce((acc, item) => acc + item.avg_connections, 0) / (count || 1));
         const avgRead = Math.round(currentData.reduce((acc, item) => acc + item.avg_read_iops, 0) / (count || 1));
         const avgWrite = Math.round(currentData.reduce((acc, item) => acc + item.avg_write_iops, 0) / (count || 1));
         const totalCost = currentData.reduce((acc, item) => acc + item.approx_cost, 0);
         return { count, avgCpu, avgConn, avgRead, avgWrite, totalCost };
-    }, [currentData]);
+    }, [currentData, viewMode]);
 
     const handleCustomRange = (range) => {
         setCustomRange(range);
@@ -253,7 +291,7 @@ function RDSAnalytics() {
     };
 
     const metricCards = [
-        { label: 'Active Instances', value: stats.count, icon: Database, color: '#10b981', bg: 'rgba(16,185,129,0.1)', bars: [65, 45, 78, 90, 55] },
+        { label: viewMode === 'aurora' ? 'Total Clusters' : 'Active Instances', value: stats.count, icon: Database, color: '#10b981', bg: 'rgba(16,185,129,0.1)', bars: [65, 45, 78, 90, 55] },
         { label: 'Avg CPU Utilization', value: `${stats.avgCpu}%`, icon: Cpu, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', bars: [32, 28, 45, 65, 55] },
         { label: 'Avg Connections', value: stats.avgConn, icon: Network, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', bars: [120, 95, 210, 450, 380] },
         { label: 'Avg Read IOPS', value: stats.avgRead, icon: ArrowRight, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', bars: [450, 380, 820, 1250, 980] },
@@ -344,100 +382,174 @@ function RDSAnalytics() {
                         <div className="rds-panel-subtitle">Click trend icon to view detailed metrics</div>
                     </div>
 
-                    <div className="rds-instances-grid">
-                        {currentData.map((db, idx) => (
-                            <div key={db.db_identifier} className="rds-instance-card" style={{ animationDelay: `${0.2 + idx * 0.1}s` }}>
-                                <div className="rds-instance-status-glow" />
+                    <div className={viewMode === 'aurora' ? "aurora-clusters-grid" : "rds-instances-grid"}>
+                        {viewMode === 'aurora' ? (
+                            currentData.map((cluster, idx) => (
+                                <div key={cluster.cluster_name} className="aurora-cluster-card" style={{ animationDelay: `${0.2 + idx * 0.1}s` }}>
+                                    <div className="aurora-cluster-status-glow" />
 
-                                <div className="rds-instance-card-top">
-                                    <div className="rds-instance-name-info">
-                                        <div className="rds-instance-status-row">
-                                            <div className={`rds-instance-status-dot ${db.status}`} />
-                                            <span className="rds-instance-name-text">{db.db_identifier}</span>
+                                    <div className="aurora-cluster-card-top">
+                                        <div className="aurora-cluster-name-row">
+                                            <div className={`aurora-cluster-status-dot ${cluster.status}`} />
+                                            <span className="aurora-cluster-name-text">{cluster.cluster_name}</span>
                                         </div>
-                                        <div className="rds-instance-id-text">{db.engine}.{db.instance_class}</div>
+                                        <div className={`aurora-cluster-trend-badge trend-${cluster.trend}`}>
+                                            {cluster.trend === 'up' ? '↑' : cluster.trend === 'down' ? '↓' : '→'}
+                                        </div>
                                     </div>
-                                    <button
-                                        className="rds-instance-graph-btn"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedInstanceForTrend(db);
-                                        }}
-                                        title="View 30-Day Trend"
-                                    >
-                                        <BarChart3 size={16} />
-                                    </button>
-                                </div>
 
-                                <div className="rds-instance-stats-row">
-                                    <div className="rds-instance-stat-item">
-                                        <div className="rds-isi-icon"><Clock size={14} /></div>
-                                        <div className="rds-isi-value">{db.active_days_count}d</div>
-                                        <div className="rds-isi-label">Active</div>
+                                    <div className="aurora-cluster-stats-row">
+                                        <div className="aurora-cluster-stat-item">
+                                            <div className="aurora-csi-icon"><Clock size={14} /></div>
+                                            <div className="aurora-csi-value">{cluster.active_days_count}d</div>
+                                            <div className="aurora-csi-label">Active</div>
+                                        </div>
+                                        <div className="aurora-cluster-stat-divider" />
+                                        <div className="aurora-cluster-stat-item">
+                                            <div className="aurora-csi-icon"><Database size={14} /></div>
+                                            <div className="aurora-csi-value">{cluster.instances_count}</div>
+                                            <div className="aurora-csi-label">Instances</div>
+                                        </div>
+                                        <div className="aurora-cluster-stat-divider" />
+                                        <div className="aurora-cluster-stat-item">
+                                            <div className="aurora-csi-icon"><DollarSign size={14} /></div>
+                                            <div className="aurora-csi-value">${cluster.approx_cost.toFixed(0)}</div>
+                                            <div className="aurora-csi-label">Cost</div>
+                                        </div>
                                     </div>
-                                    <div className="rds-instance-stat-divider" />
-                                    <div
-                                        className="rds-instance-stat-item rds-clickable-calendar"
-                                        onClick={() => {
-                                            const formattedDates = (db.active_dates || []).map(d => {
-                                                const dt = new Date(d);
-                                                return dt.toLocaleDateString('en-US', {
-                                                    month: 'short',
-                                                    day: 'numeric',
-                                                    year: 'numeric'
+
+                                    <div className="aurora-cluster-resource-bars">
+                                        <div className="aurora-rb-item">
+                                            <div className="aurora-rb-header">
+                                                <span className="aurora-rb-label"><Cpu size={12} /> CPU</span>
+                                                <span className="aurora-rb-value">{cluster.avg_cpu_utilization}%</span>
+                                            </div>
+                                            <div className="aurora-rb-track"><div className="aurora-rb-fill cpu" style={{ width: `${cluster.avg_cpu_utilization}%` }} /></div>
+                                        </div>
+                                        <div className="aurora-rb-item">
+                                            <div className="aurora-rb-header">
+                                                <span className="aurora-rb-label"><Network size={12} /> Connections</span>
+                                                <span className="aurora-rb-value">{cluster.avg_connections}</span>
+                                            </div>
+                                            <div className="aurora-rb-track"><div className="aurora-rb-fill conn" style={{ width: `${Math.min(100, (cluster.avg_connections / 200) * 100)}%` }} /></div>
+                                        </div>
+                                        <div className="aurora-rb-item">
+                                            <div className="aurora-rb-header">
+                                                <span className="aurora-rb-label"><ArrowRight size={12} /> Read IOPS</span>
+                                                <span className="aurora-rb-value">{cluster.avg_read_iops}</span>
+                                            </div>
+                                            <div className="aurora-rb-track"><div className="aurora-rb-fill read" style={{ width: `${Math.min(100, (cluster.avg_read_iops / 1000) * 100)}%` }} /></div>
+                                        </div>
+                                        <div className="aurora-rb-item">
+                                            <div className="aurora-rb-header">
+                                                <span className="aurora-rb-label"><Zap size={12} /> Write IOPS</span>
+                                                <span className="aurora-rb-value">{cluster.avg_write_iops}</span>
+                                            </div>
+                                            <div className="aurora-rb-track"><div className="aurora-rb-fill write" style={{ width: `${Math.min(100, (cluster.avg_write_iops / 500) * 100)}%` }} /></div>
+                                        </div>
+                                    </div>
+
+                                    <div className="aurora-cluster-footer">
+                                        <span>View Daily Breakdown</span>
+                                        <ArrowRight size={16} />
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            currentData.map((db, idx) => (
+                                <div key={db.db_identifier} className="rds-instance-card" style={{ animationDelay: `${0.2 + idx * 0.1}s` }}>
+                                    <div className="rds-instance-status-glow" />
+
+                                    <div className="rds-instance-card-top">
+                                        <div className="rds-instance-name-info">
+                                            <div className="rds-instance-status-row">
+                                                <div className={`rds-instance-status-dot ${db.status}`} />
+                                                <span className="rds-instance-name-text">{db.db_identifier}</span>
+                                            </div>
+                                            <div className="rds-instance-id-text">{db.engine}.{db.instance_class}</div>
+                                        </div>
+                                        <button
+                                            className="rds-instance-graph-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedInstanceForTrend(db);
+                                            }}
+                                            title="View 30-Day Trend"
+                                        >
+                                            <BarChart3 size={16} />
+                                        </button>
+                                    </div>
+
+                                    <div className="rds-instance-stats-row">
+                                        <div className="rds-instance-stat-item">
+                                            <div className="rds-isi-icon"><Clock size={14} /></div>
+                                            <div className="rds-isi-value">{db.active_days_count}d</div>
+                                            <div className="rds-isi-label">Active</div>
+                                        </div>
+                                        <div className="rds-instance-stat-divider" />
+                                        <div
+                                            className="rds-instance-stat-item rds-clickable-calendar"
+                                            onClick={() => {
+                                                const formattedDates = (db.active_dates || []).map(d => {
+                                                    const dt = new Date(d);
+                                                    return dt.toLocaleDateString('en-US', {
+                                                        month: 'short',
+                                                        day: 'numeric',
+                                                        year: 'numeric'
+                                                    });
                                                 });
-                                            });
-                                            setSelectedDaysInfo({
-                                                identifier: db.db_identifier,
-                                                count: db.active_days_count,
-                                                dates: formattedDates
-                                            });
-                                        }}
-                                    >
-                                        <div className="rds-isi-icon"><Calendar size={14} /></div>
-                                        <div className="rds-isi-value">View</div>
-                                        <div className="rds-isi-label">Days Active</div>
+                                                setSelectedDaysInfo({
+                                                    identifier: db.db_identifier,
+                                                    count: db.active_days_count,
+                                                    dates: formattedDates
+                                                });
+                                            }}
+                                        >
+                                            <div className="rds-isi-icon"><Calendar size={14} /></div>
+                                            <div className="rds-isi-value">View</div>
+                                            <div className="rds-isi-label">Days Active</div>
+                                        </div>
+                                        <div className="rds-instance-stat-divider" />
+                                        <div className="rds-instance-stat-item">
+                                            <div className="rds-isi-icon"><DollarSign size={14} /></div>
+                                            <div className="rds-isi-value">${db.approx_cost.toFixed(0)}</div>
+                                            <div className="rds-isi-label">Instance Cost</div>
+                                        </div>
                                     </div>
-                                    <div className="rds-instance-stat-divider" />
-                                    <div className="rds-instance-stat-item">
-                                        <div className="rds-isi-icon"><DollarSign size={14} /></div>
-                                        <div className="rds-isi-value">${db.approx_cost.toFixed(0)}</div>
-                                        <div className="rds-isi-label">Instance Cost</div>
-                                    </div>
-                                </div>
 
-                                <div className="rds-instance-resource-bars">
-                                    <div className="rds-resource-bar-item">
-                                        <div className="rds-rb-header">
-                                            <span className="rds-rb-label"><Cpu size={12} /> CPU</span>
-                                            <span className="rds-rb-value">{db.avg_cpu_utilization}%</span>
+                                    <div className="rds-instance-resource-bars">
+                                        <div className="rds-resource-bar-item">
+                                            <div className="rds-rb-header">
+                                                <span className="rds-rb-label"><Cpu size={12} /> CPU</span>
+                                                <span className="rds-rb-value">{db.avg_cpu_utilization}%</span>
+                                            </div>
+                                            <div className="rds-rb-track"><div className="rds-rb-fill cpu" style={{ width: `${db.avg_cpu_utilization}%` }} /></div>
                                         </div>
-                                        <div className="rds-rb-track"><div className="rds-rb-fill cpu" style={{ width: `${db.avg_cpu_utilization}%` }} /></div>
-                                    </div>
-                                    <div className="rds-resource-bar-item">
-                                        <div className="rds-rb-header">
-                                            <span className="rds-rb-label"><Network size={12} /> Conn</span>
-                                            <span className="rds-rb-value">{db.avg_connections}</span>
+                                        <div className="rds-resource-bar-item">
+                                            <div className="rds-rb-header">
+                                                <span className="rds-rb-label"><Network size={12} /> Conn</span>
+                                                <span className="rds-rb-value">{db.avg_connections}</span>
+                                            </div>
+                                            <div className="rds-rb-track"><div className="rds-rb-fill conn" style={{ width: `${Math.min(100, (db.avg_connections / 500) * 100)}%` }} /></div>
                                         </div>
-                                        <div className="rds-rb-track"><div className="rds-rb-fill conn" style={{ width: `${Math.min(100, (db.avg_connections / 500) * 100)}%` }} /></div>
-                                    </div>
-                                    <div className="rds-resource-bar-item">
-                                        <div className="rds-rb-header">
-                                            <span className="rds-rb-label"><ArrowRight size={12} /> Read</span>
-                                            <span className="rds-rb-value">{db.avg_read_iops}</span>
+                                        <div className="rds-resource-bar-item">
+                                            <div className="rds-rb-header">
+                                                <span className="rds-rb-label"><ArrowRight size={12} /> Read</span>
+                                                <span className="rds-rb-value">{db.avg_read_iops}</span>
+                                            </div>
+                                            <div className="rds-rb-track"><div className="rds-rb-fill read" style={{ width: `${Math.min(100, (db.avg_read_iops / 1000) * 100)}%` }} /></div>
                                         </div>
-                                        <div className="rds-rb-track"><div className="rds-rb-fill read" style={{ width: `${Math.min(100, (db.avg_read_iops / 1000) * 100)}%` }} /></div>
-                                    </div>
-                                    <div className="rds-resource-bar-item">
-                                        <div className="rds-rb-header">
-                                            <span className="rds-rb-label"><Zap size={12} /> Write</span>
-                                            <span className="rds-rb-value">{db.avg_write_iops}</span>
+                                        <div className="rds-resource-bar-item">
+                                            <div className="rds-rb-header">
+                                                <span className="rds-rb-label"><Zap size={12} /> Write</span>
+                                                <span className="rds-rb-value">{db.avg_write_iops}</span>
+                                            </div>
+                                            <div className="rds-rb-track"><div className="rds-rb-fill write" style={{ width: `${Math.min(100, (db.avg_write_iops / 500) * 100)}%` }} /></div>
                                         </div>
-                                        <div className="rds-rb-track"><div className="rds-rb-fill write" style={{ width: `${Math.min(100, (db.avg_write_iops / 500) * 100)}%` }} /></div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -447,7 +559,8 @@ function RDSAnalytics() {
                     subtitle="Detailed technical breakdown with multi-sort capability"
                     data={currentData.map(db => ({
                         ...db,
-                        id: db.db_identifier
+                        id: db.cluster_name || db.db_identifier,
+                        db_identifier: db.cluster_name || db.db_identifier
                     }))}
                     exportFilename={`${viewMode}-analytics.csv`}
                     gridTemplateColumns="52px 1.8fr 1.2fr 1.2fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr"
@@ -459,8 +572,8 @@ function RDSAnalytics() {
                             sortable: true
                         },
                         {
-                            key: 'instance_class',
-                            label: 'INSTANCE CLASS',
+                            key: viewMode === 'rds' ? 'instance_class' : 'instances_count',
+                            label: viewMode === 'rds' ? 'INSTANCE CLASS' : 'INSTANCES',
                             icon: Server,
                             sortable: true,
                             align: 'center',
@@ -472,7 +585,7 @@ function RDSAnalytics() {
                             icon: Database,
                             sortable: true,
                             align: 'center',
-                            render: (val) => <span className="cmp-instance-type">{val}</span>
+                            render: (val) => <span className="cmp-instance-type">{val || 'Aurora'}</span>
                         },
                         {
                             key: 'avg_cpu_utilization',
@@ -480,7 +593,8 @@ function RDSAnalytics() {
                             icon: Cpu,
                             type: 'cpu',
                             sortable: true,
-                            align: 'center'
+                            align: 'center',
+                            render: (val) => `${val}%`
                         },
                         {
                             key: 'avg_connections',
