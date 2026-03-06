@@ -3,11 +3,14 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
     Clock, DollarSign, Activity, Cpu, TrendingUp, Zap,
     ArrowRight, ChevronLeft, ChevronRight, Calendar, Server,
-    SearchX, RefreshCw, TrendingDown, Minus, Download, BarChart3
+    SearchX, RefreshCw, TrendingDown, Minus, Download, BarChart3,
+    ArrowLeft
 } from 'lucide-react';
-import '../../../css/analytics/ec2/EC2Analytics.css';
 import '../../../css/analytics/comparison-table.css';
+import '../../../css/analytics/ec2/EC2Analytics.css';
 import ComparisonTable from '../ComparisonTable';
+import EC2GraphModal from './EC2GraphModal';
+import axiosClient from '../../api/axiosClient';
 
 // ─── Custom Calendar Picker ───────────────────────────────────────────────────
 function CalendarPicker({ onRangeSelect, onClose }) {
@@ -131,11 +134,15 @@ function CalendarPicker({ onRangeSelect, onClose }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 function EC2Analytics() {
-    const navigate = useNavigate();
-    const [selectedRange, setSelectedRange] = useState('7d');
+    const [selectedRange, setSelectedRange] = useState('24h');
     const [showCalendar, setShowCalendar] = useState(false);
     const [customRange, setCustomRange] = useState(null);
     const [selectedDaysInfo, setSelectedDaysInfo] = useState(null);
+    const [selectedInstanceForGraph, setSelectedInstanceForGraph] = useState(null);
+    const [allInstanceData, setAllInstanceData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
     const datePresets = [
         { id: '24h', label: '24H', days: 1 },
@@ -144,28 +151,144 @@ function EC2Analytics() {
         { id: '30d', label: '30D', days: 30 },
     ];
 
-    const allInstanceData = [
-        { instanceName: 'prod-api-server', instanceId: 'i-0a2b3c4d5e6f7g8h9', approxCost: 1247.50, activeDays: 7, avgCpu: 45.2, status: 'healthy', trend: 'up', minDays: 1 },
-        { instanceName: 'staging-worker-01', instanceId: 'i-1a2b3c4d5e6f7g8h9', approxCost: 423.20, activeDays: 5, avgCpu: 32.1, status: 'healthy', trend: 'stable', minDays: 7 },
-        { instanceName: 'dev-db-replica', instanceId: 'i-2a2b3c4d5e6f7g8h9', approxCost: 156.80, activeDays: 3, avgCpu: 28.5, status: 'warning', trend: 'down', minDays: 15 },
-        { instanceName: 'test-cache-node', instanceId: 'i-3a2b3c4d5e6f7g8h9', approxCost: 89.40, activeDays: 2, avgCpu: 18.9, status: 'healthy', trend: 'up', minDays: 30 },
-    ];
-
     const { setBgContext } = useOutletContext();
+
+    const formatDate = (date) => {
+        return date.toLocaleDateString('en-CA', {
+            timeZone: 'Asia/Kolkata'
+        });
+    };
+    const getDateRange = () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // CUSTOM RANGE
+        if (selectedRange === 'custom' && customRange) {
+            const from = new Date(customRange.start);
+            const to = new Date(customRange.end);
+
+            from.setHours(0, 0, 0, 0);
+            to.setHours(0, 0, 0, 0);
+
+            return {
+                from: formatDate(from),
+                to: formatDate(to)   // end exclusive handled by backend
+            };
+        }
+
+        // PRESET RANGE
+        // PRESET RANGE
+        const preset = datePresets.find(p => p.id === selectedRange);
+        const days = preset?.days || 7;
+
+        let from = new Date(today);
+
+        if (selectedRange === '24h') {
+            from.setDate(today.getDate() - 1);
+        } else {
+            from.setDate(today.getDate() - (days - 1));
+        }
+
+        return {
+            from: formatDate(from),
+            to: formatDate(today)
+        };
+    };
+
+    const getDisplayRangeLabel = () => {
+        const today = new Date();
+
+        // Custom range
+        if (selectedRange === 'custom' && customRange) {
+            return `${customRange.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${customRange.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+        }
+
+        // Preset range
+        const preset = datePresets.find(p => p.id === selectedRange);
+        const days = preset?.days || 7;
+
+        const from = new Date();
+        from.setDate(today.getDate() - days);
+
+        return `${from.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    };
 
     useEffect(() => {
         setBgContext('analytics');
         return () => setBgContext('default');
     }, [setBgContext]);
 
+
+    const MOCK_INSTANCES = [
+        {
+            instanceName: "edith-prod-api",
+            instanceId: "i-0a1b2c3d4e5f6g7h8",
+            instanceType: "t3.large",
+            avgCpu: 45.2,
+            approxCost: 124.50,
+            activeDays: 30,
+            dates: Array.from({ length: 30 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                return d.toISOString();
+            }),
+            status: 'running'
+        },
+        {
+            instanceName: "edith-worker-node-1",
+            instanceId: "i-9i8h7g6f5e4d3c2b1",
+            instanceType: "c5.xlarge",
+            avgCpu: 78.5,
+            approxCost: 310.20,
+            activeDays: 30,
+            dates: Array.from({ length: 30 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                return d.toISOString();
+            }),
+            status: 'running'
+        },
+        {
+            instanceName: "edith-db-replica",
+            instanceId: "i-11223344556677889",
+            instanceType: "m5.large",
+            avgCpu: 12.8,
+            approxCost: 85.00,
+            activeDays: 25,
+            dates: Array.from({ length: 25 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                return d.toISOString();
+            }),
+            status: 'running'
+        },
+        {
+            instanceName: "edith-staging-env",
+            instanceId: "i-aabbccddeeff00112",
+            instanceType: "t3.medium",
+            avgCpu: 5.4,
+            approxCost: 42.15,
+            activeDays: 12,
+            dates: Array.from({ length: 12 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                return d.toISOString();
+            }),
+            status: 'stopped'
+        }
+    ];
+
+    useEffect(() => {
+        setAllInstanceData(MOCK_INSTANCES);
+    }, []);
+
     // Filter instances based on selected range
     const instanceData = useMemo(() => {
         const days = selectedRange === 'custom'
             ? (customRange ? Math.ceil((customRange.end - customRange.start) / (1000 * 60 * 60 * 24)) : 0)
             : (datePresets.find(p => p.id === selectedRange)?.days || 7);
-        if (selectedRange === '24h') return [];
-        return allInstanceData.filter(c => c.minDays <= days);
-    }, [selectedRange, customRange]);
+        return allInstanceData.filter(c => c.activeDays > 0);
+    }, [selectedRange, customRange, allInstanceData]);
 
     const summaryStats = useMemo(() => ({
         totalInstances: instanceData.length,
@@ -173,15 +296,18 @@ function EC2Analytics() {
         avgCpu: instanceData.length ? (instanceData.reduce((s, c) => s + c.avgCpu, 0) / instanceData.length).toFixed(1) : 0,
     }), [instanceData]);
 
-    const handleInstanceClick = (instance) => {
-        navigate(`/analytics/ec2/instance/${instance.instanceId}`, { state: { instance } });
-    };
-
     const handleCustomRange = (range) => {
         setCustomRange(range);
         setSelectedRange('custom');
     };
 
+    const handleGraphClick = (instance) => {
+        setSelectedInstanceForGraph({
+            ...instance,
+            cpu: instance.avgCpu,
+            memory: 60
+        });
+    };
     const getActiveLabel = () => {
         if (selectedRange === 'custom' && customRange) {
             return `${customRange.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${customRange.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
@@ -190,13 +316,14 @@ function EC2Analytics() {
     };
 
     const handleExportAll = () => {
-        const headers = ['Instance Name', 'Instance ID', 'Active Days', 'CPU (%)', 'Total Cost ($)'];
+        const headers = ['Instance Name', 'Instance ID', 'Instance Type', 'Active Days', 'CPU (%)', 'Total Cost ($)'];
         const csvRows = [headers.join(',')];
 
         instanceData.forEach(inst => {
             const row = [
                 `"${inst.instanceName}"`,
                 `"${inst.instanceId}"`,
+                `"${inst.instanceType}"`,
                 inst.activeDays,
                 inst.avgCpu,
                 inst.approxCost.toFixed(2)
@@ -218,7 +345,7 @@ function EC2Analytics() {
 
     const metricCards = [
         { label: 'Active Instances', value: summaryStats.totalInstances, icon: Server, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', bars: [65, 45, 78, 90, 55] },
-        { label: 'Total active days', value: instanceData.reduce((s, c) => s + c.activeDays, 0), icon: Activity, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', trend: '+12%' },
+        { label: 'Showing Data For', value: getDisplayRangeLabel(), icon: Activity, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', isDateCard: true },
         { label: 'Total Cost', value: `$${summaryStats.totalCost.toFixed(0)}`, icon: DollarSign, color: '#10b981', bg: 'rgba(16,185,129,0.1)', progress: 68 },
         { label: 'Avg CPU', value: `${summaryStats.avgCpu}%`, icon: Cpu, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', circle: summaryStats.avgCpu },
     ];
@@ -226,6 +353,13 @@ function EC2Analytics() {
     return (
         <div className="ec2-analytics-page">
             <div className="ec2-analytics-content">
+                <div className="ec2-breadcrumb">
+                    <button className="ec2-back-btn" onClick={() => navigate('/analytics')}>
+                        <ArrowLeft size={16} />
+                        <span>Analytics</span>
+                    </button>
+                </div>
+
                 {/* ── Header ── */}
                 <div className="ec2-page-header">
                     <div className="ec2-header-left">
@@ -240,7 +374,7 @@ function EC2Analytics() {
                     </div>
 
                     <div className="time-selector-wrap" style={{ gap: '1rem' }}>
-                        <button
+                        {/* <button
                             className="ec2-export-all-btn"
                             onClick={handleExportAll}
                             style={{
@@ -260,7 +394,7 @@ function EC2Analytics() {
                         >
                             <Download size={16} />
                             <span>Export Comprehensive Insight</span>
-                        </button>
+                        </button> */}
 
                         <div className="time-selector">
                             {datePresets.map(p => (
@@ -291,7 +425,9 @@ function EC2Analytics() {
                             <div key={i} className="metric-card-new" style={{ '--mc': card.color, '--mc-bg': card.bg, animationDelay: `${i * 0.1}s` }}>
                                 <div className="mc-top-accent" />
                                 <div className="mc-icon"><Icon size={24} /></div>
-                                <div className="mc-value">{card.value}</div>
+                                <div className={`mc-value ${card.isDateCard ? 'mc-date-value' : ''}`}>
+                                    {card.value}
+                                </div>
                                 <div className="mc-label">{card.label}</div>
                                 {card.bars && (
                                     <div className="mc-mini-bars">
@@ -326,6 +462,17 @@ function EC2Analytics() {
                     })}
                 </div>
 
+                {loading && (
+                    <div className="ec2-loading-state">
+                        Loading EC2 instance analytics...
+                    </div>
+                )}
+
+                {error && (
+                    <div className="ec2-error-state">
+                        Failed to load data: {error}
+                    </div>
+                )}
                 {/* ── Instances Panel ── */}
                 <div className="ec2-instances-panel">
                     <div className="panel-header-new">
@@ -334,12 +481,12 @@ function EC2Analytics() {
                             <h2>Active Instances</h2>
                             <span className="panel-period-badge">{getActiveLabel()}</span>
                         </div>
-                        <div className="panel-subtitle">Click an instance to view detailed metrics</div>
+                        {/* <div className="panel-subtitle">Click an instance to view detailed metrics</div> */}
                     </div>
 
                     <div className="instances-grid">
-                        {instanceData.length === 0 ? (
-                            <div className="instances-empty-state">
+                        {!loading && instanceData.length === 0 ?
+                            (<div className="instances-empty-state">
                                 <div className="empty-icon-wrap">
                                     <SearchX size={48} className="empty-icon" />
                                     <div className="empty-icon-ring" />
@@ -357,98 +504,98 @@ function EC2Analytics() {
                                     Reset to Last 7 Days
                                 </button>
                             </div>
-                        ) : (
-                            instanceData.map((instance, index) => (
-                                <div
-                                    key={instance.instanceId}
-                                    className={`instance-card ${instance.status}`}
-                                    onClick={() => handleInstanceClick(instance)}
-                                    style={{ animationDelay: `${0.3 + index * 0.1}s`, cursor: 'pointer' }}
-                                >
-                                    <div className={`instance-status-glow ${instance.status}`} />
+                            ) : (
+                                instanceData.map((instance, index) => (
+                                    <div
+                                        key={instance.instanceId}
+                                        className={`instance-card ${instance.status}`}
+                                        style={{ animationDelay: `${0.3 + index * 0.1}s`, cursor: 'default' }}
+                                    >
+                                        <div className={`instance-status-glow ${instance.status}`} />
 
-                                    <div className="instance-card-top">
-                                        <div className="instance-name-info">
-                                            <div className="instance-status-row">
-                                                <div className={`instance-status-dot ${instance.status}`} />
-                                                <span
-                                                    className="instance-name-text"
+                                        <div className="instance-card-top">
+                                            <div className="instance-name-info">
+                                                <div className="instance-status-row">
+                                                    <div className={`instance-status-dot ${instance.status}`} />
+                                                    <span className="instance-name-text">
+                                                        {instance.instanceName}
+                                                    </span>
+                                                </div>
+                                                <div className="instance-id-text">
+                                                    {instance.instanceId}
+                                                    <span className="instance-id-separator">•</span>
+                                                    <span className="instance-type-text">{instance.instanceType}</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <button
+                                                    className="instance-graph-btn"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        handleInstanceClick(instance);
+                                                        handleGraphClick(instance);
                                                     }}
                                                 >
-                                                    {instance.instanceName}
-                                                </span>
+                                                    <BarChart3 size={16} />
+                                                </button>
                                             </div>
-                                            <div className="instance-id-text">{instance.instanceId}</div>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                            <button
-                                                className="instance-graph-btn"
+
+                                        <div className="instance-stats-row">
+                                            <div className="instance-stat-item">
+                                                <div className="isi-icon"><Clock size={14} /></div>
+                                                <div className="isi-value">{instance.activeDays}d</div>
+                                                <div className="isi-label">Active</div>
+                                            </div>
+                                            <div className="instance-stat-divider" />
+                                            <div
+                                                className="instance-stat-item clickable-calendar"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleInstanceClick(instance);
+                                                    // Calculate dates for the display
+                                                    const dates = (instance.dates || []).map(d => {
+                                                        const dt = new Date(d);
+
+                                                        return dt.toLocaleDateString('en-US', {
+                                                            timeZone: 'Asia/Kolkata',
+                                                            month: 'short',
+                                                            day: 'numeric',
+                                                            year: 'numeric'
+                                                        });
+                                                    });
+                                                    setSelectedDaysInfo({
+                                                        name: instance.instanceName,
+                                                        id: instance.instanceId,
+                                                        days: instance.activeDays,
+                                                        dates: dates
+                                                    });
                                                 }}
-                                                title="View 30-Day Trend"
                                             >
-                                                <BarChart3 size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="instance-stats-row">
-                                        <div className="instance-stat-item">
-                                            <div className="isi-icon"><Clock size={14} /></div>
-                                            <div className="isi-value">{instance.activeDays}d</div>
-                                            <div className="isi-label">Active</div>
-                                        </div>
-                                        <div className="instance-stat-divider" />
-                                        <div
-                                            className="instance-stat-item clickable-calendar"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                // Calculate dates for the display
-                                                const dates = [];
-                                                for (let i = 0; i < instance.activeDays; i++) {
-                                                    const d = new Date();
-                                                    d.setDate(d.getDate() - i);
-                                                    dates.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
-                                                }
-                                                setSelectedDaysInfo({
-                                                    name: instance.instanceName,
-                                                    id: instance.instanceId,
-                                                    days: instance.activeDays,
-                                                    dates: dates
-                                                });
-                                            }}
-                                        >
-                                            <div className="isi-icon"><Calendar size={14} /></div>
-                                            <div className="isi-value">View</div>
-                                            <div className="isi-label">Days Active</div>
-                                        </div>
-                                        <div className="instance-stat-divider" />
-                                        <div className="instance-stat-item">
-                                            <div className="isi-icon"><DollarSign size={14} /></div>
-                                            <div className="isi-value">${instance.approxCost.toFixed(0)}</div>
-                                            <div className="isi-label">Instance Cost</div>
-                                        </div>
-                                    </div>
-
-                                    <div className="instance-resource-bars">
-                                        <div className="resource-bar-item">
-                                            <div className="rb-header">
-                                                <span className="rb-label"><Cpu size={12} /> CPU Bar</span>
-                                                <span className="rb-value">{instance.avgCpu}%</span>
+                                                <div className="isi-icon"><Calendar size={14} /></div>
+                                                <div className="isi-value">View</div>
+                                                <div className="isi-label">Days Active</div>
                                             </div>
-                                            <div className="rb-track">
-                                                <div className="rb-fill cpu-fill" style={{ width: `${instance.avgCpu}%` }} />
+                                            <div className="instance-stat-divider" />
+                                            <div className="instance-stat-item">
+                                                <div className="isi-icon"><DollarSign size={14} /></div>
+                                                <div className="isi-value">${instance.approxCost.toFixed(0)}</div>
+                                                <div className="isi-label">Instance Cost</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="instance-resource-bars">
+                                            <div className="resource-bar-item">
+                                                <div className="rb-header">
+                                                    <span className="rb-label"><Cpu size={12} /> CPU Bar</span>
+                                                    <span className="rb-value">{instance.avgCpu}%</span>
+                                                </div>
+                                                <div className="rb-track">
+                                                    <div className="rb-fill cpu-fill" style={{ width: `${instance.avgCpu}%` }} />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
-                        )}
+                                ))
+                            )}
                     </div>
                 </div>
 
@@ -462,13 +609,32 @@ function EC2Analytics() {
                             id: c.instanceId
                         }))}
                         exportFilename="instance-comparison.csv"
-                        gridTemplateColumns="52px 2fr 1fr 1fr 1.2fr"
+                        gridTemplateColumns="52px 2fr 1.4fr 1fr 0.9fr 0.7fr 1fr"
                         columns={[
                             {
                                 key: 'instanceName',
                                 label: 'Instance',
                                 type: 'status-name',
                                 sortable: true
+                            },
+                            {
+                                key: 'instanceId',
+                                label: 'Instance ID',
+                                sortable: true,
+                                align: 'center',
+                                render: (val) => (
+                                    <span className="cmp-instance-id">{val}</span>
+                                )
+                            },
+                            {
+                                key: 'instanceType',
+                                label: 'Instance Type',
+                                icon: Server,
+                                sortable: true,
+                                align: 'center',
+                                render: (val) => (
+                                    <span className="cmp-instance-type">{val}</span>
+                                )
                             },
                             {
                                 key: 'avgCpu',
@@ -528,6 +694,14 @@ function EC2Analytics() {
                         <button className="dim-close-btn" onClick={() => setSelectedDaysInfo(null)}>Got it</button>
                     </div>
                 </div>
+            )}
+
+            {selectedInstanceForGraph && (
+                <EC2GraphModal
+                    instance={selectedInstanceForGraph}
+                    selectedDate={null}
+                    onClose={() => setSelectedInstanceForGraph(null)}
+                />
             )}
         </div>
     );

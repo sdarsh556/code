@@ -56,13 +56,13 @@ function Analytics() {
             subtitle: 'Database Analytics',
             description: 'Database performance, query insights & storage cost tracking',
             icon: Database,
-            available: false,
+            available: true,
             accentColor: '#10b981',
             glowColor: 'rgba(16, 185, 129, 0.4)',
             gradient: 'linear-gradient(135deg, #065f46 0%, #10b981 50%, #34d399 100%)',
             bgGradient: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(52,211,153,0.05) 100%)',
-            stat: '—',
-            statLabel: 'Coming Soon'
+            stat: 'LIVE',
+            statLabel: 'Active'
         }
     ];
 

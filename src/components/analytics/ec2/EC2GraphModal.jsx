@@ -1,59 +1,53 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
-import { X, TrendingUp, Activity, Cpu, Calendar, MemoryStick, ArrowLeft } from 'lucide-react';
+import { X, TrendingUp, Activity, Cpu, Calendar, MemoryStick } from 'lucide-react';
 import '../../../css/analytics/ecs/CPUGraphModal.css'; // Reusing the same beautiful styles
+import axiosClient from '../../api/axiosClient';
 
-function EC2GraphModal() {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const { setBgContext } = useOutletContext();
-    const instance = location.state?.instance || { instanceName: 'Unknown Instance', cpu: 0, memory: 0 };
-
-    useEffect(() => {
-        if (setBgContext) {
-            setBgContext('analytics');
-            return () => setBgContext('default');
-        }
-    }, [setBgContext]);
-
-    const onClose = () => navigate(-1);
-
+function EC2GraphModal({ instance, selectedDate, onClose }) {
     const [tooltip, setTooltip] = useState(null);
     const [hoveredIdx, setHoveredIdx] = useState(null);
-    const [activeMetric, setActiveMetric] = useState('cpu'); // 'cpu' | 'memory'
+    const [cpuData, setCpuData] = useState([]);
+    const [loading, setLoading] = useState(false);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const selectedDateObj = location.state?.selectedDate ? new Date(location.state.selectedDate) : null;
+    const selectedDateObj = selectedDate ? new Date(selectedDate) : null;
     if (selectedDateObj) selectedDateObj.setHours(0, 0, 0, 0);
 
-    // Generate 30-day data for both CPU and Memory (stable with useMemo)
-    const { cpuData, memData } = useMemo(() => {
-        const cpu = [];
-        const mem = [];
+    useEffect(() => {
+        if (!instance?.instanceId) return;
+
+        // Generate mock history for last 30 days
+        const generatedHistory = [];
+        const baseCpu = instance.cpu || 40;
+
         for (let i = 29; i >= 0; i--) {
-            const d = new Date(today);
+            const d = new Date();
             d.setDate(d.getDate() - i);
+            d.setHours(0, 0, 0, 0);
 
-            const cpuNoise = (Math.sin(i * 0.7) * 12) + (Math.cos(i * 0.3) * 5);
-            const cpuVal = Math.max(5, Math.min(99, instance.cpu + cpuNoise));
+            // Create some realistic-looking jitter
+            const jitter = (Math.random() - 0.5) * 15;
+            const value = Math.max(5, Math.min(95, baseCpu + jitter));
 
-            const memNoise = (Math.sin(i * 0.5 + 1) * 10) + (Math.cos(i * 0.4) * 6);
-            const memVal = Math.max(5, Math.min(99, instance.memory + memNoise));
-
-            cpu.push({ date: new Date(d), value: parseFloat(cpuVal.toFixed(1)) });
-            mem.push({ date: new Date(d), value: parseFloat(memVal.toFixed(1)) });
+            generatedHistory.push({
+                date: new Date(d),
+                value: Number(value.toFixed(1))
+            });
         }
-        return { cpuData: cpu, memData: mem };
-    }, [instance.cpu, instance.memory]);
 
-    const data = activeMetric === 'cpu' ? cpuData : memData;
-    const currentVal = activeMetric === 'cpu' ? instance.cpu : instance.memory;
+        setCpuData(generatedHistory);
+    }, [instance.instanceId, instance.cpu]);
 
-    const maxVal = Math.max(...data.map(d => d.value));
-    const minVal = Math.min(...data.map(d => d.value));
-    const avgVal = (data.reduce((s, d) => s + d.value, 0) / data.length).toFixed(1);
+    const data = cpuData.length ? cpuData : [];
+    const currentVal = instance.cpu;
+
+    const maxVal = data.length ? Math.max(...data.map(d => d.value)) : 0;
+    const minVal = data.length ? Math.min(...data.map(d => d.value)) : 0;
+    const avgVal = data.length
+        ? (data.reduce((s, d) => s + d.value, 0) / data.length).toFixed(1)
+        : 0;
 
     const isToday = (d) => d.getTime() === today.getTime();
     const isSelected = (d) => selectedDateObj && d.getTime() === selectedDateObj.getTime();
@@ -66,52 +60,50 @@ function EC2GraphModal() {
     const padY = 10;
 
     const getX = (i) => padX + (i / (data.length - 1)) * (chartW - padX * 2);
-    const getY = (v) => padY + (1 - (v - minVal) / (maxVal - minVal + 1)) * (chartH - padY * 2);
+    const range = (maxVal - minVal) || 1;
 
-    const linePath = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d.value)}`).join(' ');
-    const areaPath = `${linePath} L ${getX(data.length - 1)} ${chartH} L ${getX(0)} ${chartH} Z`;
+    const getY = (v) =>
+        padY + (1 - (v - minVal) / range) * (chartH - padY * 2);
+
+    let linePath = "";
+    let areaPath = "";
+
+    if (data.length > 1) {
+        linePath = data
+            .map((d, i) => {
+                const x = getX(i);
+                const y = getY(d.value);
+                return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+            })
+            .join(" ");
+
+        areaPath = `${linePath} L ${getX(data.length - 1)} ${chartH} L ${getX(0)} ${chartH} Z`;
+    }
 
     // Colors per metric
-    const metricColor = activeMetric === 'cpu' ? '#3b82f6' : '#ec4899'; // BLUE for EC2 CPU, PINK for MEM
-    const metricColorLight = activeMetric === 'cpu' ? 'rgba(59,130,246,0.3)' : 'rgba(236,72,153,0.3)';
+    const metricColor = '#3b82f6'
 
     return (
-        <div className="ec2-analytics-page" style={{ padding: '2rem' }}>
-            <div className="graph-modal" style={{ position: 'relative', width: '100%', maxWidth: '1200px', margin: '0 auto', '--accent-primary': '#3b82f6' }}>
+        <div className="graph-modal-overlay" onClick={onClose}>
+            <div className="graph-modal" onClick={e => e.stopPropagation()} style={{ '--accent-primary': '#3b82f6' }}>
 
                 {/* Header */}
                 <div className="gm-header">
                     <div className="gm-header-left">
-                        <div className="gm-icon" style={{ background: activeMetric === 'cpu' ? 'var(--gradient-primary)' : 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)' }}>
-                            {activeMetric === 'cpu' ? <Cpu size={22} /> : <MemoryStick size={22} />}
+                        <div className="gm-icon" style={{ background: 'var(--gradient-primary)' }}>
+                            <Cpu size={22} />
                         </div>
                         <div>
-                            <h2 className="gm-title" style={{ background: activeMetric === 'cpu' ? 'var(--gradient-primary)' : 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                            <h2 className="gm-title" style={{ background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                                 {instance.instanceName}
                             </h2>
-                            <p className="gm-subtitle">30-Day {activeMetric === 'cpu' ? 'CPU' : 'Memory'} Usage Trend</p>
+                            <p className="gm-subtitle">30-Day CPU Usage Trend</p>
                         </div>
                     </div>
                     <div className="gm-header-right">
                         {/* Metric Toggle */}
-                        <div className="gm-metric-toggle">
-                            <button
-                                className={`gm-toggle-btn ${activeMetric === 'cpu' ? 'active cpu-active' : ''}`}
-                                onClick={() => setActiveMetric('cpu')}
-                            >
-                                <Cpu size={14} />
-                                CPU
-                            </button>
-                            <button
-                                className={`gm-toggle-btn ${activeMetric === 'memory' ? 'active mem-active' : ''}`}
-                                onClick={() => setActiveMetric('memory')}
-                            >
-                                <MemoryStick size={14} />
-                                Memory
-                            </button>
-                        </div>
-                        <button className="gm-close-btn" onClick={onClose} title="Go Back">
-                            <ArrowLeft size={20} />
+                        <button className="gm-close-btn" onClick={onClose}>
+                            <X size={20} />
                         </button>
                     </div>
                 </div>
@@ -129,8 +121,8 @@ function EC2GraphModal() {
                         <div className="gm-stat-lbl">Average</div>
                     </div>
                     <div className="gm-stat">
-                        <div className={`gm-stat-icon ${activeMetric === 'cpu' ? 'current' : 'mem-current'}`}>
-                            {activeMetric === 'cpu' ? <Cpu size={16} /> : <MemoryStick size={16} />}
+                        <div className={`gm-stat-icon current`}>
+                            <Cpu size={16} />
                         </div>
                         <div className="gm-stat-val">{currentVal}%</div>
                         <div className="gm-stat-lbl">Current</div>
@@ -150,15 +142,14 @@ function EC2GraphModal() {
                         viewBox={`0 0 ${chartW} ${chartH}`}
                         className="gm-line-svg"
                         preserveAspectRatio="none"
-                        key={activeMetric}
                     >
                         <defs>
-                            <linearGradient id={`line-area-grad-${activeMetric}`} x1="0" y1="0" x2="0" y2="1">
+                            <linearGradient id={`line-area-grad-cpu`} x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor={metricColor} stopOpacity="0.3" />
                                 <stop offset="100%" stopColor={metricColor} stopOpacity="0" />
                             </linearGradient>
                         </defs>
-                        <path d={areaPath} fill={`url(#line-area-grad-${activeMetric})`} />
+                        <path d={areaPath} fill={`url(#line-area-grad-cpu)`} />
                         <path d={linePath} fill="none" stroke={metricColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         {hoveredIdx !== null && (
                             <circle
@@ -201,8 +192,8 @@ function EC2GraphModal() {
                                     onMouseLeave={() => { setHoveredIdx(null); setTooltip(null); }}
                                 >
                                     <div
-                                        className={`gm-bar ${activeMetric === 'memory' ? 'mem-bar' : ''} ${todayBar ? 'today-bar' : ''} ${selectedBar ? 'selected-bar' : ''} ${isHovered ? 'hovered' : ''}`}
-                                        style={{ height: `${heightPct}%`, background: isHovered ? (activeMetric === 'cpu' ? '#3b82f6' : '#ec4899') : '' }}
+                                        className={`gm-bar ${todayBar ? 'today-bar' : ''} ${selectedBar ? 'selected-bar' : ''} ${isHovered ? 'hovered' : ''}`}
+                                        style={{ height: `${heightPct}%`, background: isHovered ? '#3b82f6' : '' }}
                                     />
                                     {(todayBar || selectedBar) && (
                                         <div className={`gm-bar-label ${todayBar ? 'today-label' : 'selected-label'}`}>
@@ -234,8 +225,8 @@ function EC2GraphModal() {
                         </div>
                     )}
                     <div className="gm-legend-item">
-                        <div className={`gm-legend-dot ${activeMetric === 'cpu' ? 'normal-dot' : 'mem-dot'}`} style={{ background: activeMetric === 'cpu' ? '#3b82f6' : '#ec4899' }} />
-                        <span>{activeMetric === 'cpu' ? 'CPU Usage' : 'Memory Usage'}</span>
+                        <div className={`gm-legend-dot normal-dot`} style={{ background: '#3b82f6' }} />
+                        <span>CPU Usage</span>
                     </div>
                 </div>
             </div>
@@ -247,8 +238,8 @@ function EC2GraphModal() {
                     style={{ left: tooltip.x, top: tooltip.y - 80 }}
                 >
                     <div className="gm-tooltip-date">{tooltip.date}</div>
-                    <div className="gm-tooltip-val" style={{ color: activeMetric === 'cpu' ? '#3b82f6' : '#ec4899' }}>{tooltip.value}%</div>
-                    <div className="gm-tooltip-metric">{activeMetric === 'cpu' ? 'CPU' : 'Memory'}</div>
+                    <div className="gm-tooltip-val" style={{ color: '#3b82f6' }}>{tooltip.value}%</div>
+                    <div className="gm-tooltip-metric">CPU</div>
                     {tooltip.isToday && <div className="gm-tooltip-tag today-tag">Today</div>}
                     {tooltip.isSelected && <div className="gm-tooltip-tag selected-tag">Selected</div>}
                 </div>
