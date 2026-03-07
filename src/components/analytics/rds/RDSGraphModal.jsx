@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { X, TrendingUp, Activity, Cpu, Network, Zap, Database, Calendar } from 'lucide-react';
+import { X, TrendingUp, Activity, Cpu, Network, Zap, Database, Calendar, DollarSign } from 'lucide-react';
 
-function RDSGraphModal({ isOpen, onClose, instance }) {
+function RDSGraphModal({ isOpen, onClose, instance, excludeMetrics = [] }) {
     const [tooltip, setTooltip] = useState(null);
     const [hoveredIdx, setHoveredIdx] = useState(null);
     const [activeMetric, setActiveMetric] = useState('cpu');
@@ -31,6 +31,7 @@ function RDSGraphModal({ isOpen, onClose, instance }) {
                 connections: isActive ? Math.max(1, Math.min(1000, connBase + (Math.cos(i * 0.5) * 20) + (Math.random() * 5))) : 0,
                 readIops: isActive ? Math.max(10, readBase + (Math.sin(i * 0.9) * 50) + (Math.random() * 30)) : 0,
                 writeIops: isActive ? Math.max(5, writeBase + (Math.cos(i * 0.7) * 30) + (Math.random() * 20)) : 0,
+                cost: isActive ? Math.max(0.1, (cpuBase / 10) + (Math.sin(i * 0.3) * 2) + Math.random()) : 0,
                 isToday: i === 0
             });
         }
@@ -39,12 +40,19 @@ function RDSGraphModal({ isOpen, onClose, instance }) {
 
     if (!isOpen) return null;
 
-    const metricConfig = {
-        cpu: { label: 'CPU Usage', unit: '%', icon: Cpu, color: '#3b82f6', key: 'cpu', gradient: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)' },
-        connections: { label: 'Connections', unit: '', icon: Network, color: '#f59e0b', key: 'connections', gradient: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)' },
-        read: { label: 'Read IOPS', unit: '', icon: Zap, color: '#10b981', key: 'readIops', gradient: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)' },
-        write: { label: 'Write IOPS', unit: '', icon: Zap, color: '#ec4899', key: 'writeIops', gradient: 'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)' }
-    };
+    const metricConfig = useMemo(() => {
+        const config = {
+            cpu: { label: 'CPU Usage', unit: '%', icon: Cpu, color: '#3b82f6', key: 'cpu', gradient: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)' },
+            connections: { label: 'DB CONN', unit: '', icon: Network, color: '#f59e0b', key: 'connections', gradient: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)' },
+            read: { label: 'Read IOPS', unit: '', icon: Zap, color: '#10b981', key: 'readIops', gradient: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)' },
+            write: { label: 'Write IOPS', unit: '', icon: Zap, color: '#ec4899', key: 'writeIops', gradient: 'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)' },
+            cost: { label: 'Daily Cost', unit: '$', icon: DollarSign, color: '#8b5cf6', key: 'cost', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)' }
+        };
+
+        return Object.fromEntries(
+            Object.entries(config).filter(([key]) => !excludeMetrics.includes(key))
+        );
+    }, [excludeMetrics]);
 
     const config = metricConfig[activeMetric] || metricConfig.cpu;
     const data = chartData;
@@ -116,19 +124,25 @@ function RDSGraphModal({ isOpen, onClose, instance }) {
                 <div className="rds-gm-stats-row">
                     <div className="rds-gm-stat">
                         <div className="rds-gm-stat-icon peak"><TrendingUp size={16} /></div>
-                        <div className="rds-gm-stat-val">{maxVal.toFixed(1)}{config.unit}</div>
+                        <div className="rds-gm-stat-val">
+                            {config.unit === '$' ? `$${maxVal.toFixed(2)}` : `${maxVal.toFixed(1)}${config.unit}`}
+                        </div>
                         <div className="rds-gm-stat-lbl">Peak</div>
                     </div>
                     <div className="rds-gm-stat">
                         <div className="rds-gm-stat-icon avg"><Activity size={16} /></div>
-                        <div className="rds-gm-stat-val">{avgVal.toFixed(1)}{config.unit}</div>
+                        <div className="rds-gm-stat-val">
+                            {config.unit === '$' ? `$${avgVal.toFixed(2)}` : `${avgVal.toFixed(1)}${config.unit}`}
+                        </div>
                         <div className="rds-gm-stat-lbl">Average</div>
                     </div>
                     <div className="rds-gm-stat">
                         <div className="rds-gm-stat-icon current" style={{ color: metricColor, background: `${metricColor}15` }}>
                             <config.icon size={16} />
                         </div>
-                        <div className="rds-gm-stat-val">{latestVal.toFixed(1)}{config.unit}</div>
+                        <div className="rds-gm-stat-val">
+                            {config.unit === '$' ? `$${latestVal.toFixed(2)}` : `${latestVal.toFixed(1)}${config.unit}`}
+                        </div>
                         <div className="rds-gm-stat-lbl">Current</div>
                     </div>
                 </div>
@@ -227,7 +241,7 @@ function RDSGraphModal({ isOpen, onClose, instance }) {
                 <div className="rds-gm-floating-tooltip" style={{ left: tooltip.x, top: tooltip.y - 100 }}>
                     <div className="rds-gm-tt-date">{tooltip.date}</div>
                     <div className="rds-gm-tt-val">
-                        {Number(tooltip.value).toFixed(2)}{config.unit}
+                        {config.unit === '$' ? `$${Number(tooltip.value).toFixed(2)}` : `${Number(tooltip.value).toFixed(2)}${config.unit}`}
                     </div>
                     <div className="rds-gm-tt-metric">{config.label}</div>
                     {tooltip.isToday && <div className="rds-gm-tt-tag today">Today</div>}

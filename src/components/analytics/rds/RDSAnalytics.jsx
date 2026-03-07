@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
     Database, Activity, Cpu, Zap, Cloud, Server, ChevronLeft, ChevronRight,
     Calendar, Download, TrendingUp, SearchX, RefreshCw, BarChart3,
@@ -131,13 +131,21 @@ function CalendarPicker({ onRangeSelect, onClose }) {
 }
 
 function RDSAnalytics() {
+    const navigate = useNavigate();
     const { setBgContext } = useOutletContext();
-    const [viewMode, setViewMode] = useState('rds'); // 'rds' or 'aurora'
+    const [searchParams, setSearchParams] = useSearchParams();
+    const viewMode = searchParams.get('view') === 'aurora' ? 'aurora' : 'rds';
+
+    const setViewMode = (mode) => {
+        setSearchParams({ view: mode }, { replace: true });
+    };
+
     const [selectedRange, setSelectedRange] = useState('7d');
     const [showCalendar, setShowCalendar] = useState(false);
     const [customRange, setCustomRange] = useState(null);
     const [selectedDaysInfo, setSelectedDaysInfo] = useState(null);
     const [selectedInstanceForTrend, setSelectedInstanceForTrend] = useState(null);
+    const [selectedClusterForTrend, setSelectedClusterForTrend] = useState(null);
 
     useEffect(() => {
         setBgContext('analytics');
@@ -385,7 +393,14 @@ function RDSAnalytics() {
                     <div className={viewMode === 'aurora' ? "aurora-clusters-grid" : "rds-instances-grid"}>
                         {viewMode === 'aurora' ? (
                             currentData.map((cluster, idx) => (
-                                <div key={cluster.cluster_name} className="aurora-cluster-card" style={{ animationDelay: `${0.2 + idx * 0.1}s` }}>
+                                <div
+                                    key={cluster.cluster_name}
+                                    className="aurora-cluster-card"
+                                    style={{ animationDelay: `${0.2 + idx * 0.1}s` }}
+                                    onClick={() => navigate(`/analytics/rds/cluster/${cluster.cluster_name}`, {
+                                        state: { cluster, selectedRange }
+                                    })}
+                                >
                                     <div className="aurora-cluster-status-glow" />
 
                                     <div className="aurora-cluster-card-top">
@@ -393,8 +408,26 @@ function RDSAnalytics() {
                                             <div className={`aurora-cluster-status-dot ${cluster.status}`} />
                                             <span className="aurora-cluster-name-text">{cluster.cluster_name}</span>
                                         </div>
-                                        <div className={`aurora-cluster-trend-badge trend-${cluster.trend}`}>
-                                            {cluster.trend === 'up' ? '↑' : cluster.trend === 'down' ? '↓' : '→'}
+                                        <div className="aurora-cluster-card-actions">
+                                            <button
+                                                className="aurora-cluster-trend-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedClusterForTrend({
+                                                        db_identifier: cluster.cluster_name,
+                                                        avg_cpu_utilization: cluster.avg_cpu_utilization,
+                                                        avg_connections: cluster.avg_connections,
+                                                        avg_read_iops: cluster.avg_read_iops,
+                                                        avg_write_iops: cluster.avg_write_iops,
+                                                        cost: cluster.approx_cost
+                                                    });
+                                                }}
+                                            >
+                                                <BarChart3 size={16} />
+                                            </button>
+                                            <div className={`aurora-cluster-trend-badge trend-${cluster.trend}`}>
+                                                {cluster.trend === 'up' ? '↑' : cluster.trend === 'down' ? '↓' : '→'}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -634,6 +667,12 @@ function RDSAnalytics() {
                 isOpen={!!selectedInstanceForTrend}
                 onClose={() => setSelectedInstanceForTrend(null)}
                 instance={selectedInstanceForTrend}
+            />
+
+            <RDSGraphModal
+                isOpen={!!selectedClusterForTrend}
+                onClose={() => setSelectedClusterForTrend(null)}
+                instance={selectedClusterForTrend}
             />
 
             {showCalendar && (

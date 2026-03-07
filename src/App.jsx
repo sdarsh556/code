@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './components/auth/Login';
 import Layout from './components/Layout';
@@ -20,6 +21,7 @@ import ClusterDetails from './components/analytics/ecs/ClusterDetails';
 import ServiceDetails from './components/analytics/ecs/ServiceDetails';
 import EKSAnalytics from './components/analytics/eks/EKSAnalytics';
 import RDSAnalytics from './components/analytics/rds/RDSAnalytics';
+import AuroraClusterDetails from './components/analytics/rds/AuroraClusterDetails';
 import AuthGuard from './components/routes/AuthGuard';
 import useSessionTimeout from './components/hooks/useSessionTimeout';
 
@@ -61,6 +63,8 @@ function App() {
             <Route path="analytics/ecs/cluster/:clusterName/services" element={<ServiceDetails />} />
             <Route path="analytics/eks" element={<EKSAnalytics />} />
             <Route path="analytics/rds" element={<RDSAnalytics />} />
+            <Route path="analytics/rds/cluster/:clusterName" element={<AuroraClusterDetails />} />
+            {/* Route added successfully */}
           </Route>
         </Route>
 
