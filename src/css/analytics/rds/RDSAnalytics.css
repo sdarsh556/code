@@ -879,6 +879,10 @@
 }
 
 /* Bar Chart Layer */
+.dynamic-bg-wrapper.context-analytics .grid-layer {
+  display: none;
+}
+
 .rds-gm-bars-container {
   display: flex;
   align-items: flex-end;
@@ -1435,4 +1439,95 @@
 
 .aurora-cluster-card:hover .aurora-cluster-footer svg {
   transform: translateX(5px);
+}
+
+/* ============================================
+   LIGHT THEME OVERRIDES
+   ============================================ */
+
+[data-theme="light"] .rds-page-header {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%);
+  border-color: var(--border-medium);
+}
+
+[data-theme="light"] .rds-page-title {
+  background: linear-gradient(90deg, var(--text-primary), var(--text-secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+[data-theme="light"] .rds-mode-toggle-wrap {
+  background: rgba(15, 23, 42, 0.06);
+  border-color: var(--border-medium);
+}
+
+[data-theme="light"] .rds-mode-toggle-btn.active {
+  color: white;
+}
+
+[data-theme="light"] .rds-toggle-slider {
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+[data-theme="light"] .rds-instances-panel {
+  border-color: var(--border-medium);
+}
+
+[data-theme="light"] .rds-panel-header-new {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.03) 0%, transparent 100%);
+}
+
+[data-theme="light"] .rds-instance-card {
+  background: #ffffff;
+  border-color: var(--border-medium);
+}
+
+[data-theme="light"] .rds-instance-card:hover {
+  border-color: var(--rds-emerald);
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08), 0 0 15px rgba(16, 185, 129, 0.1);
+}
+
+[data-theme="light"] .rds-instance-stats-row {
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
+}
+
+[data-theme="light"] .rds-instance-id-text {
+  color: var(--text-tertiary);
+}
+
+[data-theme="light"] .rds-rb-track {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+[data-theme="light"] .aurora-cluster-card {
+  background: #ffffff;
+  border-color: var(--border-medium);
+}
+
+[data-theme="light"] .aurora-cluster-card:hover {
+  border-color: var(--rds-aurora-cyan);
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.1), 0 0 20px rgba(6, 182, 212, 0.1);
+}
+
+[data-theme="light"] .aurora-cluster-name {
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .aurora-cluster-db-name {
+  color: var(--text-tertiary);
+}
+
+[data-theme="light"] .aurora-cluster-stat-card {
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
+}
+
+[data-theme="light"] .aurora-cluster-stat-value {
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .aurora-cluster-resource-bars {
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
 }

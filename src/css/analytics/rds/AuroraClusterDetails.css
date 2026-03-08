@@ -728,3 +728,102 @@
     filter: brightness(1.1);
     box-shadow: 0 20px 40px rgba(16, 185, 129, 0.5);
 }
+
+/* ============================================
+   LIGHT THEME OVERRIDES
+   ============================================ */
+
+[data-theme="light"] .cd-back-btn {
+    background: rgba(15, 23, 42, 0.04);
+    border-color: var(--border-medium);
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .cd-breadcrumb-current {
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .cd-header {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
+    border-color: var(--border-medium);
+}
+
+[data-theme="light"] .cd-title {
+    background: linear-gradient(90deg, var(--text-primary), var(--text-secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+[data-theme="light"] .cd-pill {
+    background: var(--surface-card);
+    border-color: var(--border-medium);
+}
+
+[data-theme="light"] .cd-pill-value {
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .aurora-instance-card {
+    background: #ffffff;
+    border-color: var(--border-medium);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+[data-theme="light"] .aurora-instance-card:hover {
+    border-color: var(--rds-aurora-cyan);
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.1), 0 0 20px rgba(6, 182, 212, 0.1);
+}
+
+[data-theme="light"] .aurora-ic-tech-grid {
+    opacity: 0.15;
+}
+
+[data-theme="light"] .aurora-ic-top-bar {
+    border-color: var(--border-light);
+}
+
+[data-theme="light"] .aurora-ic-id {
+    background: linear-gradient(180deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+[data-theme="light"] .aurora-ic-class {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .aurora-ic-btn.secondary {
+    background: var(--bg-secondary);
+    border-color: var(--border-medium);
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .aurora-gauge-val {
+    color: var(--text-primary);
+    text-shadow: none;
+}
+
+[data-theme="light"] .aurora-gauge-label {
+    color: var(--text-tertiary);
+}
+
+[data-theme="light"] .aurora-timeline-modal {
+    background: #ffffff;
+    border-color: var(--border-medium);
+    box-shadow: 0 40px 100px rgba(15, 23, 42, 0.2);
+}
+
+[data-theme="light"] .aurora-tm-title {
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .aurora-tm-count-block .aurora-tm-label {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .aurora-tm-date-pill {
+    background: var(--bg-secondary);
+    border-color: var(--border-light);
+    color: var(--text-primary);
+}
