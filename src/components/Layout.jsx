@@ -12,7 +12,7 @@ import {
     LogOut,
     User,
     ChevronRight,
-    Settings,
+    Settings as SettingsIcon,
     BarChart3
 } from 'lucide-react';
 import '../css/Layout.css';
@@ -182,13 +182,18 @@ function Layout() {
 
                     {!isSidebarCollapsed && (
                         <div className="sidebar-footer">
-                            <div className="sidebar-footer-card">
-                                <Settings size={20} />
-                                <div>
-                                    <h4>Settings</h4>
-                                    <p>Manage preferences</p>
+                            <Link
+                                to="/settings"
+                                className={`sidebar-footer-card-link ${location.pathname === '/settings' ? 'active' : ''}`}
+                            >
+                                <div className="sidebar-footer-card">
+                                    <SettingsIcon size={20} />
+                                    <div>
+                                        <h4>Settings</h4>
+                                        <p>Manage preferences</p>
+                                    </div>
                                 </div>
-                            </div>
+                            </Link>
                         </div>
                     )}
                 </aside>

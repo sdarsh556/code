@@ -1,0 +1,575 @@
+.settings-container {
+    /* padding: 0.5rem; */
+    max-width: 1700px;
+    margin: 0 auto;
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* ============================================
+   MODERN PAGE HEADER (Identical to ECS.jsx / RDS.jsx)
+   ============================================ */
+.page-header-modern {
+    margin-bottom: 2rem;
+    padding: 2.5rem;
+    background: linear-gradient(135deg, var(--surface-glass) 0%, var(--surface-elevated) 100%);
+    backdrop-filter: var(--backdrop-blur-strong);
+    border-radius: var(--radius-2xl);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-2xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+}
+
+.header-left-section {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.header-icon-modern {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-xl);
+    background: var(--gradient-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: var(--shadow-primary);
+    flex-shrink: 0;
+}
+
+.header-text-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.page-title-modern {
+    font-size: 2.25rem;
+    font-weight: 800;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+}
+
+.page-subtitle-modern {
+    font-size: 1.0625rem;
+    color: var(--text-secondary);
+    margin: 0.25rem 0 0;
+    line-height: 1.6;
+}
+
+.settings-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 3rem;
+    align-items: start;
+}
+
+/* Sidebar Styling */
+.settings-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: var(--surface-glass);
+    backdrop-filter: var(--backdrop-blur);
+    padding: 1rem;
+    border-radius: var(--radius-2xl);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-lg);
+}
+
+.settings-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+}
+
+.settings-tab-btn:hover:not(.disabled) {
+    background: var(--surface-elevated);
+    color: var(--accent-primary);
+    transform: translateX(4px);
+}
+
+.settings-tab-btn.active {
+    background: var(--gradient-primary);
+    color: white;
+    box-shadow: var(--shadow-primary);
+}
+
+.settings-tab-btn.disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.coming-soon {
+    margin-left: auto;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    background: var(--surface-elevated);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--text-tertiary);
+}
+
+/* Content Area */
+.section-header {
+    margin-bottom: 2.5rem;
+}
+
+.section-header h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.section-header p {
+    color: var(--text-secondary);
+    margin: 0.5rem 0 0;
+}
+
+/* Grid Layout for Cards */
+.schedulers-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+}
+
+.scheduler-card {
+    background: var(--surface-glass);
+    backdrop-filter: var(--backdrop-blur-strong);
+    border-radius: var(--radius-2xl);
+    border: 1px solid var(--border-light);
+    padding: 2rem;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    flex-direction: column;
+}
+
+.scheduler-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+}
+
+.scheduler-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: var(--shadow-2xl);
+    border-color: var(--border-medium);
+}
+
+/* Card Variants */
+.card-blue::before {
+    background: var(--gradient-primary);
+}
+
+.card-teal::before {
+    background: var(--gradient-success);
+}
+
+.card-purple::before {
+    background: linear-gradient(135deg, #8B5CF6 0%, #D946EF 100%);
+}
+
+.card-orange::before {
+    background: var(--gradient-secondary);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.service-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.service-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-lg);
+    background: var(--surface-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.service-info h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* Premium Toggle Slider */
+.premium-switch {
+    width: 60px;
+    height: 32px;
+    position: relative;
+    display: inline-block;
+}
+
+.premium-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.premium-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--surface-elevated);
+    transition: .4s;
+    border-radius: 34px;
+    border: 1px solid var(--border-light);
+}
+
+.premium-slider:before {
+    position: absolute;
+    content: "";
+    height: 24px;
+    width: 24px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: var(--shadow-md);
+}
+
+input:checked+.premium-slider {
+    background: var(--gradient-success);
+    border-color: transparent;
+}
+
+input:checked+.premium-slider:before {
+    transform: translateX(28px);
+}
+
+.card-body {
+    flex-grow: 1;
+}
+
+.question-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 0.5rem 0;
+}
+
+.description {
+    color: var(--text-tertiary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.time-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.time-field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    margin-bottom: 0.75rem;
+}
+
+/* ============================================
+   MINDBLOWING TIME INPUTS (Tier-1 Design)
+   ============================================ */
+.time-input-wrapper-premium {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--surface-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-xl);
+    padding: 0.25rem 0.75rem;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow:
+        inset 0 2px 4px rgba(0, 0, 0, 0.03),
+        0 4px 12px rgba(0, 0, 0, 0.02);
+    cursor: text;
+}
+
+.layout-container[data-theme="dark"] .time-input-wrapper-premium {
+    background: rgba(15, 23, 42, 0.8);
+    border-color: rgba(148, 163, 184, 0.15);
+    box-shadow:
+        inset 0 2px 6px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.time-input-wrapper-premium:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-primary);
+    box-shadow:
+        0 12px 24px -8px rgba(59, 130, 246, 0.2),
+        inset 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+.time-input-wrapper-premium:focus-within {
+    border-color: transparent;
+    background: var(--surface-card);
+    box-shadow:
+        0 0 0 2px var(--surface-card),
+        0 0 0 4px var(--accent-primary),
+        0 15px 30px -10px rgba(59, 130, 246, 0.4);
+}
+
+.layout-container[data-theme="dark"] .time-input-wrapper-premium:focus-within {
+    background: #0F172A;
+    box-shadow:
+        0 0 0 2px #0F172A,
+        0 0 0 4px var(--accent-primary),
+        0 0 30px rgba(96, 165, 250, 0.3);
+}
+
+.time-icon-inner {
+    color: var(--text-tertiary);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    pointer-events: none;
+    /* Clicks pass through to input */
+    position: relative;
+    z-index: 2;
+}
+
+.time-input-wrapper-premium:focus-within .time-icon-inner {
+    color: var(--accent-primary);
+    transform: scale(1.1);
+}
+
+.premium-time-input {
+    width: 100%;
+    padding: 0.75rem 0.5rem;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    font-family: inherit !important;
+    outline: none !important;
+    cursor: pointer;
+    text-align: center;
+    letter-spacing: 0.05em;
+    color-scheme: dark;
+    position: relative;
+    z-index: 1;
+}
+
+/* Hide native browser artifacts and ensure transparency */
+.premium-time-input:focus,
+.premium-time-input:active,
+.premium-time-input:hover {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Hide the native clock icon entirely as we provide our own */
+.premium-time-input::-webkit-calendar-picker-indicator {
+    display: none !important;
+    -webkit-appearance: none;
+}
+
+/* Specific fix for the 'boxy' selection highlight */
+.premium-time-input::selection {
+    background: rgba(59, 130, 246, 0.3);
+}
+
+.layout-container[data-theme="dark"] .premium-time-input::selection {
+    background: rgba(96, 165, 250, 0.4);
+}
+
+/* Deep cleanup of internal browser elements */
+.premium-time-input::-webkit-datetime-edit-fields-wrapper,
+.premium-time-input::-webkit-datetime-edit-text,
+.premium-time-input::-webkit-datetime-edit-minute,
+.premium-time-input::-webkit-datetime-edit-hour,
+.premium-time-input::-webkit-datetime-edit-ampm-field {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+/* Ensure the wrapper is the only thing with a border */
+.time-input-wrapper-premium input {
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* FF Specifics if needed */
+.premium-time-input::-moz-calendar-picker-indicator {
+    filter: var(--theme-icon-filter);
+}
+
+/* ============================================
+   CARD FOOTER & SUBMIT BUTTON
+   ============================================ */
+.card-footer-inner {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.card-submit-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-sm);
+}
+
+.card-submit-button:hover {
+    background: var(--gradient-primary);
+    border-color: transparent;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+}
+
+.card-submit-button:active {
+    transform: scale(0.98);
+}
+
+.card-submit-button svg {
+    color: var(--accent-primary);
+    transition: color 0.3s ease;
+}
+
+.card-submit-button:hover svg {
+    color: white;
+}
+
+/* Success Toast */
+.success-toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: #10b981;
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+    animation: slideInUp 0.5s ease backwards;
+    z-index: 1000;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+    .settings-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-sidebar {
+        flex-direction: row;
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .schedulers-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-footer {
+        grid-column: span 1;
+    }
+}

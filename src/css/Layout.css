@@ -98,6 +98,17 @@
     box-shadow: var(--shadow-primary);
 }
 
+.header-title-wrapper h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.02em;
+}
+
 .brand-name {
     font-size: 1.25rem;
     font-weight: 700;
@@ -459,6 +470,21 @@
 .sidebar-footer {
     padding: 1rem;
     border-top: 1px solid var(--border-light);
+}
+
+.sidebar-footer-card-link {
+    text-decoration: none;
+    display: block;
+    transition: all var(--transition-base);
+}
+
+.sidebar-footer-card-link:hover {
+    transform: translateY(-4px);
+}
+
+.sidebar-footer-card-link.active .sidebar-footer-card {
+    background: var(--gradient-secondary);
+    box-shadow: var(--shadow-xl);
 }
 
 .sidebar-footer-card {

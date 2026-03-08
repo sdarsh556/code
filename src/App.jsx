@@ -22,6 +22,7 @@ import ServiceDetails from './components/analytics/ecs/ServiceDetails';
 import EKSAnalytics from './components/analytics/eks/EKSAnalytics';
 import RDSAnalytics from './components/analytics/rds/RDSAnalytics';
 import AuroraClusterDetails from './components/analytics/rds/AuroraClusterDetails';
+import Settings from './components/home/Settings';
 import AuthGuard from './components/routes/AuthGuard';
 import useSessionTimeout from './components/hooks/useSessionTimeout';
 
@@ -64,6 +65,7 @@ function App() {
             <Route path="analytics/eks" element={<EKSAnalytics />} />
             <Route path="analytics/rds" element={<RDSAnalytics />} />
             <Route path="analytics/rds/cluster/:clusterName" element={<AuroraClusterDetails />} />
+            <Route path="settings" element={<Settings />} />
             {/* Route added successfully */}
           </Route>
         </Route>
