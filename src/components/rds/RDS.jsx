@@ -2,7 +2,8 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Database, Server, HardDrive, Play, Square, RotateCw, RefreshCw, Upload, DownloadCloud,
-    Search, Plus, Minus, Settings, Shield, Clock, Sun, Moon, Pencil, FileUp, Activity, X
+    Search, Plus, Minus, Settings, Shield, Clock, Sun, Moon, Pencil, FileUp, Activity, X,
+    ArrowUpDown
 } from 'lucide-react';
 import '../../css/rds/rds.css';
 // import axiosClient from '../api/axiosClient'; // Uncomment when ready
@@ -158,6 +159,53 @@ export default function RDS() {
     const [activeStatFilter, setActiveStatFilter] = useState(null); // 'available', 'stopped', '247', 'never', 'exception'
     const [selectedRows, setSelectedRows] = useState([]);
     const [expandedClusters, setExpandedClusters] = useState({});
+    const [showColumnSettings, setShowColumnSettings] = useState(false);
+    const [pendingVisibleColumns, setPendingVisibleColumns] = useState({});
+
+    // --- Column Visibility State ---
+    const columnDefinitions = [
+        { key: 'identifier', label: 'Identifier', mandatory: true },
+        { key: 'role', label: 'Role' },
+        { key: 'engine', label: 'Engine' },
+        { key: 'class', label: 'Class' },
+        { key: 'storage', label: 'Storage' },
+        { key: 'status', label: 'Status' },
+        { key: 'actions', label: 'Actions', mandatory: true },
+        { key: 'policies', label: 'Scheduling Policies', mandatory: true },
+        { key: 'schedule', label: 'Schedule', mandatory: true },
+        { key: 'edit', label: 'Edit', mandatory: true }
+    ];
+
+    const [visibleColumns, setVisibleColumns] = useState({
+        identifier: true,
+        role: true,
+        engine: true,
+        class: true,
+        storage: true,
+        status: true,
+        actions: true,
+        policies: true,
+        schedule: true,
+        edit: true
+    });
+
+    const smartPresets = {
+        full: { label: 'Full View', cols: ['identifier', 'role', 'engine', 'class', 'storage', 'status', 'actions', 'policies', 'schedule', 'edit'] },
+        operational: { label: 'Operational', cols: ['identifier', 'role', 'status', 'actions', 'policies'] },
+        sizing: { label: 'Sizing', cols: ['identifier', 'engine', 'class', 'storage'] },
+        minimal: { label: 'Minimal', cols: ['identifier', 'status', 'actions'] }
+    };
+
+    const applyPreset = (presetKey) => {
+        const preset = smartPresets[presetKey];
+        const newVisible = { identifier: true };
+        columnDefinitions.forEach(col => {
+            if (col.key !== 'identifier') {
+                newVisible[col.key] = preset.cols.includes(col.key);
+            }
+        });
+        setVisibleColumns(newVisible);
+    };
 
     // --- Resizable Table Logic ---
     const initialWidths = {
@@ -688,6 +736,32 @@ export default function RDS() {
                 </div>
             </div>
 
+            {/* Table Header Section (Now Attached) */}
+            <div className="rds-table-header-modern attached">
+                <div className="rds-th-left">
+                    <div className="rds-th-icon">
+                        <ArrowUpDown size={20} />
+                    </div>
+                    <div className="rds-th-text">
+                        <div className="rds-th-title">RDS Database Fleet</div>
+                        <div className="rds-th-subtitle">Manage clusters and instances · {filteredDatabases.length} items</div>
+                    </div>
+                </div>
+                <div className="rds-th-right">
+                    <button
+                        className="rds-th-action-btn settings-btn"
+                        onClick={() => {
+                            setPendingVisibleColumns(visibleColumns);
+                            setShowColumnSettings(true);
+                        }}
+                        title="Column Settings"
+                    >
+                        <Settings size={18} />
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </div>
+
             {/* Main Data Table */}
             <div className="rds-table-container glass-panel">
                 <table className="rds-table-glass" style={{ tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
@@ -700,71 +774,91 @@ export default function RDS() {
                                     onChange={handleSelectAll}
                                 />
                             </th>
-                            <th style={{ width: columnWidths.identifier }}>
-                                <div className="resizer-wrapper">
-                                    Identifier
-                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'identifier')}></div>
-                                </div>
-                            </th>
-                            <th style={{ width: columnWidths.role }}>
-                                <div className="resizer-wrapper">
-                                    Role
-                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'role')}></div>
-                                </div>
-                            </th>
-                            <th style={{ width: columnWidths.engine }}>
-                                <div className="resizer-wrapper">
-                                    Engine
-                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'engine')}></div>
-                                </div>
-                            </th>
-                            <th style={{ width: columnWidths.class }}>
-                                <div className="resizer-wrapper">
-                                    Class
-                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'class')}></div>
-                                </div>
-                            </th>
-                            <th style={{ width: columnWidths.storage }} className="storage-header-cell">
-                                <div className="resizer-wrapper">
-                                    <div className="storage-header-main">Storage</div>
-                                    <div className="storage-header-labels-box">
-                                        <span className="label-item">Used</span>
-                                        <span className="label-sep"></span>
-                                        <span className="label-item">Alloc</span>
+                            {visibleColumns.identifier && (
+                                <th style={{ width: columnWidths.identifier }}>
+                                    <div className="resizer-wrapper">
+                                        Identifier
+                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'identifier')}></div>
                                     </div>
-                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'storage')}></div>
-                                </div>
-                            </th>
-                            <th style={{ width: columnWidths.status }}>
-                                <div className="resizer-wrapper">
-                                    Status
-                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'status')}></div>
-                                </div>
-                            </th>
-                            <th style={{ width: columnWidths.actions }}>
-                                <div className="resizer-wrapper">
-                                    Actions
-                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'actions')}></div>
-                                </div>
-                            </th>
-                            <th style={{ width: columnWidths.policies }}>
-                                <div className="resizer-wrapper">
-                                    Scheduling Policies
-                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'policies')}></div>
-                                </div>
-                            </th>
-                            <th style={{ width: columnWidths.schedule }}>
-                                <div className="resizer-wrapper">
-                                    Schedule
-                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'schedule')}></div>
-                                </div>
-                            </th>
-                            <th style={{ width: columnWidths.edit }}>
-                                <div className="resizer-wrapper">
-                                    Edit
-                                    <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'edit')}></div>
-                                </div>
-                            </th>
+                                </th>
+                            )}
+                            {visibleColumns.role && (
+                                <th style={{ width: columnWidths.role }}>
+                                    <div className="resizer-wrapper">
+                                        Role
+                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'role')}></div>
+                                    </div>
+                                </th>
+                            )}
+                            {visibleColumns.engine && (
+                                <th style={{ width: columnWidths.engine }}>
+                                    <div className="resizer-wrapper">
+                                        Engine
+                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'engine')}></div>
+                                    </div>
+                                </th>
+                            )}
+                            {visibleColumns.class && (
+                                <th style={{ width: columnWidths.class }}>
+                                    <div className="resizer-wrapper">
+                                        Class
+                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'class')}></div>
+                                    </div>
+                                </th>
+                            )}
+                            {visibleColumns.storage && (
+                                <th style={{ width: columnWidths.storage }} className="storage-header-cell">
+                                    <div className="resizer-wrapper">
+                                        <div className="storage-header-main">Storage</div>
+                                        <div className="storage-header-labels-box">
+                                            <span className="label-item">Used</span>
+                                            <span className="label-sep"></span>
+                                            <span className="label-item">Alloc</span>
+                                        </div>
+                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'storage')}></div>
+                                    </div>
+                                </th>
+                            )}
+                            {visibleColumns.status && (
+                                <th style={{ width: columnWidths.status }}>
+                                    <div className="resizer-wrapper">
+                                        Status
+                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'status')}></div>
+                                    </div>
+                                </th>
+                            )}
+                            {visibleColumns.actions && (
+                                <th style={{ width: columnWidths.actions }}>
+                                    <div className="resizer-wrapper">
+                                        Actions
+                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'actions')}></div>
+                                    </div>
+                                </th>
+                            )}
+                            {visibleColumns.policies && (
+                                <th style={{ width: columnWidths.policies }}>
+                                    <div className="resizer-wrapper">
+                                        Scheduling Policies
+                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'policies')}></div>
+                                    </div>
+                                </th>
+                            )}
+                            {visibleColumns.schedule && (
+                                <th style={{ width: columnWidths.schedule }}>
+                                    <div className="resizer-wrapper">
+                                        Schedule
+                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'schedule')}></div>
+                                    </div>
+                                </th>
+                            )}
+                            {visibleColumns.edit && (
+                                <th style={{ width: columnWidths.edit }}>
+                                    <div className="resizer-wrapper">
+                                        Edit
+                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'edit')}></div>
+                                    </div>
+                                </th>
+                            )}
                         </tr>
                     </thead>
                     <tbody>
@@ -778,161 +872,188 @@ export default function RDS() {
                                             onChange={() => handleSelectRow(db.id)}
                                         />
                                     </td>
-                                    <td className="identifier-col">
-                                        <div className="identifier-wrapper">
-                                            <div className="expand-control-wrapper">
-                                                {db.is_aurora ? (
-                                                    <button className="expand-btn" onClick={() => toggleCluster(db.id)}>
-                                                        {expandedClusters[db.id] ? <Minus size={14} /> : <Plus size={14} />}
-                                                    </button>
-                                                ) : (
-                                                    <div className="expand-spacer"></div>
-                                                )}
+                                    {visibleColumns.identifier && (
+                                        <td className="identifier-col">
+                                            <div className="identifier-wrapper">
+                                                <div className="expand-control-wrapper">
+                                                    {db.is_aurora ? (
+                                                        <button className="expand-btn" onClick={() => toggleCluster(db.id)}>
+                                                            {expandedClusters[db.id] ? <Minus size={14} /> : <Plus size={14} />}
+                                                        </button>
+                                                    ) : (
+                                                        <div className="expand-spacer"></div>
+                                                    )}
+                                                </div>
+                                                <div className="db-info-content">
+                                                    <strong>{db.db_identifier}</strong>
+                                                    {(() => {
+                                                        const status = getScheduleStatus(db);
+                                                        if (!status) return null;
+                                                        return (
+                                                            <div className={`active-schedule-tag ${status.isUrgent ? 'urgent' : ''}`}>
+                                                                <span className="breathing-dot"></span>
+                                                                <Clock size={10} />
+                                                                <span>Active {status.label}</span>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
                                             </div>
-                                            <div className="db-info-content">
-                                                <strong>{db.db_identifier}</strong>
-                                                {(() => {
-                                                    const status = getScheduleStatus(db);
-                                                    if (!status) return null;
-                                                    return (
-                                                        <div className={`active-schedule-tag ${status.isUrgent ? 'urgent' : ''}`}>
-                                                            <span className="breathing-dot"></span>
-                                                            <Clock size={10} />
-                                                            <span>Active {status.label}</span>
-                                                        </div>
-                                                    );
-                                                })()}
+                                        </td>
+                                    )}
+                                    {visibleColumns.role && (
+                                        <td>
+                                            <span className="role-text-display">
+                                                {db.is_aurora ? 'Cluster' : 'Instance'}
+                                            </span>
+                                        </td>
+                                    )}
+                                    {visibleColumns.engine && (
+                                        <td>
+                                            <div className="engine-cell">
+                                                <span className="engine-name">{db.engine}</span>
+                                                <span className="engine-version">{db.engine_version}</span>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className="role-text-display">
-                                            {db.is_aurora ? 'Cluster' : 'Instance'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div className="engine-cell">
-                                            <span className="engine-name">{db.engine}</span>
-                                            <span className="engine-version">{db.engine_version}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {!db.is_aurora ? <span className="instance-class-badge">{db.instance_class}</span> : '-'}
-                                    </td>
-                                    <td>
-                                        <StorageDisplay allocated={db.storage_allocated} used={db.storage_used} isAurora={db.is_aurora} />
-                                    </td>
-                                    <td>
-                                        <span className={`status-badge ${getStatusColor(db.status)}`}>
-                                            {formatStatus(db.status)}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div className="row-actions">
+                                        </td>
+                                    )}
+                                    {visibleColumns.class && (
+                                        <td>
+                                            {!db.is_aurora ? <span className="instance-class-badge">{db.instance_class}</span> : '-'}
+                                        </td>
+                                    )}
+                                    {visibleColumns.storage && (
+                                        <td>
+                                            <StorageDisplay allocated={db.storage_allocated} used={db.storage_used} isAurora={db.is_aurora} />
+                                        </td>
+                                    )}
+                                    {visibleColumns.status && (
+                                        <td>
+                                            <span className={`status-badge ${getStatusColor(db.status)}`}>
+                                                {formatStatus(db.status)}
+                                            </span>
+                                        </td>
+                                    )}
+                                    {visibleColumns.actions && (
+                                        <td>
+                                            <div className="row-actions">
+                                                <button
+                                                    className="icon-btn play"
+                                                    title="Start"
+                                                    disabled={db.status.toLowerCase() === 'available'}
+                                                    onClick={() => handleRowActionWithConfirm(db, 'START')}
+                                                >
+                                                    <Play size={16} />
+                                                </button>
+                                                <button
+                                                    className="icon-btn stop"
+                                                    title="Stop"
+                                                    disabled={db.status.toLowerCase() === 'stopped'}
+                                                    onClick={() => handleRowActionWithConfirm(db, 'STOP')}
+                                                >
+                                                    <Square size={16} />
+                                                </button>
+                                                <button
+                                                    className="icon-btn reboot"
+                                                    title="Reboot"
+                                                    disabled={db.status.toLowerCase() === 'stopped'}
+                                                    onClick={() => handleRowActionWithConfirm(db, 'REBOOT')}
+                                                >
+                                                    <RotateCw size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    )}
+                                    {visibleColumns.policies && (
+                                        <td>
+                                            <div className="policy-buttons">
+                                                <button
+                                                    className={`policy-btn ${db.is_24_7 ? 'active-247' : ''}`}
+                                                    title="24/7 Protected"
+                                                    disabled={!db.is_24_7 && (db.never_start || db.daily_exception)}
+                                                    onClick={() => handlePolicyWithConfirm(db, 'is_24_7', '24/7 Protected')}
+                                                >
+                                                    <Shield size={16} />
+                                                </button>
+                                                <button
+                                                    className={`policy-btn ${db.never_start ? 'active-never' : ''}`}
+                                                    title="Never Start"
+                                                    disabled={!db.never_start && (db.is_24_7 || db.daily_exception)}
+                                                    onClick={() => handlePolicyWithConfirm(db, 'never_start', 'Never Start')}
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                                <button
+                                                    className={`policy-btn ${db.daily_exception ? 'active-exc' : ''}`}
+                                                    title="Daily Exception"
+                                                    disabled={!db.daily_exception && (db.is_24_7 || db.never_start)}
+                                                    onClick={() => handlePolicyWithConfirm(db, 'daily_exception', 'Daily Exception')}
+                                                >
+                                                    <FileUp size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    )}
+                                    {visibleColumns.schedule && (
+                                        <td>
                                             <button
-                                                className="icon-btn play"
-                                                title="Start"
-                                                disabled={db.status.toLowerCase() === 'available'}
-                                                onClick={() => handleRowActionWithConfirm(db, 'START')}
+                                                className="btn-set-schedule"
+                                                disabled={db.is_24_7 || db.never_start}
+                                                onClick={() => {
+                                                    setScheduleTarget({
+                                                        label: db.db_identifier,
+                                                        resourceType: 'RDS',
+                                                        scope: db.db_identifier,
+                                                        db: db
+                                                    });
+                                                    setScheduleModalOpen(true);
+                                                }}
                                             >
-                                                <Play size={16} />
+                                                <Clock size={14} /> Schedule
                                             </button>
+                                        </td>
+                                    )}
+                                    {visibleColumns.edit && (
+                                        <td>
                                             <button
-                                                className="icon-btn stop"
-                                                title="Stop"
-                                                disabled={db.status.toLowerCase() === 'stopped'}
-                                                onClick={() => handleRowActionWithConfirm(db, 'STOP')}
+                                                className="icon-btn edit"
+                                                title="Edit Instance"
+                                                onClick={() => setEditModal({ open: true, db })}
                                             >
-                                                <Square size={16} />
+                                                <Pencil size={18} />
                                             </button>
-                                            <button
-                                                className="icon-btn reboot"
-                                                title="Reboot"
-                                                disabled={db.status.toLowerCase() === 'stopped'}
-                                                onClick={() => handleRowActionWithConfirm(db, 'REBOOT')}
-                                            >
-                                                <RotateCw size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className="policy-buttons">
-                                            <button
-                                                className={`policy-btn ${db.is_24_7 ? 'active-247' : ''}`}
-                                                title="24/7 Protected"
-                                                disabled={!db.is_24_7 && (db.never_start || db.daily_exception)}
-                                                onClick={() => handlePolicyWithConfirm(db, 'is_24_7', '24/7 Protected')}
-                                            >
-                                                <Shield size={16} />
-                                            </button>
-                                            <button
-                                                className={`policy-btn ${db.never_start ? 'active-never' : ''}`}
-                                                title="Never Start"
-                                                disabled={!db.never_start && (db.is_24_7 || db.daily_exception)}
-                                                onClick={() => handlePolicyWithConfirm(db, 'never_start', 'Never Start')}
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                            <button
-                                                className={`policy-btn ${db.daily_exception ? 'active-exc' : ''}`}
-                                                title="Daily Exception"
-                                                disabled={!db.daily_exception && (db.is_24_7 || db.never_start)}
-                                                onClick={() => handlePolicyWithConfirm(db, 'daily_exception', 'Daily Exception')}
-                                            >
-                                                <FileUp size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <button
-                                            className="btn-set-schedule"
-                                            disabled={db.is_24_7 || db.never_start}
-                                            onClick={() => {
-                                                setScheduleTarget({
-                                                    label: db.db_identifier,
-                                                    resourceType: 'RDS',
-                                                    scope: db.db_identifier,
-                                                    db: db
-                                                });
-                                                setScheduleModalOpen(true);
-                                            }}
-                                        >
-                                            <Clock size={14} /> Schedule
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <button
-                                            className="icon-btn edit"
-                                            title="Edit Instance"
-                                            onClick={() => setEditModal({ open: true, db })}
-                                        >
-                                            <Pencil size={18} />
-                                        </button>
-                                    </td>
+                                        </td>
+                                    )}
                                 </tr>
 
                                 {/* Expanded Aurora Instances */}
                                 {db.is_aurora && expandedClusters[db.id] && db.instances?.map(inst => (
                                     <tr key={inst.id} className="sub-row">
                                         <td></td>
-                                        <td className="identifier-col sub">
-                                            <div className="identifier-wrapper">
-                                                <span className="tree-line"></span>
-                                                {inst.db_identifier}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className="role-text-display">{inst.role}</span>
-                                        </td>
-                                        <td>-</td>
-                                        <td><span className="instance-class-badge">{inst.instance_class}</span></td>
-                                        <td>-</td>
-                                        <td>
-                                            <span className={`status-badge ${getStatusColor(inst.status)}`}>
-                                                {formatStatus(inst.status)}
-                                            </span>
-                                        </td>
-                                        <td colSpan="5" className="sub-actions-info">
+                                        {visibleColumns.identifier && (
+                                            <td className="identifier-col sub">
+                                                <div className="identifier-wrapper">
+                                                    <span className="tree-line"></span>
+                                                    {inst.db_identifier}
+                                                </div>
+                                            </td>
+                                        )}
+                                        {visibleColumns.role && (
+                                            <td>
+                                                <span className="role-text-display">{inst.role}</span>
+                                            </td>
+                                        )}
+                                        {visibleColumns.engine && <td>-</td>}
+                                        {visibleColumns.class && <td><span className="instance-class-badge">{inst.instance_class}</span></td>}
+                                        {visibleColumns.storage && <td>-</td>}
+                                        {visibleColumns.status && (
+                                            <td>
+                                                <span className={`status-badge ${getStatusColor(inst.status)}`}>
+                                                    {formatStatus(inst.status)}
+                                                </span>
+                                            </td>
+                                        )}
+                                        {/* Sub-actions info takes up remaining visible columns */}
+                                        <td colSpan={Object.values(visibleColumns).filter(v => v).length - (visibleColumns.identifier ? 1 : 0) - (visibleColumns.role ? 1 : 0) - (visibleColumns.engine ? 1 : 0) - (visibleColumns.class ? 1 : 0) - (visibleColumns.storage ? 1 : 0) - (visibleColumns.status ? 1 : 0)} className="sub-actions-info">
                                             <span className="text-muted">Managed via cluster</span>
                                         </td>
                                     </tr>
@@ -989,6 +1110,7 @@ export default function RDS() {
                     </div>
                 </div>
             )}
+
             {/* Bulk Action Modal */}
             <RDSBulkActionModal
                 isOpen={bulkModalOpen}
@@ -1014,6 +1136,61 @@ export default function RDS() {
                 onConfirm={confirmModal.onConfirm}
                 onCancel={closeConfirmModal}
             />
+
+            {/* Column Settings Modal */}
+            {showColumnSettings && (
+                <div className="rds-column-settings-overlay" onClick={() => setShowColumnSettings(false)}>
+                    <div className="rds-column-settings-modal" onClick={e => e.stopPropagation()}>
+                        <div className="rds-csm-header">
+                            <div className="rds-csm-title-group">
+                                <Settings size={20} className="rds-csm-icon" />
+                                <h3>Column Settings</h3>
+                            </div>
+                            <button className="rds-csm-close" onClick={() => setShowColumnSettings(false)}><X size={20} /></button>
+                        </div>
+
+                        <div className="rds-csm-body">
+                            <label className="rds-csm-label">Toggle Columns</label>
+                            <div className="rds-column-toggles-grid">
+                                {columnDefinitions.map(col => (
+                                    <div key={col.key} className={`rds-column-toggle-item ${col.mandatory ? 'mandatory' : ''}`}>
+                                        <span className="rds-ct-label">{col.label}</span>
+                                        <label className="rds-switch">
+                                            <input
+                                                type="checkbox"
+                                                checked={pendingVisibleColumns[col.key] || false}
+                                                disabled={col.mandatory}
+                                                onChange={() => {
+                                                    if (!col.mandatory) {
+                                                        setPendingVisibleColumns(prev => ({
+                                                            ...prev,
+                                                            [col.key]: !prev[col.key]
+                                                        }));
+                                                    }
+                                                }}
+                                            />
+                                            <span className="rds-slider rds-round"></span>
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="rds-csm-footer">
+                            <button className="btn-rds-cancel" onClick={() => setShowColumnSettings(false)}>Cancel</button>
+                            <button
+                                className="btn-rds-submit"
+                                onClick={() => {
+                                    setVisibleColumns(pendingVisibleColumns);
+                                    setShowColumnSettings(false);
+                                }}
+                            >
+                                Submit Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
