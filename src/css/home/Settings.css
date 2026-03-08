@@ -440,6 +440,21 @@ input:checked+.premium-slider:before {
     background: rgba(96, 165, 250, 0.4);
 }
 
+/* Disabled State */
+.time-input-wrapper-premium.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--surface-subtle);
+    border-color: var(--border-light);
+    box-shadow: none;
+    transform: none !important;
+}
+
+.time-input-wrapper-premium.disabled .premium-time-input {
+    cursor: not-allowed;
+    color: var(--text-muted) !important;
+}
+
 /* Deep cleanup of internal browser elements */
 .premium-time-input::-webkit-datetime-edit-fields-wrapper,
 .premium-time-input::-webkit-datetime-edit-text,

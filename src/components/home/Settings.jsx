@@ -133,27 +133,29 @@ const Settings = () => {
                                             <div className="time-inputs">
                                                 <div className="time-field">
                                                     <label>Starting Time</label>
-                                                    <div className="time-input-wrapper-premium">
+                                                    <div className={`time-input-wrapper-premium ${!schedules[service.id].enabled ? 'disabled' : ''}`}>
                                                         <Clock className="time-icon-inner" size={16} />
                                                         <input
                                                             type="time"
                                                             className="premium-time-input"
                                                             value={schedules[service.id].startTime}
                                                             onChange={(e) => handleTimeChange(service.id, 'startTime', e.target.value)}
-                                                            onClick={(e) => e.target.showPicker?.()}
+                                                            onClick={(e) => schedules[service.id].enabled && e.target.showPicker?.()}
+                                                            disabled={!schedules[service.id].enabled}
                                                         />
                                                     </div>
                                                 </div>
                                                 <div className="time-field">
                                                     <label>Closing Time</label>
-                                                    <div className="time-input-wrapper-premium">
+                                                    <div className={`time-input-wrapper-premium ${!schedules[service.id].enabled ? 'disabled' : ''}`}>
                                                         <Clock className="time-icon-inner" size={16} />
                                                         <input
                                                             type="time"
                                                             className="premium-time-input"
                                                             value={schedules[service.id].endTime}
                                                             onChange={(e) => handleTimeChange(service.id, 'endTime', e.target.value)}
-                                                            onClick={(e) => e.target.showPicker?.()}
+                                                            onClick={(e) => schedules[service.id].enabled && e.target.showPicker?.()}
+                                                            disabled={!schedules[service.id].enabled}
                                                         />
                                                     </div>
                                                 </div>
