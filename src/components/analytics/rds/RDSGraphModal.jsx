@@ -9,31 +9,74 @@ function RDSGraphModal({ isOpen, onClose, instance, excludeMetrics = [] }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Mock data generation (30 days) with zero-value periods
+    // Unified 30-day data processor (Padding logic)
     const chartData = useMemo(() => {
         const data = [];
+        const metricsMap = new Map();
+
+        // 1. FOR BACKEND INTEGRATION: Uncomment this block when ready
+        /*
+        if (instance?.metrics && Array.isArray(instance.metrics)) {
+            instance.metrics.forEach(m => {
+                const d = new Date(m.date);
+                d.setHours(0, 0, 0, 0);
+                metricsMap.set(d.getTime(), m);
+            });
+        }
+        */
+
         for (let i = 29; i >= 0; i--) {
             const d = new Date(today);
             d.setDate(d.getDate() - i);
+            const timeKey = d.getTime();
 
-            const cpuBase = instance?.avg_cpu_utilization || 30;
-            const connBase = instance?.avg_connections || 50;
-            const readBase = instance?.avg_read_iops || 200;
-            const writeBase = instance?.avg_write_iops || 100;
+            // Check if we have backend data for this day
+            const backendMetric = metricsMap.get(timeKey);
 
-            // Inactive periods simulation
-            const isActive = i < 18;
+            if (backendMetric) {
+                data.push({
+                    date: d,
+                    displayDate: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    cpu: parseFloat(backendMetric.cpu) || 0,
+                    connections: parseInt(backendMetric.connections) || 0,
+                    readIops: parseFloat(backendMetric.read_iops) || 0,
+                    writeIops: parseFloat(backendMetric.write_iops) || 0,
+                    cost: parseFloat(backendMetric.cost) || 0,
+                    isToday: i === 0
+                });
+            } else if (instance?.metrics) {
+                // If we are in "Integrated Mode" (instance.metrics exists) but no match for this day
+                // We set everything to 0 as requested
+                data.push({
+                    date: d,
+                    displayDate: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    cpu: 0,
+                    connections: 0,
+                    readIops: 0,
+                    writeIops: 0,
+                    cost: 0,
+                    isToday: i === 0
+                });
+            } else {
+                // FALLBACK: Dummy Data Generation for purely frontend dev
+                const cpuBase = instance?.avg_cpu_utilization || 30;
+                const connBase = instance?.avg_connections || 50;
+                const readBase = instance?.avg_read_iops || 200;
+                const writeBase = instance?.avg_write_iops || 100;
 
-            data.push({
-                date: d,
-                displayDate: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                cpu: isActive ? Math.max(5, Math.min(99, cpuBase + (Math.sin(i * 0.7) * 15) + (Math.random() * 8))) : 0,
-                connections: isActive ? Math.max(1, Math.min(1000, connBase + (Math.cos(i * 0.5) * 20) + (Math.random() * 5))) : 0,
-                readIops: isActive ? Math.max(10, readBase + (Math.sin(i * 0.9) * 50) + (Math.random() * 30)) : 0,
-                writeIops: isActive ? Math.max(5, writeBase + (Math.cos(i * 0.7) * 30) + (Math.random() * 20)) : 0,
-                cost: isActive ? Math.max(0.1, (cpuBase / 10) + (Math.sin(i * 0.3) * 2) + Math.random()) : 0,
-                isToday: i === 0
-            });
+                const isActive = i < 18;
+
+                data.push({
+                    date: d,
+                    displayDate: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    cpu: isActive ? Math.max(5, Math.min(99, cpuBase + (Math.sin(i * 0.7) * 15) + (Math.random() * 8))) : 0,
+                    connections: isActive ? Math.max(1, Math.min(1000, connBase + (Math.cos(i * 0.5) * 20) + (Math.random() * 5))) : 0,
+                    readIops: isActive ? Math.max(10, readBase + (Math.sin(i * 0.9) * 50) + (Math.random() * 30)) : 0,
+                    writeIops: isActive ? Math.max(5, writeBase + (Math.cos(i * 0.7) * 30) + (Math.random() * 20)) : 0,
+                    cost: isActive ? Math.max(0.1, (cpuBase / 10) + (Math.sin(i * 0.3) * 2) + Math.random()) : 0,
+                    isToday: i === 0
+                });
+            }
         }
         return data;
     }, [instance]);

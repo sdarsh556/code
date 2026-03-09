@@ -496,6 +496,35 @@
   padding-left: 1.15rem;
 }
 
+.rds-instance-card-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.rds-aws-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.25rem 0.625rem;
+  background: linear-gradient(135deg, rgba(255, 153, 0, 0.15) 0%, rgba(255, 153, 0, 0.05) 100%);
+  border: 1px solid rgba(255, 153, 0, 0.3);
+  border-radius: 6px;
+  color: #ff9900;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(255, 153, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.aurora-cluster-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .rds-instance-graph-btn {
   width: 32px;
   height: 32px;

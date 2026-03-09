@@ -173,7 +173,8 @@ function RDSAnalytics() {
                 approx_cost: 17,
                 active_days_count: 28,
                 active_dates: ["2026-02-06", "2026-02-07", "2026-03-05"],
-                status: 'available'
+                status: 'available',
+                is_aws: true
             },
             {
                 db_identifier: "db-staging-psql-01",
@@ -231,7 +232,8 @@ function RDSAnalytics() {
                 active_days_count: 28,
                 active_dates: ["2026-03-01", "2026-03-05"],
                 status: 'available',
-                trend: 'up'
+                trend: 'up',
+                is_aws: true
             },
             {
                 cluster_name: "aurora-staging-cluster",
@@ -409,6 +411,12 @@ function RDSAnalytics() {
                                             <span className="aurora-cluster-name-text">{cluster.cluster_name}</span>
                                         </div>
                                         <div className="aurora-cluster-card-actions">
+                                            {cluster.is_aws && (
+                                                <div className="rds-aws-tag">
+                                                    <Server size={10} strokeWidth={3} />
+                                                    AWS
+                                                </div>
+                                            )}
                                             <button
                                                 className="aurora-cluster-trend-btn"
                                                 onClick={(e) => {
@@ -501,16 +509,24 @@ function RDSAnalytics() {
                                             </div>
                                             <div className="rds-instance-id-text">{db.engine}.{db.instance_class}</div>
                                         </div>
-                                        <button
-                                            className="rds-instance-graph-btn"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedInstanceForTrend(db);
-                                            }}
-                                            title="View 30-Day Trend"
-                                        >
-                                            <BarChart3 size={16} />
-                                        </button>
+                                        <div className="rds-instance-card-actions-row">
+                                            {db.is_aws && (
+                                                <div className="rds-aws-tag">
+                                                    <Server size={10} strokeWidth={3} />
+                                                    AWS
+                                                </div>
+                                            )}
+                                            <button
+                                                className="rds-instance-graph-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedInstanceForTrend(db);
+                                                }}
+                                                title="View 30-Day Trend"
+                                            >
+                                                <BarChart3 size={16} />
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="rds-instance-stats-row">
