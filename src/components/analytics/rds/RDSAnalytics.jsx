@@ -140,7 +140,7 @@ function RDSAnalytics() {
         setSearchParams({ view: mode }, { replace: true });
     };
 
-    const [selectedRange, setSelectedRange] = useState('7d');
+    const [selectedRange, setSelectedRange] = useState('24h');
     const [showCalendar, setShowCalendar] = useState(false);
     const [customRange, setCustomRange] = useState(null);
     const [selectedDaysInfo, setSelectedDaysInfo] = useState(null);
@@ -265,8 +265,36 @@ function RDSAnalytics() {
             }
         ]
     };
-
     const currentData = allDbData[viewMode];
+
+    const formatDate = (date) => {
+        return date.toISOString().split('T')[0];
+    };
+
+    const getDateRange = () => {
+        const today = new Date();
+
+        if (selectedRange === "custom" && customRange) {
+            return {
+                from_date: formatDate(customRange.start),
+                to_date: formatDate(customRange.end)
+            };
+        }
+
+        const preset = datePresets.find(p => p.id === selectedRange);
+
+        const from = new Date();
+        from.setDate(today.getDate() - (preset?.days || 7));
+
+        return {
+            from_date: formatDate(from),
+            to_date: formatDate(today)
+        };
+    };
+
+    useEffect(() => {
+        if (selectedRange === "custom" && !customRange) return;
+    }, [selectedRange, customRange]);
 
     const stats = useMemo(() => {
         const count = currentData.length;
@@ -386,7 +414,7 @@ function RDSAnalytics() {
                     <div className="rds-panel-header-new">
                         <div className="rds-panel-title-group">
                             <Zap size={20} className="rds-panel-title-icon" />
-                            <h2>Active Instances</h2>
+                            <h2>{viewMode === 'aurora' ? 'Active Clusters' : 'Active Instances'}</h2>
                             <span className="rds-panel-period-badge">{getActiveLabel()}</span>
                         </div>
                         <div className="rds-panel-subtitle">Click trend icon to view detailed metrics</div>
@@ -400,7 +428,7 @@ function RDSAnalytics() {
                                     className="aurora-cluster-card"
                                     style={{ animationDelay: `${0.2 + idx * 0.1}s` }}
                                     onClick={() => navigate(`/analytics/rds/cluster/${cluster.cluster_name}`, {
-                                        state: { cluster, selectedRange }
+                                        state: { cluster, selectedRange, customRange }
                                     })}
                                 >
                                     <div className="aurora-cluster-status-glow" />
@@ -421,6 +449,24 @@ function RDSAnalytics() {
                                                 className="aurora-cluster-trend-btn"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+
+                                                    const today = new Date();
+                                                    const metrics = [];
+
+                                                    for (let i = 29; i >= 0; i--) {
+                                                        const d = new Date(today);
+                                                        d.setDate(today.getDate() - i);
+
+                                                        metrics.push({
+                                                            date: d.toISOString().split("T")[0],
+                                                            cost: cluster.approx_cost / 30,
+                                                            cpu: 0,          // optional, fill if needed
+                                                            connections: 0,  // optional
+                                                            readIops: 0,
+                                                            writeIops: 0
+                                                        });
+                                                    }
+
                                                     setSelectedClusterForTrend({
                                                         db_identifier: cluster.cluster_name,
                                                         avg_cpu_utilization: cluster.avg_cpu_utilization,
@@ -433,9 +479,6 @@ function RDSAnalytics() {
                                             >
                                                 <BarChart3 size={16} />
                                             </button>
-                                            <div className={`aurora-cluster-trend-badge trend-${cluster.trend}`}>
-                                                {cluster.trend === 'up' ? '↑' : cluster.trend === 'down' ? '↓' : '→'}
-                                            </div>
                                         </div>
                                     </div>
 
@@ -612,7 +655,7 @@ function RDSAnalytics() {
                         db_identifier: db.cluster_name || db.db_identifier
                     }))}
                     exportFilename={`${viewMode}-analytics.csv`}
-                    gridTemplateColumns="52px 1.8fr 1.2fr 1.2fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr"
+                    gridTemplateColumns="52px 2.5fr 0.5fr 1.2fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr"
                     columns={[
                         {
                             key: 'db_identifier',
@@ -689,6 +732,7 @@ function RDSAnalytics() {
                 isOpen={!!selectedClusterForTrend}
                 onClose={() => setSelectedClusterForTrend(null)}
                 instance={selectedClusterForTrend}
+                excludeMetrics={['cpu', 'connections', 'read', 'write']}
             />
 
             {showCalendar && (

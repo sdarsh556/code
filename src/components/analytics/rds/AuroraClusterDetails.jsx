@@ -14,7 +14,7 @@ function AuroraClusterDetails() {
     const { clusterName } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
-    const { cluster, selectedRange } = location.state || {};
+    const { cluster, selectedRange, customRange } = location.state || {};
     const { setBgContext } = useOutletContext();
 
     const [selectedInstance, setSelectedInstance] = useState(null);
@@ -26,6 +26,39 @@ function AuroraClusterDetails() {
         setBgContext('analytics');
         return () => setBgContext('default');
     }, [setBgContext]);
+
+    const getDateRange = () => {
+
+        if (selectedRange === "custom" && customRange) {
+            return {
+                from_date: customRange.start,
+                to_date: customRange.end
+            };
+        }
+
+        const end = new Date();
+        const start = new Date();
+
+        const rangeMap = {
+            "7d": 7,
+            "15d": 15,
+            "30d": 30,
+            "90d": 90
+        };
+
+        const days = rangeMap[selectedRange] || 30;
+
+        start.setDate(end.getDate() - days);
+
+        const format = (d) => d.toISOString().split("T")[0];
+
+        return {
+            from_date: format(start),
+            to_date: format(end)
+        };
+    };
+
+
 
     // Mock Data based on user request
     const clusterData = useMemo(() => ({
@@ -80,7 +113,24 @@ function AuroraClusterDetails() {
             total_days: 30,
             total_instances: 3
         }
-    }), [clusterName]);
+    }), [clusterName, cluster]);
+
+    useEffect(() => {
+    }, [clusterName, selectedRange, customRange]);
+
+    const loading = false;
+
+    if (loading || !clusterData) {
+        return (
+            <div className="aurora-details-page">
+                <div className="ad-content">
+                    <div style={{ padding: "40px", textAlign: "center" }}>
+                        Loading Aurora Cluster Metrics...
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const handleViewTrend = (instance) => {
         setSelectedInstance({
@@ -230,7 +280,7 @@ function AuroraClusterDetails() {
                     <div className="cd-summary-pills">
                         <div className="cd-pill">
                             <Clock size={16} />
-                            <span className="cd-pill-value">{cluster?.activeDays || 30}</span>
+                            <span className="cd-pill-value">{clusterData.metric_summary?.total_days}</span>
                             <span className="cd-pill-label">Days Active</span>
                         </div>
                         <div className="cd-pill">
@@ -240,7 +290,7 @@ function AuroraClusterDetails() {
                         </div>
                         <div className="cd-pill cost-pill">
                             <DollarSign size={16} />
-                            <span className="cd-pill-value">${cluster?.approxCost?.toFixed(0) || '1,248'}</span>
+                            <span className="cd-pill-value">${clusterData.metric_summary?.total_cost?.toFixed(0) || 0}</span>
                             <span className="cd-pill-label">Total Cost</span>
                         </div>
                     </div>
@@ -381,7 +431,10 @@ function AuroraClusterDetails() {
                     isOpen={showGraphModal}
                     instance={selectedInstance}
                     excludeMetrics={['cost']}
-                    onClose={() => { setShowGraphModal(false); setSelectedInstance(null); }}
+                    onClose={() => {
+                        setShowGraphModal(false);
+                        setSelectedInstance(null);
+                    }}
                 />
             )}
 

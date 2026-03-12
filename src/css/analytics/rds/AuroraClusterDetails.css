@@ -79,7 +79,7 @@
 
 /* ── Base ── */
 .aurora-details-page {
-    min-height: calc(100vh - 80px);
+    min-height: 100vh;
     position: relative;
     overflow: hidden;
 }
@@ -121,7 +121,7 @@
     z-index: 1;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 2.5rem 2rem 4rem;
+    /* padding: 2.5rem 2rem 4rem; */
 }
 
 /* ── Breadcrumb (Mirrored from ECS) ── */
@@ -316,7 +316,7 @@
 .aurora-instance-card {
     position: relative;
     padding: 2.5rem 3.5rem;
-    background: linear-gradient(135deg, rgba(13, 17, 23, 0.7) 0%, rgba(22, 27, 34, 0.5) 100%);
+    background: var(--bg-secondary);
     backdrop-filter: blur(40px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 32px;
@@ -341,7 +341,7 @@
 .aurora-instance-card:hover {
     transform: translateY(-8px);
     border-color: rgba(6, 182, 212, 0.3);
-    background: linear-gradient(135deg, rgba(15, 20, 28, 0.8) 0%, rgba(25, 30, 40, 0.6) 100%);
+    background: var(--bg-secondary);
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), 0 0 30px rgba(6, 182, 212, 0.1);
 }
 
@@ -826,4 +826,8 @@
     background: var(--bg-secondary);
     border-color: var(--border-light);
     color: var(--text-primary);
+}
+
+[data-theme="light"] .aurora-gauge-svg circle:first-of-type {
+    stroke: rgba(15, 23, 42, 0.04) !important;
 }

@@ -89,10 +89,10 @@
 
 /* ── Page Base ── */
 .rds-analytics-page {
-  min-height: calc(100vh - 80px);
+  min-height: 100vh;
   position: relative;
   overflow: hidden;
-  padding: 2rem;
+  /* padding: 2rem; */
 }
 
 .rds-analytics-content {
@@ -524,6 +524,7 @@
   align-items: center;
   gap: 0.75rem;
 }
+
 
 .rds-instance-graph-btn {
   width: 32px;

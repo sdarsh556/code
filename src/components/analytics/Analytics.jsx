@@ -19,12 +19,12 @@ function Analytics() {
             glowColor: 'rgba(59, 130, 246, 0.4)',
             gradient: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 50%, #06b6d4 100%)',
             bgGradient: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(6,182,212,0.05) 100%)',
-            stat: 'LIVE',
+            // stat: 'LIVE',
             statLabel: 'Active'
         },
         {
             id: 'ecs',
-            name: 'ECS',
+            name: 'ECS Analytics',
             subtitle: 'Container Analytics',
             description: 'Container insights, cluster performance & service cost breakdown',
             icon: Container,
@@ -33,12 +33,12 @@ function Analytics() {
             glowColor: 'rgba(139, 92, 246, 0.5)',
             gradient: 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 50%, #ec4899 100%)',
             bgGradient: 'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(236,72,153,0.06) 100%)',
-            stat: 'LIVE',
+            // stat: 'LIVE',
             statLabel: 'Active'
         },
         {
             id: 'eks',
-            name: 'EKS',
+            name: 'EKS Analytics',
             subtitle: 'Kubernetes Analytics',
             description: 'Kubernetes cluster health, pod metrics & workload analytics',
             icon: Boxes,
@@ -47,12 +47,12 @@ function Analytics() {
             glowColor: 'rgba(236, 72, 153, 0.4)',
             gradient: 'linear-gradient(135deg, #be185d 0%, #ec4899 50%, #f97316 100%)',
             bgGradient: 'linear-gradient(135deg, rgba(236,72,153,0.08) 0%, rgba(249,115,22,0.05) 100%)',
-            stat: '—',
+            // stat: '—',
             statLabel: 'Coming Soon'
         },
         {
             id: 'rds',
-            name: 'RDS',
+            name: 'RDS Analytics',
             subtitle: 'Database Analytics',
             description: 'Database performance, query insights & storage cost tracking',
             icon: Database,
@@ -61,7 +61,7 @@ function Analytics() {
             glowColor: 'rgba(16, 185, 129, 0.4)',
             gradient: 'linear-gradient(135deg, #065f46 0%, #10b981 50%, #34d399 100%)',
             bgGradient: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(52,211,153,0.05) 100%)',
-            stat: 'LIVE',
+            // stat: '—',
             statLabel: 'Active'
         }
     ];
@@ -150,7 +150,7 @@ function Analytics() {
                                         <div className="card-icon-wrap" style={{ background: service.gradient }}>
                                             <Icon size={28} />
                                         </div>
-                                        <div className="card-badge" style={{
+                                        {/* <div className="card-badge" style={{
                                             background: service.available
                                                 ? 'rgba(16,185,129,0.15)'
                                                 : 'rgba(148,163,184,0.1)',
@@ -161,7 +161,7 @@ function Analytics() {
                                         }}>
                                             {service.available && <span className="live-dot" />}
                                             {service.stat}
-                                        </div>
+                                        </div> */}
                                     </div>
 
                                     {/* Body */}
