@@ -2,131 +2,107 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Database, Server, HardDrive, Play, Square, RotateCw, RefreshCw, Upload, DownloadCloud,
-    Search, Plus, Minus, Settings, Shield, Clock, Sun, Moon, Pencil, FileUp, Activity, X,
-    ArrowUpDown
+    Search, Plus, Minus, Settings, Shield, Clock, Sun, Moon, Pencil, FileUp, Activity, X, ArrowUpDown,
+    ChevronUp, ChevronDown
 } from 'lucide-react';
 import '../../css/rds/rds.css';
-// import axiosClient from '../api/axiosClient'; // Uncomment when ready
+import axiosClient from '../api/axiosClient'; // Uncomment when ready
 import ScheduleModal from '../common/ScheduleModal'; // Assuming ScheduleModal exists
 import RDSBulkActionModal from './RDSBulkActionModal';
 import ConfirmActionModal from '../common/ConfirmActionModal';
 
-const mockData = [
+const DUMMY_DATABASES = [
     {
-        id: 'rds-1',
-        db_identifier: 'prod-postgres-db',
+        id: 'db-123',
+        db_identifier: 'prod-mysql-instance',
         is_aurora: false,
-        engine: 'postgres',
-        engine_version: '14.7',
-        instance_class: 'db.m5.large',
-        storage_allocated: 500,
-        storage_used: 350,
+        engine: 'mysql',
+        engine_version: '8.0.28',
+        instance_class: 'db.t3.medium',
+        storage_allocated: 100,
+        storage_used: 45.5,
         status: 'available',
         vcpu: 2,
-        memory: 8,
+        memory: 4,
         is_24_7: true,
         never_start: false,
         daily_exception: false,
-        schedule: {
-            from_date: '2026-03-01',
-            to_date: '2026-03-10'
-        }
+        schedule: null
     },
     {
-        id: 'aurora-1',
-        db_identifier: 'prod-aurora-cluster',
+        id: 'cluster-456',
+        db_identifier: 'staging-aurora-cluster',
         is_aurora: true,
         engine: 'aurora-postgresql',
-        engine_version: '14.6',
+        engine_version: '13.7',
         storage_allocated: null,
-        storage_used: 1200,
+        storage_used: 120.8,
         status: 'available',
+        vcpu: null,
+        memory: null,
         is_24_7: false,
         never_start: false,
-        daily_exception: false,
-        schedule: {
-            from_date: '2026-03-04',
-            to_date: '2026-03-04'
-        },
-        writer_instance: 'prod-aurora-instance-1',
+        daily_exception: true,
+        schedule: null,
         instances: [
             {
-                id: 'aurora-1-inst-1',
-                db_identifier: 'prod-aurora-instance-1',
-                role: 'Writer',
-                instance_class: 'db.r6g.large',
+                id: 'inst-1',
+                db_identifier: 'staging-aurora-instance-1',
+                role: 'writer',
+                instance_class: 'db.r5.large',
                 status: 'available',
                 vcpu: 2,
                 memory: 16
             },
             {
-                id: 'aurora-1-inst-2',
-                db_identifier: 'prod-aurora-instance-2',
-                role: 'Reader',
-                instance_class: 'db.r6g.large',
+                id: 'inst-2',
+                db_identifier: 'staging-aurora-instance-2',
+                role: 'reader',
+                instance_class: 'db.r5.large',
                 status: 'available',
                 vcpu: 2,
                 memory: 16
             }
         ]
-    },
-    {
-        id: 'rds-2',
-        db_identifier: 'dev-mysql-db',
-        is_aurora: false,
-        engine: 'mysql',
-        engine_version: '8.0.32',
-        instance_class: 'db.t3.medium',
-        storage_allocated: 100,
-        storage_used: 45,
-        status: 'stopped',
-        vcpu: 2,
-        memory: 4,
-        is_24_7: false,
-        never_start: true,
-        daily_exception: false
-    },
-    {
-        id: 'rds-3',
-        db_identifier: 'staging-aurora-cluster',
-        is_aurora: true,
-        engine: 'aurora-mysql',
-        engine_version: '8.0.23',
-        storage_allocated: null,
-        storage_used: 150,
-        status: 'available',
-        vcpu: 2,
-        memory: 8,
-        is_24_7: false,
-        never_start: false,
-        daily_exception: true
     }
 ];
 
-// Helper to determine status color
+const DUMMY_RDS_STATS = {
+    total_instances: 3,
+    running_instances: 3,
+    stopped_instances: 0,
+    total_storage_gb: 220.8,
+    avg_cpu_utilization: 12.5,
+    active_schedules: 1
+};
+
 const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
         case 'available':
         case 'running':
-            return 'status-available';
+            return 'rds-status-available';
         case 'stopped':
         case 'stopping':
-            return 'status-stopped';
+            return 'rds-status-stopped';
         case 'starting':
         case 'rebooting':
-            return 'status-starting';
+            return 'rds-status-starting';
+        case 'modifying':
+            return 'rds-status-modifying';
         default:
-            return 'status-unknown';
+            return 'rds-status-unknown';
     }
 };
 
 // Helper to format status label based on resource type
 const formatStatus = (status) => {
     const s = status?.toLowerCase();
-    if (s === 'available' || s === 'running') {
-        return 'Available';
-    }
-    if (s === 'stopped') return 'Stopped';
+
+    if (s === "modifying") return "Modifying";
+
+    if (s === "available" || s === "running") return "Available";
+    if (s === "stopped") return "Stopped";
+
     return status;
 };
 
@@ -153,14 +129,29 @@ const getScheduleStatus = (db) => {
 
 export default function RDS() {
     const navigate = useNavigate();
-    const [databases, setDatabases] = useState(mockData);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState('all'); // 'all', 'rds', 'aurora'
     const [activeStatFilter, setActiveStatFilter] = useState(null); // 'available', 'stopped', '247', 'never', 'exception'
     const [selectedRows, setSelectedRows] = useState([]);
     const [expandedClusters, setExpandedClusters] = useState({});
+    const [databases, setDatabases] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [dashboardStats, setDashboardStats] = useState(null);
+    const [statsLoading, setStatsLoading] = useState(true);
+    const [statsError, setStatsError] = useState(null);
+    const [rowActionLoading, setRowActionLoading] = useState({});
+    const operationPollers = useRef({});
+    const [isUploading, setIsUploading] = useState(false);
+    const [sortBy, setSortBy] = useState(null);
+    const [sortDir, setSortDir] = useState('asc');
     const [showColumnSettings, setShowColumnSettings] = useState(false);
     const [pendingVisibleColumns, setPendingVisibleColumns] = useState({});
+    const [availableInstanceTypes, setAvailableInstanceTypes] = useState([]);
+    const [instanceTypesLoading, setInstanceTypesLoading] = useState(false);
+    const [selectedInstanceClass, setSelectedInstanceClass] = useState("");
+    const modificationPollers = useRef({});
+    const [modificationLoading, setModificationLoading] = useState({});
 
     // --- Column Visibility State ---
     const columnDefinitions = [
@@ -206,6 +197,7 @@ export default function RDS() {
         });
         setVisibleColumns(newVisible);
     };
+
 
     // --- Resizable Table Logic ---
     const initialWidths = {
@@ -282,12 +274,20 @@ export default function RDS() {
     const handleSync = async () => {
         try {
             setIsSyncing(true);
-            console.log("RDS Sync started...");
-            // Add actual API call here later
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Mock delay
-            console.log("RDS Sync completed.");
+
+            const response = await axiosClient.post("/rds/sync");
+
+            if (!response.data.success) {
+                throw new Error("Sync failed");
+            }
+
+            // Refresh data after sync completes
+            await fetchInstances();
+            await fetchDashboardStats();
+
         } catch (error) {
             console.error("RDS Sync failed:", error);
+            setError("RDS Sync failed. Please try again.");
         } finally {
             setIsSyncing(false);
         }
@@ -300,6 +300,212 @@ export default function RDS() {
             onConfirm: async () => {
                 closeConfirmModal();
                 await handleSync();
+            }
+        });
+    };
+
+    const transformBackendData = (apiData) => {
+        return apiData.map(item => {
+
+            // ==========================
+            // AURORA CLUSTER
+            // ==========================
+            if (item.instances) {
+                return {
+                    id: item.cluster_identifier,
+                    db_identifier: item.cluster_identifier,
+                    is_aurora: true,
+                    engine: item.engine,
+                    engine_version: item.engine_version,
+                    storage_allocated: null,
+                    storage_used: parseFloat(item.used_storage_gb) || 0,
+                    status: item.status,
+                    vcpu: null,
+                    memory: null,
+
+                    // Protection Mapping
+                    is_24_7: item.protection_type === "always_running",
+                    never_start: item.protection_type === "never_start",
+                    daily_exception: item.protection_type === "daily_exception",
+
+                    schedule: item.protection_type === "custom_schedule"
+                        ? {
+                            from_date: new Date().toISOString().split("T")[0],
+                            to_date: new Date().toISOString().split("T")[0]
+                        }
+                        : null,
+
+                    instances: item.instances.map(inst => ({
+                        id: inst.id,
+                        db_identifier: inst.db_identifier,
+                        role: inst.role,
+                        instance_class: inst.instance_class,
+                        status: inst.status,
+                        vcpu: inst.vcpu,
+                        memory: parseFloat(inst.memory_gb)
+                    }))
+                };
+            }
+
+            // ==========================
+            // RDS INSTANCE
+            // ==========================
+            return {
+                id: item.id,
+                db_identifier: item.db_identifier,
+                is_aurora: false,
+                engine: item.engine,
+                engine_version: item.engine_version,
+                instance_class: item.instance_class,
+                storage_allocated: item.allocated_storage_gb,
+                storage_used: parseFloat(item.used_storage_gb) || 0,
+                status: item.status,
+                vcpu: item.vcpu,
+                memory: parseFloat(item.memory_gb),
+
+                is_24_7: item.protection_type === "always_running",
+                never_start: item.protection_type === "never_start",
+                daily_exception: item.protection_type === "daily_exception",
+
+                schedule: item.protection_type === "custom_schedule"
+                    ? {
+                        from_date: new Date().toISOString().split("T")[0],
+                        to_date: new Date().toISOString().split("T")[0]
+                    }
+                    : null
+            };
+        });
+    };
+
+    const fetchInstances = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await axiosClient.get("/rds/instances");
+            const apiData = response.data.data || [];
+
+            if (apiData.length === 0) {
+                console.log('⚠️ API returned no RDS instances, falling back to dummy databases');
+                setDatabases(DUMMY_DATABASES);
+            } else {
+                const transformed = transformBackendData(apiData);
+                setDatabases(transformed);
+            }
+
+        } catch (err) {
+            console.error("Error fetching RDS instances:", err);
+            // setError("Failed to load database instances.");
+            console.log('⚠️ Falling back to dummy databases');
+            setDatabases(DUMMY_DATABASES);
+            setError(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchDashboardStats = async () => {
+        try {
+            setStatsLoading(true);
+            setStatsError(null);
+
+            const response = await axiosClient.get("/rds/dashboard/stats");
+            const apiStats = response.data.data;
+
+            if (!apiStats || Object.keys(apiStats).length === 0) {
+                setDashboardStats(DUMMY_RDS_STATS);
+            } else {
+                setDashboardStats(apiStats);
+            }
+
+        } catch (err) {
+            console.error("Error fetching dashboard stats:", err);
+            // setStatsError("Failed to load dashboard statistics.");
+            setDashboardStats(DUMMY_RDS_STATS);
+        } finally {
+            setStatsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchInstances();
+        fetchDashboardStats();
+
+        const modifying = JSON.parse(localStorage.getItem("rds_modifying") || "[]");
+
+        modifying.forEach(dbIdentifier => {
+            pollModificationStatus(dbIdentifier);
+        });
+
+    }, []);
+
+    const executeRowAction = async (db, action) => {
+        try {
+            setRowActionLoading(prev => ({
+                ...prev,
+                [db.id]: action
+            }));
+
+            const endpointMap = {
+                START: "/rds/instances/start",
+                STOP: "/rds/instances/stop",
+                REBOOT: "/rds/instances/reboot"
+            };
+
+            // 🔵 Optimistic status
+            setDatabases(prev =>
+                prev.map(item => {
+                    if (item.id === db.id) {
+                        if (action === "START") return { ...item, status: "starting" };
+                        if (action === "STOP") return { ...item, status: "stopping" };
+                        if (action === "REBOOT") return { ...item, status: "rebooting" };
+                    }
+                    return item;
+                })
+            );
+
+            const response = await axiosClient.post(
+                endpointMap[action],
+                {},
+                { params: { db_identifier: db.db_identifier } }
+            );
+
+            if (!response.data.success) {
+                throw new Error("Operation initiation failed");
+            }
+
+            const operationId = response.data.data.operation_id;
+
+            // 🔁 Start polling
+            pollOperationStatus(operationId, db.db_identifier, action);
+
+        } catch (error) {
+            console.error(`${action} failed for ${db.db_identifier}`, error);
+            fetchInstances();
+        } finally {
+            setRowActionLoading(prev => {
+                const updated = { ...prev };
+                delete updated[db.id];
+                return updated;
+            });
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            Object.values(operationPollers.current).forEach(clearInterval);
+        };
+    }, []);
+
+    const handleRowActionWithConfirm = (db, action) => {
+        const actionLower = action.toLowerCase();
+
+        setConfirmModal({
+            open: true,
+            message: `Are you sure you want to ${actionLower} database "${db.db_identifier}"?`,
+            onConfirm: async () => {
+                closeConfirmModal();
+                await executeRowAction(db, action);
             }
         });
     };
@@ -326,13 +532,66 @@ export default function RDS() {
 
     const executeFileUpload = async (file) => {
         try {
-            console.log(`📤 Uploading file: ${file.name}...`);
-            setUploadedFile(file);
-            // Add actual API call here
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            console.log("✅ File uploaded successfully.");
+            setIsUploading(true);
+            setError(null);
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const response = await axiosClient.post(
+                "/rds/daily-exceptions/upload",
+                formData,
+                {
+                    headers: {
+                        "Content-Type": "multipart/form-data"
+                    }
+                }
+            );
+
+            if (!response.data.success) {
+                throw new Error(response.data.error || "Upload failed");
+            }
+
+            const {
+                added,
+                skipped,
+                valid,
+                invalid,
+                total,
+                expires_at
+            } = response.data;
+
+            setConfirmModal({
+                open: true,
+                message: `
+                    Upload Summary:
+
+                    Total Rows: ${total}
+                    Valid: ${valid}
+                    Invalid: ${invalid}
+                    Added: ${added}
+                    Skipped: ${skipped}
+
+                    Expires At: ${new Date(expires_at).toLocaleString()}
+                `,
+                onConfirm: () => closeConfirmModal()
+            });
+
+            await fetchInstances();
+            await fetchDashboardStats();
+
         } catch (error) {
-            console.error("❌ File upload failed:", error);
+            const backendMessage =
+                error.response?.data?.error ||
+                "Failed to process daily exceptions.";
+
+            setConfirmModal({
+                open: true,
+                message: backendMessage,
+                onConfirm: () => closeConfirmModal()
+            });
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -350,67 +609,256 @@ export default function RDS() {
         });
     };
 
-    const handleRowActionWithConfirm = (db, action) => {
-        const actionLower = action.toLowerCase();
-        setConfirmModal({
-            open: true,
-            message: `Are you sure you want to ${actionLower} database "${db.db_identifier}"?`,
-            onConfirm: async () => {
-                closeConfirmModal();
-                console.log(`Executing ${action} on ${db.db_identifier}`);
-                // Mock status change
-                setDatabases(prev => prev.map(item => {
-                    if (item.id === db.id) {
-                        let newStatus = item.status;
-                        if (action === 'START') newStatus = 'available';
-                        if (action === 'STOP') newStatus = 'stopped';
-                        return { ...item, status: newStatus };
-                    }
-                    return item;
-                }));
+    const pollOperationStatus = (operationId, dbIdentifier, action) => {
+        const interval = setInterval(async () => {
+            try {
+                const response = await axiosClient.get("/rds/instances/operation-status", {
+                    params: { operation_id: operationId }
+                });
+
+                if (!response.data.success) return;
+
+                const { status } = response.data.data;
+
+                if (status === "completed") {
+                    clearInterval(operationPollers.current[operationId]);
+                    delete operationPollers.current[operationId];
+
+                    setDatabases(prev =>
+                        prev.map(db => {
+                            if (db.db_identifier === dbIdentifier) {
+                                if (action === "START") return { ...db, status: "available" };
+                                if (action === "STOP") return { ...db, status: "stopped" };
+                                if (action === "REBOOT") return { ...db, status: "available" };
+                            }
+                            return db;
+                        })
+                    );
+
+                    fetchDashboardStats();
+                }
+
+                if (status === "failed") {
+                    clearInterval(operationPollers.current[operationId]);
+                    delete operationPollers.current[operationId];
+                    fetchInstances();
+                }
+
+            } catch (error) {
+                console.error("Polling failed:", error);
             }
-        });
+        }, 15000);
+
+        operationPollers.current[operationId] = interval;
     };
 
-    const handlePolicyWithConfirm = (db, field, label) => {
-        const isActive = db[field];
-        const message = isActive
-            ? `Are you sure you want to remove ${label} from "${db.db_identifier}"?`
-            : `Are you sure you want to mark "${db.db_identifier}" as ${label}?`;
+    // const handleRowActionWithConfirm = (db, action) => {
+    //     const actionLower = action.toLowerCase();
+    //     setConfirmModal({
+    //         open: true,
+    //         message: `Are you sure you want to ${actionLower} database "${db.db_identifier}"?`,
+    //         onConfirm: async () => {
+    //             closeConfirmModal();
+    //             console.log(`Executing ${action} on ${db.db_identifier}`);
+    //             // Mock status change
+    //             setDatabases(prev => prev.map(item => {
+    //                 if (item.id === db.id) {
+    //                     let newStatus = item.status;
+    //                     if (action === 'START') newStatus = 'available';
+    //                     if (action === 'STOP') newStatus = 'stopped';
+    //                     return { ...item, status: newStatus };
+    //                 }
+    //                 return item;
+    //             }));
+    //         }
+    //     });
+    // };
 
-        setConfirmModal({
-            open: true,
-            message: message,
-            onConfirm: async () => {
-                closeConfirmModal();
-                setDatabases(prev => prev.map(item => {
+    const executePolicyAction = async (db, field) => {
+        try {
+            const isActive = db[field];
+
+            const endpointMap = {
+                is_24_7: {
+                    add: "/rds/whitelist",
+                    remove: `/rds/whitelist/${db.db_identifier}`
+                },
+                never_start: {
+                    add: "/rds/never-start",
+                    remove: `/rds/never-start/${db.db_identifier}`
+                },
+                daily_exception: {
+                    add: "/rds/daily-exceptions",
+                    remove: `/rds/daily-exceptions/${db.db_identifier}` // dummy route for now
+                }
+            };
+
+            const endpoints = endpointMap[field];
+
+            if (!endpoints) return;
+
+            // 🔵 Optimistic UI Update
+            setDatabases(prev =>
+                prev.map(item => {
                     if (item.id === db.id) {
+
                         if (isActive) {
+                            // Turning OFF
                             return { ...item, [field]: false };
                         } else {
-                            // Turn on this policy, turn off others
+                            // Turning ON (mutually exclusive)
                             return {
                                 ...item,
-                                is_24_7: field === 'is_24_7',
-                                never_start: field === 'never_start',
-                                daily_exception: field === 'daily_exception'
+                                is_24_7: field === "is_24_7",
+                                never_start: field === "never_start",
+                                daily_exception: field === "daily_exception"
                             };
                         }
                     }
                     return item;
-                }));
+                })
+            );
+
+            if (isActive) {
+                // DELETE
+                await axiosClient.delete(endpoints.remove);
+            } else {
+                // POST
+                await axiosClient.post(endpoints.add, {
+                    db_identifier: db.db_identifier
+                });
+            }
+
+            // Optional: refresh stats only
+            fetchDashboardStats();
+
+        } catch (error) {
+            console.error("Policy update failed:", error);
+
+            // 🔴 Rollback UI on failure
+            fetchInstances();
+        }
+    };
+
+    const handlePolicyWithConfirm = (db, field, label) => {
+        const isActive = db[field];
+
+        const actionText = isActive ? 'remove' : 'enable';
+
+        setConfirmModal({
+            open: true,
+            message: `Are you sure you want to ${actionText} "${label}" for database "${db.db_identifier}"?`,
+            onConfirm: async () => {
+                closeConfirmModal();
+                await executePolicyAction(db, field);
             }
         });
     };
 
     const executeBulkAction = async (action, mode) => {
         try {
-            console.log(`🚀 Executing Bulk ${action} for ${mode} databases...`);
-            // Add actual API call here
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Mock delay
-            console.log(`✅ Bulk ${action} completed.`);
+            let response;
+
+            // =====================================================
+            // MODE: ALL  →  Use new backend APIs
+            // =====================================================
+            if (mode === "ALL") {
+
+                const endpoint =
+                    action === "START"
+                        ? "/rds/instances/start-all"
+                        : "/rds/instances/stop-all";
+
+                response = await axiosClient.post(endpoint);
+
+                if (!response.data.success) {
+                    throw new Error("Bulk ALL operation failed");
+                }
+
+                const { summary, operations } = response.data;
+
+                // Nothing eligible
+                if (summary.total === 0) {
+                    console.warn(`No eligible databases for ${action}`);
+                    return;
+                }
+
+                // 🔵 Optimistic UI update
+                setDatabases(prev =>
+                    prev.map(db => {
+                        if (action === "START" && db.status.toLowerCase() === "stopped") {
+                            return { ...db, status: "starting" };
+                        }
+                        if (action === "STOP" && db.status.toLowerCase() === "available") {
+                            return { ...db, status: "stopping" };
+                        }
+                        return db;
+                    })
+                );
+
+                // 🔁 Start polling for each operation
+                operations.forEach(op => {
+                    pollOperationStatus(op.operation_id, op.db_identifier, action);
+                });
+
+            }
+
+            // =====================================================
+            // MODE: SELECTED  →  Use your existing bulk endpoints
+            // =====================================================
+            if (mode === "SELECTED") {
+
+                const endpoint =
+                    action === "START"
+                        ? "/rds/instances/bulk-start"
+                        : "/rds/instances/bulk-stop";
+
+                const targetDatabases =
+                    databases.filter(db => selectedRows.includes(db.id));
+
+                if (!targetDatabases.length) return;
+
+                const dbIdentifiers = targetDatabases.map(db => db.db_identifier);
+
+                // 🔵 Optimistic UI update
+                setDatabases(prev =>
+                    prev.map(db => {
+                        if (dbIdentifiers.includes(db.db_identifier)) {
+                            if (action === "START") return { ...db, status: "starting" };
+                            if (action === "STOP") return { ...db, status: "stopping" };
+                        }
+                        return db;
+                    })
+                );
+
+                response = await axiosClient.post(endpoint, {
+                    db_identifiers: dbIdentifiers
+                });
+
+                if (!response.data.success) {
+                    throw new Error("Bulk SELECTED operation failed");
+                }
+
+                const { operations } = response.data;
+
+                operations.forEach(op => {
+                    pollOperationStatus(op.operation_id, op.db_identifier, action);
+                });
+            }
+
+            // 🟢 Clear selection
+            setSelectedRows([]);
+
+            // 🟢 Refresh stats after small delay
+            setTimeout(() => {
+                fetchDashboardStats();
+            }, 3000);
+
         } catch (error) {
-            console.error(`❌ Bulk ${action} failed:`, error);
+            console.error(`Bulk ${action} failed`, error);
+
+            // Rollback on failure
+            fetchInstances();
         }
     };
 
@@ -425,54 +873,6 @@ export default function RDS() {
         // Add actual API call logic here if needed
         setScheduleModalOpen(false);
     };
-
-    // Derived Stats
-    const stats = useMemo(() => {
-        let rdsCount = 0;
-        let auroraCount = 0;
-        let rdsAllocated = 0;
-        let rdsUsed = 0;
-        let auroraUsed = 0;
-        let auroraAllocated = 0;
-        let runningCount = 0;
-        let stoppedCount = 0;
-        let is247Count = 0;
-        let neverStartCount = 0;
-        let exceptionCount = 0;
-
-        const countDb = (db) => {
-            if (db.is_aurora) {
-                auroraCount++;
-                auroraUsed += (db.storage_used || 0);
-                auroraAllocated += (db.storage_allocated || 2000);
-            } else {
-                rdsCount++;
-                rdsAllocated += (db.storage_allocated || 0);
-                rdsUsed += (db.storage_used || 0);
-            }
-
-            if (db.status.toLowerCase() === 'available') runningCount++;
-            if (db.status.toLowerCase() === 'stopped') stoppedCount++;
-
-            if (db.is_24_7) is247Count++;
-            if (db.never_start) neverStartCount++;
-            if (db.daily_exception) exceptionCount++;
-        };
-
-        databases.forEach(db => {
-            countDb(db);
-            // If it's a cluster, we don't necessarily count its instances for high-level policy stats
-            // but the user logic usually acts on the DB identifier shown in the main rows.
-        });
-
-        return {
-            total: databases.length,
-            rdsCount, auroraCount,
-            rdsAllocated, rdsUsed, auroraUsed, auroraAllocated,
-            runningCount, stoppedCount,
-            is247Count, neverStartCount, exceptionCount
-        };
-    }, [databases]);
 
     // Filtering
     const filteredDatabases = useMemo(() => {
@@ -500,6 +900,41 @@ export default function RDS() {
         });
     }, [databases, filterType, searchQuery, activeStatFilter]);
 
+    const handleSort = (key) => {
+        if (sortBy === key) {
+            setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(key);
+            setSortDir('asc');
+        }
+    };
+
+    const sortedDatabases = useMemo(() => {
+        if (!sortBy) return filteredDatabases;
+        return [...filteredDatabases].sort((a, b) => {
+            let valA = a[sortBy];
+            let valB = b[sortBy];
+
+            // Special handling for Storage (sort by Used)
+            if (sortBy === 'storage') {
+                valA = a.storage_used || 0;
+                valB = b.storage_used || 0;
+            }
+
+            // Numeric Sort
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return sortDir === 'asc' ? valA - valB : valB - valA;
+            }
+
+            // String Sort fallback
+            const strA = String(valA || '').toLowerCase();
+            const strB = String(valB || '').toLowerCase();
+            if (strA < strB) return sortDir === 'asc' ? -1 : 1;
+            if (strA > strB) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [filteredDatabases, sortBy, sortDir]);
+
     const toggleStatFilter = (filter) => {
         setActiveStatFilter(prev => prev === filter ? null : filter);
     };
@@ -518,16 +953,16 @@ export default function RDS() {
     };
 
     const handleSelectAll = () => {
-        if (selectedRows.length === filteredDatabases.length) {
+        if (selectedRows.length === sortedDatabases.length) {
             setSelectedRows([]);
         } else {
-            setSelectedRows(filteredDatabases.map(db => db.id));
+            setSelectedRows(sortedDatabases.map(db => db.id));
         }
     };
 
     const FilterButton = ({ type, label, active }) => (
         <button
-            className={`rds-filter-toggle-btn ${active ? 'active' : ''}`}
+            className={`rds-filter-toggle-btn ${active ? 'rds-active' : ''}`}
             onClick={() => {
                 if (filterType === type) setFilterType('all');
                 else setFilterType(type);
@@ -537,15 +972,138 @@ export default function RDS() {
         </button>
     );
 
+    const fetchInstanceTypes = async (engine) => {
+        try {
+            setInstanceTypesLoading(true);
+
+            const response = await axiosClient.get("/rds/instance-types", {
+                params: { engine }
+            });
+
+            if (response.data.success) {
+                setAvailableInstanceTypes(response.data.data);
+            }
+
+        } catch (error) {
+            console.error("Failed to fetch instance types", error);
+        } finally {
+            setInstanceTypesLoading(false);
+        }
+    };
+
+    const modifyInstanceClass = async () => {
+        const db = editModal.db;
+
+        try {
+
+            const response = await axiosClient.post(
+                "/rds/instances/modify",
+                {},
+                {
+                    params: {
+                        db_identifier: db.db_identifier,
+                        new_instance_class: selectedInstanceClass
+                    }
+                }
+            );
+
+            if (!response.data.success) {
+                throw new Error("Modification failed");
+            }
+
+            // Optimistic UI update
+            setDatabases(prev =>
+                prev.map(item =>
+                    item.db_identifier === db.db_identifier
+                        ? { ...item, status: "modifying" }
+                        : item
+                )
+            );
+
+            // Persist modifying state
+            const modifying = JSON.parse(localStorage.getItem("rds_modifying") || "[]");
+            if (!modifying.includes(db.db_identifier)) {
+                modifying.push(db.db_identifier);
+                localStorage.setItem("rds_modifying", JSON.stringify(modifying));
+            }
+
+            setModificationLoading(prev => ({
+                ...prev,
+                [db.db_identifier]: true
+            }));
+
+            pollModificationStatus(db.db_identifier);
+
+            setEditModal({ open: false, db: null });
+
+        } catch (error) {
+            console.error("Instance modification failed", error);
+        }
+    };
+
+    const pollModificationStatus = (dbIdentifier) => {
+
+        const interval = setInterval(async () => {
+
+            try {
+
+                const response = await axiosClient.get(
+                    "/rds/instances/modification-status",
+                    { params: { db_identifier: dbIdentifier } }
+                );
+
+                if (!response.data.success) return;
+
+                const { status } = response.data.data;
+
+                if (status === "completed") {
+
+                    clearInterval(modificationPollers.current[dbIdentifier]);
+                    delete modificationPollers.current[dbIdentifier];
+
+                    const modifying = JSON.parse(localStorage.getItem("rds_modifying") || "[]");
+                    const updated = modifying.filter(id => id !== dbIdentifier);
+                    localStorage.setItem("rds_modifying", JSON.stringify(updated));
+
+                    setModificationLoading(prev => {
+                        const copy = { ...prev };
+                        delete copy[dbIdentifier];
+                        return copy;
+                    });
+
+                    fetchInstances();
+                }
+
+            } catch (error) {
+                console.error("Modification polling failed", error);
+            }
+
+        }, 15000);
+
+        modificationPollers.current[dbIdentifier] = interval;
+    };
+
+    useEffect(() => {
+        return () => {
+            Object.values(operationPollers.current).forEach(clearInterval);
+            Object.values(modificationPollers.current).forEach(clearInterval);
+        };
+    }, []);
+
     // Storage Display Component
     const StorageDisplay = ({ allocated, used }) => {
         return (
-            <div className="storage-compact-box">
-                <span className="storage-val used">{used} GB</span>
-                <span className="storage-val-sep"></span>
-                <span className="storage-val allocated">{allocated ? `${allocated} GB` : '-'}</span>
+            <div className="rds-storage-compact-box">
+                <span className="rds-storage-val rds-used">{used} GB</span>
+                <span className="rds-storage-val-sep"></span>
+                <span className="rds-storage-val rds-allocated">{allocated ? `${allocated} GB` : '-'}</span>
             </div>
         );
+    };
+
+    const isOperationInProgress = (status) => {
+        const s = status?.toLowerCase();
+        return ['starting', 'stopping', 'rebooting', 'modifying'].includes(s);
     };
 
     return (
@@ -563,128 +1121,141 @@ export default function RDS() {
                     </div>
 
                     <button
-                        className={`btn-delta-updates sync-btn-rds ${isSyncing ? 'syncing' : ''}`}
+                        className={`rds-btn-delta-updates rds-sync-btn ${isSyncing ? 'rds-syncing' : ''}`}
                         onClick={handleSyncWithConfirm}
                         disabled={isSyncing}
                     >
-                        <div className="icon-wrapper">
-                            <RefreshCw size={20} className={isSyncing ? 'spinning' : ''} />
+                        <div className="rds-icon-wrapper">
+                            <RefreshCw size={20} className={isSyncing ? 'rds-spinning' : ''} />
                         </div>
-                        <span>{isSyncing ? 'Syncing...' : 'Sync Clusters'}</span>
+                        <span>{isSyncing ? 'Syncing...' : 'Sync Databases'}</span>
                     </button>
                 </div>
             </div>
 
             {/* EC2 Style Stats & Actions Grid - Row 1 */}
-            <div className="rds-stats-grid ec2-style">
-                <div className="stat-card glass-card ec2-card">
-                    <div className="stat-header-ec2">
-                        <span className="stat-title-ec2">Total Databases</span>
-                        <Database size={24} className="stat-icon-ec2 blue" />
+            <div className="rds-stats-grid rds-ec2-style">
+                <div className="rds-stat-card rds-glass-card rds-ec2-card">
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Total Databases</span>
+                        <Database size={24} className="rds-stat-icon-ec2 rds-blue" />
                     </div>
-                    <div className="stat-value-ec2 glow-text">{stats.total}</div>
+                    <div className="rds-stat-value-ec2 rds-glow-text">{statsLoading ? '—' : dashboardStats?.total_databases ?? 0}</div>
                 </div>
 
-                <div className="stat-card glass-card rds-storage-card ec2-card">
-                    <div className="stat-header-ec2">
-                        <span className="stat-title-ec2">RDS Storage & Count</span>
+                <div className="rds-stat-card rds-glass-card rds-storage-card rds-ec2-card">
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">RDS Storage & Count</span>
                     </div>
-                    <div className="capsule-display mt-2">
-                        <div className="capsule-bar rds-bar">
-                            <div className="used" style={{ flex: stats.rdsUsed }}></div>
-                            <div className="free" style={{ flex: stats.rdsAllocated - stats.rdsUsed }}></div>
+                    <div className="rds-capsule-display rds-mt-2">
+                        <div className="rds-capsule-bar rds-bar">
+                            <div
+                                className="rds-used"
+                                style={{ flex: dashboardStats?.rds_used_storage_gb || 0 }}
+                            ></div>
+
+                            <div
+                                className="rds-free"
+                                style={{
+                                    flex: Math.max(
+                                        (dashboardStats?.rds_allocated_storage_gb || 0) -
+                                        (dashboardStats?.rds_used_storage_gb || 0),
+                                        0
+                                    )
+                                }}
+                            ></div>
                         </div>
-                        <div className="capsule-labels-ec2">
-                            <span>Used: {stats.rdsUsed}GB</span>
-                            <span>Allocated: {stats.rdsAllocated}GB</span>
+                        <div className="rds-capsule-labels-ec2">
+                            <span>Used: <span className="rds-used-value">{dashboardStats?.rds_used_storage_gb ?? 0}GB</span></span>
+                            <span>Alloc: <span className="rds-used-value">{dashboardStats?.rds_allocated_storage_gb ?? 0}GB</span></span>
                         </div>
                     </div>
-                    <div className="stat-subtext-ec2 mt-auto">Active Instances: {stats.rdsCount}</div>
+                    <div className="rds-stat-subtext-ec2 rds-mt-auto">Active Instances: <span className="rds-used-value">{dashboardStats?.rds_count ?? 0}</span></div>
                 </div>
 
-                <div className="stat-card glass-card aurora-storage-card ec2-card">
-                    <div className="stat-header-ec2">
-                        <span className="stat-title-ec2">Aurora Usage</span>
-                        <HardDrive size={18} className="stat-icon-ec2 purple" />
+                <div className="rds-stat-card rds-glass-card rds-aurora-storage-card rds-ec2-card">
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Aurora Usage</span>
+                        <HardDrive size={18} className="rds-stat-icon-ec2 rds-purple" />
                     </div>
-                    <div className="stat-value-ec2 glow-text">{stats.auroraUsed} GB</div>
-                    <div className="stat-subtext-ec2 mt-auto">Active Clusters: {stats.auroraCount}</div>
+                    <div className="rds-stat-value-ec2 rds-glow-text rds-aurora-stat-value">{dashboardStats?.aurora_used_storage_gb ?? 0} GB</div>
+                    <div className="rds-stat-subtext-ec2 rds-mt-auto">Active Clusters: <span className="rds-used-value">{dashboardStats?.aurora_count ?? 0}</span></div>
                 </div>
 
                 <div
-                    className={`stat-card glass-card ec2-card clickable-stat ${activeStatFilter === 'available' ? 'active-filter-green' : ''}`}
+                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'available' ? 'rds-active-filter-green' : ''}`}
                     onClick={() => toggleStatFilter('available')}
                 >
-                    <div className="stat-header-ec2">
-                        <span className="stat-title-ec2">Available</span>
-                        <Activity size={24} className="stat-icon-ec2 green" />
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Available</span>
+                        <Activity size={24} className="rds-stat-icon-ec2 rds-green" />
                     </div>
-                    <div className="stat-value-ec2 green-text">{stats.runningCount}</div>
+                    <div className="rds-stat-value-ec2 rds-green-text">{dashboardStats?.running_count ?? 0}</div>
                 </div>
 
                 <div
-                    className={`stat-card glass-card ec2-card clickable-stat ${activeStatFilter === 'stopped' ? 'active-filter-red' : ''}`}
+                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'stopped' ? 'rds-active-filter-red' : ''}`}
                     onClick={() => toggleStatFilter('stopped')}
                 >
-                    <div className="stat-header-ec2">
-                        <span className="stat-title-ec2">Stopped</span>
-                        <Activity size={24} className="stat-icon-ec2 red" />
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Stopped</span>
+                        <Activity size={24} className="rds-stat-icon-ec2 rds-red" />
                     </div>
-                    <div className="stat-value-ec2 red-text">{stats.stoppedCount}</div>
+                    <div className="rds-stat-value-ec2 rds-red-text">{dashboardStats?.stopped_count ?? 0}</div>
                 </div>
             </div>
 
             {/* EC2 Style Stats & Actions Grid - Row 2 */}
-            <div className="rds-stats-grid ec2-style">
+            <div className="rds-stats-grid rds-ec2-style">
                 <div
-                    className={`stat-card glass-card ec2-card clickable-stat ${activeStatFilter === '247' ? 'active-filter-blue' : ''}`}
+                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === '247' ? 'rds-active-filter-blue' : ''}`}
                     onClick={() => toggleStatFilter('247')}
                 >
-                    <div className="stat-header-ec2">
-                        <span className="stat-title-ec2">24/7 Protected</span>
-                        <Shield size={24} className="stat-icon-ec2 blue" />
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">24/7 Protected</span>
+                        <Shield size={24} className="rds-stat-icon-ec2 rds-blue" />
                     </div>
-                    <div className="stat-value-ec2 blue-text">{stats.is247Count}</div>
+                    <div className="rds-stat-value-ec2 rds-blue-text">{dashboardStats?.always_running_count ?? 0}</div>
                 </div>
 
                 <div
-                    className={`stat-card glass-card ec2-card clickable-stat ${activeStatFilter === 'never' ? 'active-filter-orange' : ''}`}
+                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'never' ? 'rds-active-filter-orange' : ''}`}
                     onClick={() => toggleStatFilter('never')}
                 >
-                    <div className="stat-header-ec2">
-                        <span className="stat-title-ec2">Never-Start</span>
-                        <X size={24} className="stat-icon-ec2 orange" />
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Never-Start</span>
+                        <X size={24} className="rds-stat-icon-ec2 rds-orange" />
                     </div>
-                    <div className="stat-value-ec2 orange-text">{stats.neverStartCount}</div>
+                    <div className="rds-stat-value-ec2 rds-orange-text">{dashboardStats?.never_start_count ?? 0}</div>
                 </div>
 
                 <div
-                    className={`stat-card glass-card ec2-card clickable-stat ${activeStatFilter === 'exception' ? 'active-filter-yellow' : ''}`}
+                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'exception' ? 'rds-active-filter-yellow' : ''}`}
                     onClick={() => toggleStatFilter('exception')}
                 >
-                    <div className="stat-header-ec2">
-                        <span className="stat-title-ec2">Daily Exceptions</span>
-                        <FileUp size={24} className="stat-icon-ec2 yellow" />
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Daily Exceptions</span>
+                        <FileUp size={24} className="rds-stat-icon-ec2 rds-yellow" />
                     </div>
-                    <div className="stat-value-ec2 yellow-text">{stats.exceptionCount}</div>
+                    <div className="rds-stat-value-ec2 rds-yellow-text">{dashboardStats?.daily_exceptions_count ?? 0}</div>
                 </div>
 
                 {/* Stack 1: Start/Stop */}
-                <div className="button-stack-card">
+                <div className="rds-button-stack-card">
                     <button
-                        className="btn-stack btn-delta-updates start-btn"
+                        className="rds-btn-stack rds-btn-delta-updates rds-start-btn"
                         onClick={() => { setBulkAction('START'); setBulkModalOpen(true); }}
                     >
-                        <div className="icon-wrapper">
+                        <div className="rds-icon-wrapper">
                             <Play size={16} />
                         </div>
                         <span>Start</span>
                     </button>
                     <button
-                        className="btn-stack btn-delta-updates stop-btn"
+                        className="rds-btn-stack rds-btn-delta-updates rds-stop-btn"
                         onClick={() => { setBulkAction('STOP'); setBulkModalOpen(true); }}
                     >
-                        <div className="icon-wrapper">
+                        <div className="rds-icon-wrapper">
                             <Square size={16} />
                         </div>
                         <span>Stop</span>
@@ -692,21 +1263,32 @@ export default function RDS() {
                 </div>
 
                 {/* Stack 2: Updates/Upload */}
-                <div className="button-stack-card">
+                <div className="rds-button-stack-card">
                     <button
-                        className="btn-stack btn-delta-updates update-btn"
+                        className="rds-btn-stack rds-btn-delta-updates rds-update-btn"
                         onClick={() => navigate('/rds/updates')}
                     >
-                        <div className="icon-wrapper">
+                        <div className="rds-icon-wrapper">
                             <Activity size={16} />
                         </div>
                         <span>Updates</span>
                     </button>
-                    <button className="btn-stack btn-delta-updates upload-btn" onClick={handleUploadClick}>
-                        <div className="icon-wrapper">
-                            <FileUp size={16} />
-                        </div>
-                        <span>Upload Exceptions</span>
+                    <button
+                        className={`rds-btn-stack rds-upload-btn ${isUploading ? "rds-loading" : ""}`}
+                        onClick={handleUploadClick}
+                        disabled={isUploading}
+                    >
+                        {isUploading ? (
+                            <>
+                                <span className="rds-btn-spinner"></span>
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                <Upload size={14} />
+                                Upload Exceptions
+                            </>
+                        )}
                     </button>
                     <input
                         type="file"
@@ -719,7 +1301,7 @@ export default function RDS() {
             </div>
 
             {/* Filter and Search */}
-            <div className="rds-controls-container glass-panel">
+            <div className="rds-controls-container rds-glass-panel">
                 <div className="rds-filter-group">
                     <FilterButton type="rds" label="RDS Instances" active={filterType === 'rds'} />
                     <FilterButton type="aurora" label="Aurora Clusters" active={filterType === 'aurora'} />
@@ -736,6 +1318,20 @@ export default function RDS() {
                 </div>
             </div>
 
+            {loading && (
+                <div className="loading-state">
+                    <RefreshCw className="spinning" size={24} />
+                    <span>Loading RDS data...</span>
+                </div>
+            )}
+
+            {error && (
+                <div className="error-state">
+                    <span>{error}</span>
+                </div>
+            )}
+
+            {/* Main Data Table */}
             {/* Table Header Section (Now Attached) */}
             <div className="rds-table-header-modern attached">
                 <div className="rds-th-left">
@@ -761,351 +1357,432 @@ export default function RDS() {
                     </button>
                 </div>
             </div>
-
-            {/* Main Data Table */}
-            <div className="rds-table-container glass-panel">
-                <table className="rds-table-glass" style={{ tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
-                    <thead>
-                        <tr>
-                            <th className="checkbox-col" style={{ width: columnWidths.checkbox }}>
-                                <input
-                                    type="checkbox"
-                                    checked={selectedRows.length === filteredDatabases.length && filteredDatabases.length > 0}
-                                    onChange={handleSelectAll}
-                                />
-                            </th>
-                            {visibleColumns.identifier && (
-                                <th style={{ width: columnWidths.identifier }}>
-                                    <div className="resizer-wrapper">
-                                        Identifier
-                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'identifier')}></div>
-                                    </div>
+            {!loading && !error && (
+                <div className="rds-table-container rds-glass-panel">
+                    <table className="rds-table-glass" style={{ tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
+                        <thead>
+                            <tr>
+                                <th className="rds-checkbox-col" style={{ width: columnWidths.checkbox }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedRows.length === sortedDatabases.length && sortedDatabases.length > 0}
+                                        onChange={handleSelectAll}
+                                    />
                                 </th>
-                            )}
-                            {visibleColumns.role && (
-                                <th style={{ width: columnWidths.role }}>
-                                    <div className="resizer-wrapper">
-                                        Role
-                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'role')}></div>
-                                    </div>
-                                </th>
-                            )}
-                            {visibleColumns.engine && (
-                                <th style={{ width: columnWidths.engine }}>
-                                    <div className="resizer-wrapper">
-                                        Engine
-                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'engine')}></div>
-                                    </div>
-                                </th>
-                            )}
-                            {visibleColumns.class && (
-                                <th style={{ width: columnWidths.class }}>
-                                    <div className="resizer-wrapper">
-                                        Class
-                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'class')}></div>
-                                    </div>
-                                </th>
-                            )}
-                            {visibleColumns.storage && (
-                                <th style={{ width: columnWidths.storage }} className="storage-header-cell">
-                                    <div className="resizer-wrapper">
-                                        <div className="storage-header-main">Storage</div>
-                                        <div className="storage-header-labels-box">
-                                            <span className="label-item">Used</span>
-                                            <span className="label-sep"></span>
-                                            <span className="label-item">Alloc</span>
+                                {visibleColumns.identifier && (
+                                    <th style={{ width: columnWidths.identifier }}>
+                                        <div className="rds-resizer-wrapper">
+                                            <div style={{ padding: '16px 20px' }}>Identifier</div>
+                                            <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'identifier')}></div>
                                         </div>
-                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'storage')}></div>
-                                    </div>
-                                </th>
-                            )}
-                            {visibleColumns.status && (
-                                <th style={{ width: columnWidths.status }}>
-                                    <div className="resizer-wrapper">
-                                        Status
-                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'status')}></div>
-                                    </div>
-                                </th>
-                            )}
-                            {visibleColumns.actions && (
-                                <th style={{ width: columnWidths.actions }}>
-                                    <div className="resizer-wrapper">
-                                        Actions
-                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'actions')}></div>
-                                    </div>
-                                </th>
-                            )}
-                            {visibleColumns.policies && (
-                                <th style={{ width: columnWidths.policies }}>
-                                    <div className="resizer-wrapper">
-                                        Scheduling Policies
-                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'policies')}></div>
-                                    </div>
-                                </th>
-                            )}
-                            {visibleColumns.schedule && (
-                                <th style={{ width: columnWidths.schedule }}>
-                                    <div className="resizer-wrapper">
-                                        Schedule
-                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'schedule')}></div>
-                                    </div>
-                                </th>
-                            )}
-                            {visibleColumns.edit && (
-                                <th style={{ width: columnWidths.edit }}>
-                                    <div className="resizer-wrapper">
-                                        Edit
-                                        <div className="resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'edit')}></div>
-                                    </div>
-                                </th>
-                            )}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredDatabases.map(db => (
-                            <React.Fragment key={db.id}>
-                                <tr className={`main-row ${selectedRows.includes(db.id) ? 'selected' : ''}`}>
-                                    <td className="checkbox-col">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedRows.includes(db.id)}
-                                            onChange={() => handleSelectRow(db.id)}
-                                        />
-                                    </td>
-                                    {visibleColumns.identifier && (
-                                        <td className="identifier-col">
-                                            <div className="identifier-wrapper">
-                                                <div className="expand-control-wrapper">
-                                                    {db.is_aurora ? (
-                                                        <button className="expand-btn" onClick={() => toggleCluster(db.id)}>
-                                                            {expandedClusters[db.id] ? <Minus size={14} /> : <Plus size={14} />}
-                                                        </button>
-                                                    ) : (
-                                                        <div className="expand-spacer"></div>
-                                                    )}
+                                    </th>
+                                )}
+                                {visibleColumns.role && (
+                                    <th style={{ width: columnWidths.role }}>
+                                        <div className="rds-resizer-wrapper">
+                                            <div style={{ padding: '16px 20px' }}>Role</div>
+                                            <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'role')}></div>
+                                        </div>
+                                    </th>
+                                )}
+                                {visibleColumns.engine && (
+                                    <th style={{ width: columnWidths.engine }}>
+                                        <div className="rds-resizer-wrapper">
+                                            <div style={{ padding: '16px 20px' }}>Engine</div>
+                                            <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'engine')}></div>
+                                        </div>
+                                    </th>
+                                )}
+                                {visibleColumns.class && (
+                                    <th style={{ width: columnWidths.class }}>
+                                        <div className="rds-resizer-wrapper">
+                                            <div style={{ padding: '16px 20px' }}>Class</div>
+                                            <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'class')}></div>
+                                        </div>
+                                    </th>
+                                )}
+                                {visibleColumns.storage && (
+                                    <th style={{ width: columnWidths.storage }} className={`rds-storage-header-cell rds-th-sortable ${sortBy === 'storage' ? 'rds-th-active' : ''}`}>
+                                        <div className="rds-resizer-wrapper">
+                                            <button className="rds-th-sort-btn" onClick={() => handleSort('storage')}>
+                                                <div className="rds-storage-header-main">
+                                                    Storage
+                                                    <div className="rds-sort-indicator-stacked">
+                                                        <ChevronUp size={11} className={`rds-sort-icon-up ${sortBy === 'storage' && sortDir === 'asc' ? 'rds-sort-icon-active' : ''}`} />
+                                                        <ChevronDown size={11} className={`rds-sort-icon-down ${sortBy === 'storage' && sortDir === 'desc' ? 'rds-sort-icon-active' : ''}`} />
+                                                    </div>
                                                 </div>
-                                                <div className="db-info-content">
-                                                    <strong>{db.db_identifier}</strong>
-                                                    {(() => {
-                                                        const status = getScheduleStatus(db);
-                                                        if (!status) return null;
-                                                        return (
-                                                            <div className={`active-schedule-tag ${status.isUrgent ? 'urgent' : ''}`}>
-                                                                <span className="breathing-dot"></span>
-                                                                <Clock size={10} />
-                                                                <span>Active {status.label}</span>
-                                                            </div>
-                                                        );
-                                                    })()}
+                                                <div className="rds-storage-header-labels-box">
+                                                    <span className="rds-label-item">Used</span>
+                                                    <span className="rds-label-sep"></span>
+                                                    <span className="rds-label-item">Alloc</span>
                                                 </div>
-                                            </div>
-                                        </td>
-                                    )}
-                                    {visibleColumns.role && (
-                                        <td>
-                                            <span className="role-text-display">
-                                                {db.is_aurora ? 'Cluster' : 'Instance'}
-                                            </span>
-                                        </td>
-                                    )}
-                                    {visibleColumns.engine && (
-                                        <td>
-                                            <div className="engine-cell">
-                                                <span className="engine-name">{db.engine}</span>
-                                                <span className="engine-version">{db.engine_version}</span>
-                                            </div>
-                                        </td>
-                                    )}
-                                    {visibleColumns.class && (
-                                        <td>
-                                            {!db.is_aurora ? <span className="instance-class-badge">{db.instance_class}</span> : '-'}
-                                        </td>
-                                    )}
-                                    {visibleColumns.storage && (
-                                        <td>
-                                            <StorageDisplay allocated={db.storage_allocated} used={db.storage_used} isAurora={db.is_aurora} />
-                                        </td>
-                                    )}
-                                    {visibleColumns.status && (
-                                        <td>
-                                            <span className={`status-badge ${getStatusColor(db.status)}`}>
-                                                {formatStatus(db.status)}
-                                            </span>
-                                        </td>
-                                    )}
-                                    {visibleColumns.actions && (
-                                        <td>
-                                            <div className="row-actions">
-                                                <button
-                                                    className="icon-btn play"
-                                                    title="Start"
-                                                    disabled={db.status.toLowerCase() === 'available'}
-                                                    onClick={() => handleRowActionWithConfirm(db, 'START')}
-                                                >
-                                                    <Play size={16} />
-                                                </button>
-                                                <button
-                                                    className="icon-btn stop"
-                                                    title="Stop"
-                                                    disabled={db.status.toLowerCase() === 'stopped'}
-                                                    onClick={() => handleRowActionWithConfirm(db, 'STOP')}
-                                                >
-                                                    <Square size={16} />
-                                                </button>
-                                                <button
-                                                    className="icon-btn reboot"
-                                                    title="Reboot"
-                                                    disabled={db.status.toLowerCase() === 'stopped'}
-                                                    onClick={() => handleRowActionWithConfirm(db, 'REBOOT')}
-                                                >
-                                                    <RotateCw size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    )}
-                                    {visibleColumns.policies && (
-                                        <td>
-                                            <div className="policy-buttons">
-                                                <button
-                                                    className={`policy-btn ${db.is_24_7 ? 'active-247' : ''}`}
-                                                    title="24/7 Protected"
-                                                    disabled={!db.is_24_7 && (db.never_start || db.daily_exception)}
-                                                    onClick={() => handlePolicyWithConfirm(db, 'is_24_7', '24/7 Protected')}
-                                                >
-                                                    <Shield size={16} />
-                                                </button>
-                                                <button
-                                                    className={`policy-btn ${db.never_start ? 'active-never' : ''}`}
-                                                    title="Never Start"
-                                                    disabled={!db.never_start && (db.is_24_7 || db.daily_exception)}
-                                                    onClick={() => handlePolicyWithConfirm(db, 'never_start', 'Never Start')}
-                                                >
-                                                    <X size={16} />
-                                                </button>
-                                                <button
-                                                    className={`policy-btn ${db.daily_exception ? 'active-exc' : ''}`}
-                                                    title="Daily Exception"
-                                                    disabled={!db.daily_exception && (db.is_24_7 || db.never_start)}
-                                                    onClick={() => handlePolicyWithConfirm(db, 'daily_exception', 'Daily Exception')}
-                                                >
-                                                    <FileUp size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    )}
-                                    {visibleColumns.schedule && (
-                                        <td>
-                                            <button
-                                                className="btn-set-schedule"
-                                                disabled={db.is_24_7 || db.never_start}
-                                                onClick={() => {
-                                                    setScheduleTarget({
-                                                        label: db.db_identifier,
-                                                        resourceType: 'RDS',
-                                                        scope: db.db_identifier,
-                                                        db: db
-                                                    });
-                                                    setScheduleModalOpen(true);
-                                                }}
-                                            >
-                                                <Clock size={14} /> Schedule
                                             </button>
-                                        </td>
-                                    )}
-                                    {visibleColumns.edit && (
-                                        <td>
-                                            <button
-                                                className="icon-btn edit"
-                                                title="Edit Instance"
-                                                onClick={() => setEditModal({ open: true, db })}
-                                            >
-                                                <Pencil size={18} />
+                                            <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'storage')}></div>
+                                        </div>
+                                    </th>
+                                )}
+                                {visibleColumns.status && (
+                                    <th style={{ width: columnWidths.status }} className={`rds-th-sortable ${sortBy === 'status' ? 'rds-th-active' : ''}`}>
+                                        <div className="rds-resizer-wrapper">
+                                            <button className="rds-th-sort-btn" onClick={() => handleSort('status')}>
+                                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                    Status
+                                                    <div className="rds-sort-indicator-stacked">
+                                                        <ChevronUp size={11} className={`rds-sort-icon-up ${sortBy === 'status' && sortDir === 'asc' ? 'rds-sort-icon-active' : ''}`} />
+                                                        <ChevronDown size={11} className={`rds-sort-icon-down ${sortBy === 'status' && sortDir === 'desc' ? 'rds-sort-icon-active' : ''}`} />
+                                                    </div>
+                                                </div>
                                             </button>
+                                            <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'status')}></div>
+                                        </div>
+                                    </th>
+                                )}
+                                {visibleColumns.actions && (
+                                    <th style={{ width: columnWidths.actions }}>
+                                        <div className="rds-resizer-wrapper">
+                                            Actions
+                                            <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'actions')}></div>
+                                        </div>
+                                    </th>
+                                )}
+                                {visibleColumns.policies && (
+                                    <th style={{ width: columnWidths.policies }}>
+                                        <div className="rds-resizer-wrapper">
+                                            Scheduling Policies
+                                            <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'policies')}></div>
+                                        </div>
+                                    </th>
+                                )}
+                                {visibleColumns.schedule && (
+                                    <th style={{ width: columnWidths.schedule }}>
+                                        <div className="rds-resizer-wrapper">
+                                            Schedule
+                                            <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'schedule')}></div>
+                                        </div>
+                                    </th>
+                                )}
+                                {visibleColumns.edit && (
+                                    <th style={{ width: columnWidths.edit }}>
+                                        <div className="rds-resizer-wrapper">
+                                            Edit
+                                            <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'edit')}></div>
+                                        </div>
+                                    </th>
+                                )}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedDatabases.map(db => (
+                                <React.Fragment key={db.id}>
+                                    <tr className={`rds-main-row ${selectedRows.includes(db.id) ? 'rds-selected' : ''}`}>
+                                        <td className="rds-checkbox-col">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedRows.includes(db.id)}
+                                                onChange={() => handleSelectRow(db.id)}
+                                            />
                                         </td>
-                                    )}
-                                </tr>
-
-                                {/* Expanded Aurora Instances */}
-                                {db.is_aurora && expandedClusters[db.id] && db.instances?.map(inst => (
-                                    <tr key={inst.id} className="sub-row">
-                                        <td></td>
                                         {visibleColumns.identifier && (
-                                            <td className="identifier-col sub">
-                                                <div className="identifier-wrapper">
-                                                    <span className="tree-line"></span>
-                                                    {inst.db_identifier}
+                                            <td className="rds-identifier-col">
+                                                <div className="rds-identifier-wrapper">
+                                                    <div className="rds-expand-control-wrapper">
+                                                        {db.is_aurora ? (
+                                                            <button className="rds-expand-btn" onClick={() => toggleCluster(db.id)}>
+                                                                {expandedClusters[db.id] ? <Minus size={14} /> : <Plus size={14} />}
+                                                            </button>
+                                                        ) : (
+                                                            <div className="rds-expand-spacer"></div>
+                                                        )}
+                                                    </div>
+                                                    <div className="rds-db-info-content">
+                                                        <strong>{db.db_identifier}</strong>
+                                                        {(() => {
+                                                            const status = getScheduleStatus(db);
+                                                            if (!status) return null;
+                                                            return (
+                                                                <div className={`rds-active-schedule-tag ${status.isUrgent ? 'rds-urgent' : ''}`}>
+                                                                    <span className="rds-breathing-dot"></span>
+                                                                    <Clock size={10} />
+                                                                    <span>Active {status.label}</span>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </div>
                                                 </div>
                                             </td>
                                         )}
                                         {visibleColumns.role && (
                                             <td>
-                                                <span className="role-text-display">{inst.role}</span>
-                                            </td>
-                                        )}
-                                        {visibleColumns.engine && <td>-</td>}
-                                        {visibleColumns.class && <td><span className="instance-class-badge">{inst.instance_class}</span></td>}
-                                        {visibleColumns.storage && <td>-</td>}
-                                        {visibleColumns.status && (
-                                            <td>
-                                                <span className={`status-badge ${getStatusColor(inst.status)}`}>
-                                                    {formatStatus(inst.status)}
+                                                <span className="rds-role-text-display">
+                                                    {db.is_aurora ? 'Cluster' : 'Instance'}
                                                 </span>
                                             </td>
                                         )}
-                                        {/* Sub-actions info takes up remaining visible columns */}
-                                        <td colSpan={Object.values(visibleColumns).filter(v => v).length - (visibleColumns.identifier ? 1 : 0) - (visibleColumns.role ? 1 : 0) - (visibleColumns.engine ? 1 : 0) - (visibleColumns.class ? 1 : 0) - (visibleColumns.storage ? 1 : 0) - (visibleColumns.status ? 1 : 0)} className="sub-actions-info">
-                                            <span className="text-muted">Managed via cluster</span>
-                                        </td>
+                                        {visibleColumns.engine && (
+                                            <td>
+                                                <div className="rds-engine-cell">
+                                                    <span className="rds-engine-name">{db.engine}</span>
+                                                    <span className="rds-engine-version">{db.engine_version}</span>
+                                                </div>
+                                            </td>
+                                        )}
+                                        {visibleColumns.class && (
+                                            <td>
+                                                {!db.is_aurora ? <span className="rds-instance-class-badge">{db.instance_class}</span> : '-'}
+                                            </td>
+                                        )}
+                                        {visibleColumns.storage && (
+                                            <td>
+                                                <StorageDisplay allocated={db.storage_allocated} used={db.storage_used} isAurora={db.is_aurora} />
+                                            </td>
+                                        )}
+                                        {visibleColumns.status && (
+                                            <td>
+                                                <span className={`rds-status-badge ${getStatusColor(db.status)}`}>
+                                                    {formatStatus(db.status)}
+                                                </span>
+                                            </td>
+                                        )}
+                                        {visibleColumns.actions && (
+                                            <td>
+                                                <div className="rds-row-actions">
+                                                    <button
+                                                        className="rds-icon-btn rds-play"
+                                                        title="Start"
+                                                        disabled={
+                                                            isOperationInProgress(db.status) ||
+                                                            ['available', 'running'].includes(db.status.toLowerCase()) ||
+                                                            rowActionLoading[db.id]
+                                                        }
+                                                        onClick={() => handleRowActionWithConfirm(db, 'START')}
+                                                    >
+                                                        {rowActionLoading[db.id] === 'START'
+                                                            ? <RefreshCw size={16} className="rds-spinning" />
+                                                            : <Play size={16} />
+                                                        }
+                                                    </button>
+                                                    <button
+                                                        className="rds-icon-btn rds-stop"
+                                                        title="Stop"
+                                                        disabled={
+                                                            isOperationInProgress(db.status) ||
+                                                            ['stopped'].includes(db.status.toLowerCase()) ||
+                                                            rowActionLoading[db.id]
+                                                        }
+                                                        onClick={() => handleRowActionWithConfirm(db, 'STOP')}
+                                                    >
+                                                        {rowActionLoading[db.id] === 'STOP'
+                                                            ? <RefreshCw size={16} className="rds-spinning" />
+                                                            : <Square size={16} />
+                                                        }
+                                                    </button>
+                                                    <button
+                                                        className="rds-icon-btn rds-reboot"
+                                                        title="Reboot"
+                                                        disabled={
+                                                            isOperationInProgress(db.status) ||
+                                                            ['stopped'].includes(db.status.toLowerCase()) ||
+                                                            rowActionLoading[db.id]
+                                                        }
+                                                        onClick={() => handleRowActionWithConfirm(db, 'REBOOT')}
+                                                    >
+                                                        {rowActionLoading[db.id] === 'REBOOT'
+                                                            ? <RefreshCw size={16} className="rds-spinning" />
+                                                            : <RotateCw size={16} />
+                                                        }
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        )}
+                                        {visibleColumns.policies && (
+                                            <td>
+                                                <div className="rds-policy-buttons">
+                                                    <button
+                                                        className={`rds-policy-btn ${db.is_24_7 ? 'rds-active-247' : ''}`}
+                                                        title="24/7 Protected"
+                                                        disabled={!db.is_24_7 && (db.never_start || db.daily_exception)}
+                                                        onClick={() => handlePolicyWithConfirm(db, 'is_24_7', '24/7 Protected')}
+                                                    >
+                                                        <Shield size={16} />
+                                                    </button>
+                                                    <button
+                                                        className={`rds-policy-btn ${db.never_start ? 'rds-active-never' : ''}`}
+                                                        title="Never Start"
+                                                        disabled={!db.never_start && (db.is_24_7 || db.daily_exception)}
+                                                        onClick={() => handlePolicyWithConfirm(db, 'never_start', 'Never Start')}
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                    <button
+                                                        className={`rds-policy-btn ${db.daily_exception ? 'rds-active-exc' : ''}`}
+                                                        title="Daily Exception"
+                                                        disabled={!db.daily_exception && (db.is_24_7 || db.never_start)}
+                                                        onClick={() => handlePolicyWithConfirm(db, 'daily_exception', 'Daily Exception')}
+                                                    >
+                                                        <FileUp size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        )}
+                                        {visibleColumns.schedule && (
+                                            <td>
+                                                <button
+                                                    className="rds-btn-set-schedule"
+                                                    disabled={db.is_24_7 || db.never_start}
+                                                    onClick={() => {
+                                                        setScheduleTarget({
+                                                            label: db.db_identifier,
+                                                            resourceType: 'RDS',
+                                                            scope: db.db_identifier,
+                                                            db: db
+                                                        });
+                                                        setScheduleModalOpen(true);
+                                                    }}
+                                                >
+                                                    <Clock size={14} /> Schedule
+                                                </button>
+                                            </td>
+                                        )}
+                                        {visibleColumns.edit && (
+                                            <td>
+                                                {!db.is_aurora ? (
+                                                    <button
+                                                        className="rds-icon-btn rds-edit"
+                                                        title="Edit Instance"
+                                                        onClick={() => {
+                                                            setEditModal({ open: true, db });
+                                                            setSelectedInstanceClass("");
+                                                            fetchInstanceTypes(db.engine);
+                                                        }}
+                                                    >
+                                                        <Pencil size={18} />
+                                                    </button>
+                                                ) : (
+                                                    <span className="rds-text-muted">-</span>
+                                                )}
+                                            </td>
+                                        )}
                                     </tr>
-                                ))}
-                            </React.Fragment>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+
+                                    {/* Expanded Aurora Instances */}
+                                    {db.is_aurora && expandedClusters[db.id] && db.instances?.map(inst => (
+                                        <tr key={inst.id} className="rds-sub-row">
+                                            <td></td>
+                                            {visibleColumns.identifier && (
+                                                <td className="rds-identifier-col rds-sub">
+                                                    <div className="rds-identifier-wrapper">
+                                                        <span className="rds-tree-line"></span>
+                                                        {inst.db_identifier}
+                                                    </div>
+                                                </td>
+                                            )}
+                                            {visibleColumns.role && (
+                                                <td>
+                                                    <span className="rds-role-text-display">{inst.role}</span>
+                                                </td>
+                                            )}
+                                            {visibleColumns.engine && <td>-</td>}
+                                            {visibleColumns.class &&
+                                                <td><span className="rds-instance-class-badge">{inst.instance_class}</span></td>
+                                            }
+                                            {visibleColumns.storage && <td>-</td>}
+                                            {visibleColumns.status && (
+                                                <td>
+                                                    <span className={`rds-status-badge ${getStatusColor(inst.status)}`}>
+                                                        {formatStatus(inst.status)}
+                                                    </span>
+                                                </td>
+                                            )}
+                                            <td colSpan={Object.values(visibleColumns).filter(v => v).length - (visibleColumns.identifier ? 1 : 0) - (visibleColumns.role ? 1 : 0) - (visibleColumns.engine ? 1 : 0) - (visibleColumns.class ? 1 : 0) - (visibleColumns.storage ? 1 : 0) - (visibleColumns.status ? 1 : 0)} className="rds-sub-actions-info">
+                                                <span className="rds-text-muted">Managed via cluster</span>
+                                            </td>
+
+                                            <td>
+                                                <button
+                                                    className="rds-icon-btn rds-edit"
+                                                    title="Edit Instance"
+                                                    onClick={() => {
+                                                        setEditModal({
+                                                            open: true,
+                                                            db: {
+                                                                ...inst,
+                                                                db_identifier: inst.db_identifier,
+                                                                instance_class: inst.instance_class
+                                                            }
+                                                        });
+
+                                                        setSelectedInstanceClass("");
+                                                        fetchInstanceTypes(inst.engine);
+                                                    }}
+                                                >
+                                                    <Pencil size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </React.Fragment>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
             {/* Edit Modal (Glass) */}
             {editModal.open && (
-                <div className="glass-modal-overlay">
-                    <div className="glass-modal-content">
-                        <div className="modal-header">
+                <div className="rds-glass-modal-overlay">
+                    <div className="rds-glass-modal-content">
+                        <div className="rds-modal-header">
                             <h3>Modify Instance Class</h3>
-                            <button onClick={() => setEditModal({ open: false, db: null })} className="close-btn"><X size={20} /></button>
+                            <button onClick={() => setEditModal({ open: false, db: null })} className="rds-close-btn"><X size={20} /></button>
                         </div>
-                        <div className="modal-body">
-                            <p className="mb-4">DB Identifier: <strong>{editModal.db?.db_identifier}</strong></p>
+                        <div className="rds-modal-body">
+                            <p className="rds-mb-4">DB Identifier: <strong>{editModal.db?.db_identifier}</strong></p>
 
-                            <div className="current-specs glass-panel">
+                            <div className="rds-current-specs rds-glass-panel">
                                 <h4>Current Specs</h4>
-                                <div className="specs-grid">
-                                    <div className="spec-item">
+                                <div className="rds-specs-grid">
+                                    <div className="rds-spec-item">
                                         <label>Class</label>
-                                        <div className="val">{editModal.db?.instance_class || 'N/A'}</div>
+                                        <div className="rds-val">{editModal.db?.instance_class || 'N/A'}</div>
                                     </div>
-                                    <div className="spec-item">
+                                    <div className="rds-spec-item">
                                         <label>vCPU</label>
-                                        <div className="val">{editModal.db?.vcpu || '-'}</div>
+                                        <div className="rds-val">{editModal.db?.vcpu || '-'}</div>
                                     </div>
-                                    <div className="spec-item">
+                                    <div className="rds-spec-item">
                                         <label>Memory</label>
-                                        <div className="val">{editModal.db?.memory ? `${editModal.db.memory} GB` : '-'}</div>
+                                        <div className="rds-val">{editModal.db?.memory ? `${editModal.db.memory} GB` : '-'}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="form-group mt-4">
+                            <div className="rds-form-group rds-mt-4">
                                 <label>New Instance Class</label>
-                                <select className="glass-select">
-                                    <option>Select new class...</option>
-                                    <option value="db.r6g.xlarge">db.r6g.xlarge (4 vCPU, 32GB)</option>
-                                    <option value="db.m5.xlarge">db.m5.xlarge (4 vCPU, 16GB)</option>
-                                    <option value="db.t3.large">db.t3.large (2 vCPU, 8GB)</option>
+                                <select
+                                    className="rds-glass-select"
+                                    value={selectedInstanceClass}
+                                    onChange={(e) => setSelectedInstanceClass(e.target.value)}
+                                >
+                                    <option value="">Select new class...</option>
+
+                                    {availableInstanceTypes.map(type => (
+                                        <option key={type.instance_class} value={type.instance_class}>
+                                            {type.instance_class} ({type.vcpu} vCPU, {type.memory_gb}GB)
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
-                        <div className="modal-footer">
-                            <button className="btn-glass secondary" onClick={() => setEditModal({ open: false, db: null })}>Cancel</button>
-                            <button className="btn-glass primary">Apply Changes</button>
+                        <div className="rds-modal-footer">
+                            <button className="rds-btn-glass rds-secondary" onClick={() => setEditModal({ open: false, db: null })}>Cancel</button>
+                            <button
+                                className="rds-btn-glass rds-primary"
+                                onClick={modifyInstanceClass}
+                                disabled={!selectedInstanceClass}
+                            >
+                                Apply Changes
+                            </button>
                         </div>
                     </div>
                 </div>

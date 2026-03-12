@@ -391,8 +391,8 @@
 }
 
 .table-container-modern {
+    overflow-x: auto;
     width: 100%;
-    overflow: visible;
 }
 
 .modern-table {
@@ -465,6 +465,30 @@
     color: var(--text-primary);
 }
 
+/* Column resizer handle */
+.modern-table th {
+    position: relative;
+    user-select: none;
+    /* prevent text selection while dragging */
+}
+
+.column-resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 10;
+    background: transparent;
+    /* or rgba(0,0,0,0.1) on hover */
+    transition: background 0.2s;
+}
+
+.column-resizer:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
 .td-center {
     text-align: center;
 }
@@ -524,16 +548,20 @@
     display: inline-flex;
     align-items: center;
     gap: clamp(0.25rem, 0.8vw, 0.375rem);
+    gap: 0.1rem;
     padding: clamp(0.3rem, 1vw, 0.375rem) clamp(0.6rem, 1.2vw, 0.75rem);
-    background: var(--gradient-warm);
     color: white;
     border-radius: var(--radius-md);
     font-size: 0.75rem;
     font-weight: 700;
-    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
     animation: none;
     white-space: nowrap;
+    width: 140px;
+    text-align: center;
+    background: var(--gradient-warm);
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
 }
+
 
 /* Service Counts */
 .service-count {
@@ -674,6 +702,12 @@
     box-shadow: 0 8px 20px rgba(16, 185, 129, 0.6), 0 0 20px rgba(16, 185, 129, 0.4) !important;
 }
 
+.layout-container[data-theme="dark"] .exception {
+    box-shadow:
+        0 8px 20px rgba(239, 68, 68, 0.6),
+        0 0 18px rgba(239, 68, 68, 0.45);
+}
+
 .layout-container[data-theme="dark"] .schedule-btn {
     box-shadow: var(--shadow-lg), var(--glow-primary);
 }
@@ -790,7 +824,8 @@
 
     .exception-badge,
     .service-count,
-    .compute-badge {
+    .compute-badge,
+    .exception {
         font-size: 0.6875rem;
         padding: 0.3rem 0.6rem;
     }
@@ -1364,4 +1399,29 @@
 
     background: var(--gradient-secondary);
     color: white;
+}
+
+
+.exception {
+    display: inline-flex;
+    align-items: center;
+    /* gap: clamp(0.25rem, 0.8vw, 0.375rem); */
+    gap: 0.1rem;
+    padding: clamp(0.3rem, 1vw, 0.375rem) clamp(0.6rem, 1.2vw, 0.75rem);
+    color: white;
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    font-weight: 700;
+    animation: none;
+    white-space: nowrap;
+    width: 140px;
+    text-align: center;
+    background: var(--gradient-warm);
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+.layout-container[data-theme="dark"] .exception {
+    box-shadow:
+        0 8px 20px rgba(239, 68, 68, 0.6),
+        0 0 18px rgba(239, 68, 68, 0.45);
 }

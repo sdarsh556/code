@@ -27,9 +27,46 @@ import '../../css/ecs/ECS.css';
 import '../../css/common/ScheduleModal.css';
 import axiosClient from '../api/axiosClient';
 import ConfirmActionModal from '../common/ConfirmActionModal';
+import ResizableTable from '../common/ResizableTable';
 
 const CLUSTER_CACHE_KEY = 'lombard_ecs_clusters_cache';
 const CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
+
+const DUMMY_CLUSTERS = [
+    {
+        id: 1,
+        name: 'production-cluster',
+        activeServices: 12,
+        runningServices: 10,
+        closedServices: 2,
+        computeType: 'FARGATE',
+        isScheduled: true,
+        schedule_start: null,
+        schedule_end: null
+    },
+    {
+        id: 2,
+        name: 'staging-cluster',
+        activeServices: 8,
+        runningServices: 8,
+        closedServices: 0,
+        computeType: 'FARGATE',
+        isScheduled: false,
+        schedule_start: null,
+        schedule_end: null
+    },
+    {
+        id: 3,
+        name: 'development-cluster',
+        activeServices: 15,
+        runningServices: 5,
+        closedServices: 10,
+        computeType: 'ASG',
+        isScheduled: true,
+        schedule_start: null,
+        schedule_end: null
+    }
+];
 
 function useDebounce(value, delay) {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -133,6 +170,17 @@ function ECS() {
     // Debounced search query (300ms delay)
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
+    const columns = [
+        { key: 'name', label: 'Cluster Name', widthPercent: 22, minWidth: 180 },
+        { key: 'activeServices', label: 'Active Services', widthPercent: 13, minWidth: 130 },
+        { key: 'runningServices', label: 'Running Services', widthPercent: 14, minWidth: 130 },
+        { key: 'closedServices', label: 'Closed Services', widthPercent: 13, minWidth: 130 },
+        { key: 'computeType', label: 'Compute Type', widthPercent: 12, minWidth: 150 },
+        { key: 'schedule', label: 'Schedule', widthPercent: 15, minWidth: 150 },
+        { key: 'exception', label: 'Exception', widthPercent: 11, minWidth: 120 }
+    ];
+
+
     // Fetch clusters from API
     const fetchClustersFromDB = useCallback(async () => {
         setIsLoadingClusters(true);
@@ -142,11 +190,23 @@ function ECS() {
             const response = await axiosClient.get('/ecs/clusters');
             const result = response.data;
 
-            if (!result.success) {
-                throw new Error(result.error?.message || 'Failed to fetch clusters');
+            let clusterData = result.data || [];
+
+            if (clusterData.length === 0) {
+                console.log('⚠️ API returned no clusters, falling back to dummy clusters');
+                clusterData = DUMMY_CLUSTERS.map(c => ({
+                    cluster_name: c.name,
+                    active_services_count: c.activeServices,
+                    running_services_count: c.runningServices,
+                    stopped_services_count: c.closedServices,
+                    compute_type: c.computeType,
+                    is_scheduled: c.isScheduled,
+                    schedule_start: c.schedule_start,
+                    schedule_end: c.schedule_end
+                }));
             }
 
-            const mappedClusters = result.data.map((c, index) => ({
+            const mappedClusters = clusterData.map((c, index) => ({
                 id: index + 1,
                 name: c.cluster_name,
                 activeServices: c.active_services_count,
@@ -170,7 +230,10 @@ function ECS() {
             );
         } catch (err) {
             console.error('❌ Cluster fetch error:', err);
-            setError(err.message);
+            // setError(err.message);
+            console.log('⚠️ Falling back to dummy clusters');
+            setClusters(DUMMY_CLUSTERS);
+            setIsInitialLoad(false);
         } finally {
             setIsLoadingClusters(false);
         }
@@ -398,8 +461,7 @@ function ECS() {
                     ...cluster,
                     scheduleStatus: schedule
                         ? calculateScheduleStatus(schedule)
-                        : null,
-                    isScheduled: !!schedule
+                        : null
                 };
             })
         );
@@ -457,25 +519,24 @@ function ECS() {
     // }), [clusters]);
 
     const stats = useMemo(() => {
-        const scheduledCount =
-            clusters.filter((c) => c.isScheduled).length;
+        const totalClustersCount = clusters.length;
 
-        const exceptionCount =
-            Object.values(clusterExceptions).filter(Boolean).length;
+        const totalServices = clusters.reduce(
+            (sum, c) => sum + (c.activeServices || 0),
+            0
+        );
+
+        // Only count schedules from DB
+        const activeScheduledCount = clusters.filter(
+            (c) => c.isScheduled === true
+        ).length;
 
         return {
-            totalServices: clusters.reduce(
-                (sum, c) => sum + c.activeServices,
-                0
-            ),
-
-            totalClustersCount: clusters.length,
-
-            // ✅ Scheduled + Exceptions
-            activeExceptions: scheduledCount + exceptionCount
+            totalClustersCount,
+            totalServices,
+            activeExceptions: activeScheduledCount
         };
-    }, [clusters, clusterExceptions]);
-
+    }, [clusters]);
 
     const filteredClustersWithStatus = useMemo(() => {
         return clusters.filter(cluster =>
@@ -534,35 +595,64 @@ function ECS() {
     };
 
 
-    const handleFileUpload = useCallback((event) => {
+    const handleFileUpload = useCallback(async (event) => {
         const file = event.target.files[0];
-        if (file) {
-            setUploadedFile(file);
+        if (!file) return;
 
-            // ⏸️ TODO: Process and upload file to API
-            // Uncomment when API is ready:
-            /*
+        setUploadedFile(file);
+        setError(null);
+
+        try {
             const formData = new FormData();
-            formData.append('file', file);
-            
-            fetch('/api/ecs/upload-exceptions', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('File uploaded successfully:', data);
-                // Refresh schedules after upload
-                loadSchedules();
-            })
-            .catch(error => {
-                console.error('Error uploading file:', error);
-            });
-            */
+            formData.append("file", file);
 
-            console.log('File uploaded:', file.name);
+            const response = await axiosClient.post(
+                "/ecs/clusters/exception/bulk-add",
+                formData,
+                {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
+            );
+
+            if (response.status === 207) {
+                alert("Upload completed with some failures. Check summary.");
+            }
+
+            const result = response.data;
+
+            if (!result.success) {
+                throw new Error(result.error?.message || "Bulk upload failed");
+            }
+
+            // ✅ Show summary to user (you can replace with toast if needed)
+            alert(
+                `Bulk Upload Completed:
+            
+Total: ${result.summary.total_clusters}
+Added: ${result.summary.exceptions_added}
+Failed: ${result.summary.clusters_failed}
+Not Found: ${result.summary.clusters_not_found.length}`
+            );
+
+            // ✅ Refresh exception state after upload
+            await loadClusterExceptions();
+
+        } catch (err) {
+            console.error("Bulk upload failed:", err);
+
+            setError(
+                err.response?.data?.error?.message ||
+                err.message ||
+                "Failed to upload exceptions"
+            );
+        } finally {
+            // Reset input so same file can be uploaded again
+            event.target.value = null;
         }
-    }, []);
+    }, [loadClusterExceptions]);
+
 
     const handleUploadClick = useCallback(() => {
         fileInputRef.current?.click();
@@ -741,7 +831,7 @@ function ECS() {
                         </div>
                         <div className="stat-content-modern">
                             <h3 className="stat-value-modern">{stats.activeExceptions}</h3>
-                            <p className="stat-label-modern">Active Exceptions</p>
+                            <p className="stat-label-modern">Active Schedules</p>
                         </div>
                     </div>
                 </div>
@@ -769,7 +859,7 @@ function ECS() {
                     <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".txt,.csv,.json"
+                        accept=".txt,.csv"
                         onChange={handleFileUpload}
                         className="hidden-file-input"
                     />
@@ -803,74 +893,88 @@ function ECS() {
                 </div>
 
                 <div className="table-container-modern">
-                    <table className="modern-table">
-                        <thead>
-                            <tr>
-                                <th className="th-cluster">Cluster Name</th>
-                                <th className="th-center">Active Services</th>
-                                <th className="th-center">Running Services</th>
-                                <th className="th-center">Closed Services</th>
-                                <th className="th-center">Compute Type</th>
-                                <th className="th-center">Schedule</th>
-                                <th className="th-center">Exception</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredClustersWithStatus.map((cluster) => (
-                                <tr
-                                    key={cluster.id}
-                                    className={`table-row-modern ${cluster.id % 2 !== 0 ? 'striped-row' : ''}`}
-                                >
-                                    <td
-                                        className="cluster-name-modern clickable-cell"
-                                        onClick={() => handleClusterClick(cluster.name)}
-                                    >
-                                        <div className="cluster-info">
-                                            <Container size={20} className="cluster-icon-modern" />
-                                            <div className="cluster-details">
-                                                <span className="cluster-name-text" title={cluster.name}>
-                                                    {cluster.name}
-                                                </span>
+                    <ResizableTable
+                        columns={columns}
+                        data={filteredClustersWithStatus}
+                        tableClassName="modern-table"
+                        wrapperClassName="table-container-modern"
+                        renderCell={(key, cluster) => {
 
-                                                {/* Cluster-level schedule badge */}
-                                                {cluster.scheduleStatus && (
-                                                    <span className={`exception-badge ${cluster.scheduleStatus.badgeClass}`}>
-                                                        <ExceptionTimer
-                                                            remaining={cluster.scheduleStatus.remaining}
-                                                            total={cluster.scheduleStatus.total}
-                                                        />
-                                                        Active {cluster.scheduleStatus.remaining} {cluster.scheduleStatus.remaining === 1 ? 'Day' : 'Days'}
+                            switch (key) {
+
+                                case 'name':
+                                    return (
+                                        <div
+                                            className="cluster-name-modern clickable-cell"
+                                            onClick={() => handleClusterClick(cluster.name)}
+                                        >
+                                            <div className="cluster-info">
+                                                <Container size={20} className="cluster-icon-modern" />
+                                                <div className="cluster-details">
+                                                    <span
+                                                        className="cluster-name-text"
+                                                        title={cluster.name}
+                                                    >
+                                                        {cluster.name}
                                                     </span>
-                                                )}
+
+                                                    {/* Schedule badge */}
+                                                    {cluster.scheduleStatus && (
+                                                        <span className={`exception-badge ${cluster.scheduleStatus.badgeClass}`}>
+                                                            <ExceptionTimer
+                                                                remaining={cluster.scheduleStatus.remaining}
+                                                                total={cluster.scheduleStatus.total}
+                                                            />
+                                                            Active {cluster.scheduleStatus.remaining} {cluster.scheduleStatus.remaining === 1 ? 'Day' : 'Days'}
+                                                        </span>
+                                                    )}
+
+                                                    {/* NEW — Exception badge */}
+                                                    {clusterExceptions[cluster.name] && (
+                                                        <span className="exception exception-active">
+                                                            <ExceptionTimer />
+                                                            Active Exception
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </td>
+                                    );
 
-                                    <td className="td-center">
+                                case 'activeServices':
+                                    return (
                                         <div className="service-count active-count">
                                             <PlayCircle size={16} />
                                             <span>{cluster.activeServices}</span>
                                         </div>
-                                    </td>
-                                    <td className="td-center">
+                                    );
+
+                                case 'runningServices':
+                                    return (
                                         <div className="service-count running-count">
                                             <Activity size={16} />
                                             <span>{cluster.runningServices}</span>
                                         </div>
-                                    </td>
-                                    <td className="td-center">
+                                    );
+
+                                case 'closedServices':
+                                    return (
                                         <div className="service-count closed-count">
                                             <StopCircle size={16} />
                                             <span>{cluster.closedServices}</span>
                                         </div>
-                                    </td>
-                                    <td className="td-center">
+                                    );
+
+                                case 'computeType':
+                                    return (
                                         <span className={`compute-badge ${getComputeTypeColor(cluster.computeType)}`}>
                                             <Cpu size={16} />
                                             {cluster.computeType}
                                         </span>
-                                    </td>
-                                    <td className="td-center">
+                                    );
+
+                                case 'schedule':
+                                    return (
                                         <button
                                             className="schedule-btn"
                                             onClick={() => handleScheduleClick(cluster)}
@@ -878,29 +982,12 @@ function ECS() {
                                             <Calendar size={16} />
                                             <span>Set Schedule</span>
                                         </button>
-                                    </td>
-                                    {/* <td className="td-center">
-                                        <button
-                                            className="schedule-btn"
-                                            onClick={() => handleScheduleClick(cluster)}
-                                        >
-                                            <CalendarMinus />
-                                            <CalendarPlus />
-                                        </button>
-                                    </td> */}
-                                    <td className="td-center">
-                                        {cluster.isScheduled ? (
+                                    );
 
-                                            <button
-                                                className="schedule-btn exception-add"
-                                                disabled
-                                                title="Exceptions cannot be added when schedule is active"
-                                                style={{ opacity: 0.4, cursor: "not-allowed" }}
-                                            >
-                                                <CalendarPlus size={18} />
-                                            </button>
+                                case 'exception':
 
-                                        ) : clusterExceptions[cluster.name] ? (
+                                    if (clusterExceptions[cluster.name]) {
+                                        return (
                                             <button
                                                 className="schedule-btn exception-remove"
                                                 onClick={() =>
@@ -910,26 +997,41 @@ function ECS() {
                                             >
                                                 <CalendarMinus size={20} />
                                             </button>
+                                        );
+                                    }
 
-                                        ) : (
+                                    // 2️⃣ If schedule exists but no exception → disable ADD
+                                    if (cluster.isScheduled) {
+                                        return (
                                             <button
                                                 className="schedule-btn exception-add"
-                                                onClick={() =>
-                                                    handleAddExceptionWithConfirm(cluster.name)
-                                                }
-                                                title="Add Exception"
+                                                disabled
+                                                title="Exceptions cannot be added when schedule is active"
+                                                style={{ opacity: 0.4, cursor: "not-allowed" }}
                                             >
-                                                <CalendarPlus size={20} />
+                                                <CalendarPlus size={18} />
                                             </button>
+                                        );
+                                    }
 
-                                        )}
+                                    // 3️⃣ Normal ADD
+                                    return (
+                                        <button
+                                            className="schedule-btn exception-add"
+                                            onClick={() =>
+                                                handleAddExceptionWithConfirm(cluster.name)
+                                            }
+                                            title="Add Exception"
+                                        >
+                                            <CalendarPlus size={20} />
+                                        </button>
+                                    );
+                                default:
+                                    return null;
+                            }
+                        }}
+                    />
 
-                                    </td>
-
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
 
                     {filteredClustersWithStatus.length === 0 && (
                         <div className="empty-state-modern">

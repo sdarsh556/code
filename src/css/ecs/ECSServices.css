@@ -142,12 +142,40 @@
    ============================================ */
 .stats-actions-container {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto auto;
     /* Stats | Buttons */
     gap: 2rem;
     margin-bottom: 2rem;
     align-items: start;
 }
+
+.update-buttons-modern {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 220px;
+}
+
+.btn-update-modern {
+    background: linear-gradient(135deg, #CC8B79 0%, #9F6976 50%, #714674 100%);
+    box-shadow: 0 4px 12px rgba(204, 139, 121, 0.3);
+}
+
+.btn-update-modern:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(204, 139, 121, 0.4);
+}
+
+.btn-revision-modern {
+    background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-revision-modern:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+}
+
 
 /* Stats Cards Grid (3 Columns) */
 .stats-cards-modern {
@@ -228,6 +256,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    gap: 20px;
 }
 
 .stat-value-modern {
@@ -337,6 +366,17 @@
     box-shadow: var(--shadow-xl);
 }
 
+.btn-revision-action {
+    background: linear-gradient(135deg, #95f9c3 0%, #0b3866 100%);
+    box-shadow: 0 8px 24px rgba(204, 139, 121, 0.4);
+    margin-left: 15px;
+}
+
+.btn-revision-action:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-xl);
+}
+
 .services-action-buttons {
     display: flex;
     gap: 1rem;
@@ -416,6 +456,7 @@
 .services-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .services-table th {
@@ -1050,6 +1091,36 @@ input[type="checkbox"]:disabled:hover {
     box-shadow: none;
 }
 
+.services-table-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    /* horizontal scroll */
+}
+
+.services-table th {
+    position: sticky;
+    top: 0;
+    background: #f9f9f9;
+    z-index: 1;
+}
+
+.services-table th,
+.services-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resizable-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+}
+
+
 /* Error */
 .stepper-error-message {
     display: flex;
@@ -1467,4 +1538,220 @@ input[type="checkbox"]:disabled:hover {
 
 .btn-delta-updates {
     margin-right: 15px;
+}
+
+.revision-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.revision-modal {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    width: 400px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.revision-date-list {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.revision-date-option {
+    display: flex;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.revision-modal-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-confirm {
+    background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+    color: white;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    background: #e5e7eb;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* ============================================
+   EDIT MODAL - DARK THEME COMPLETE OVERRIDE
+   ============================================ */
+
+.layout-container[data-theme="dark"] .modal-overlay {
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(20px);
+}
+
+/* Modal Container */
+.layout-container[data-theme="dark"] .modal-minimal-content {
+    background: linear-gradient(135deg,
+            rgba(30, 41, 59, 0.98),
+            rgba(15, 23, 42, 0.98));
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(99, 102, 241, 0.08) inset;
+}
+
+/* Header */
+.layout-container[data-theme="dark"] .modal-sublabel {
+    color: #94a3b8;
+}
+
+.layout-container[data-theme="dark"] .service-minimal-title {
+    color: #f1f5f9;
+}
+
+/* Close Button */
+.layout-container[data-theme="dark"] .close-minimal-btn {
+    color: #94a3b8;
+}
+
+.layout-container[data-theme="dark"] .close-minimal-btn:hover {
+    background: rgba(148, 163, 184, 0.15);
+    color: #ffffff;
+}
+
+/* Stepper Highlight Row */
+.layout-container[data-theme="dark"] .stepper-row.highlight-row {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* Step Label */
+.layout-container[data-theme="dark"] .step-label {
+    color: #60a5fa;
+}
+
+.layout-container[data-theme="dark"] .step-desc {
+    color: #94a3b8;
+}
+
+/* Stepper Control */
+.layout-container[data-theme="dark"] .stepper-control {
+    background: rgba(51, 65, 85, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+/* Step Buttons */
+.layout-container[data-theme="dark"] .step-btn {
+    background: rgba(71, 85, 105, 0.7);
+    color: #e2e8f0;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.layout-container[data-theme="dark"] .step-btn:hover {
+    background: rgba(99, 102, 241, 0.3);
+    border-color: #6366f1;
+    color: #ffffff;
+}
+
+/* Step Input */
+.layout-container[data-theme="dark"] .step-input {
+    color: #ffffff;
+}
+
+/* Error Message */
+.layout-container[data-theme="dark"] .stepper-error-message {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* History Card */
+.layout-container[data-theme="dark"] .history-card {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+/* History Header */
+.layout-container[data-theme="dark"] .history-header {
+    color: #94a3b8;
+}
+
+/* History Table */
+.layout-container[data-theme="dark"] .history-table {
+    background: rgba(15, 23, 42, 0.9);
+}
+
+.layout-container[data-theme="dark"] .history-table thead {
+    background: rgba(51, 65, 85, 0.6);
+}
+
+.layout-container[data-theme="dark"] .history-table th {
+    color: #94a3b8;
+}
+
+.layout-container[data-theme="dark"] .history-table td {
+    color: #e5e7eb;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.layout-container[data-theme="dark"] .history-table tbody tr:nth-child(even) {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.layout-container[data-theme="dark"] .history-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.12);
+}
+
+/* Save Button */
+.layout-container[data-theme="dark"] .btn-save-minimal {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    box-shadow:
+        0 10px 25px -5px rgba(249, 115, 22, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+.layout-container[data-theme="dark"] .btn-save-minimal:hover:not(.disabled) {
+    background: linear-gradient(135deg, #ea580c, #dc2626);
+    box-shadow:
+        0 15px 35px -5px rgba(249, 115, 22, 0.6);
+}
+
+.layout-container[data-theme="dark"] .task-count.active {
+    background: rgba(59, 130, 246, 0.12);
+}
+
+/* DARK MODE - Status Badge */
+.layout-container[data-theme="dark"] .status-badge {
+    background-color: #2a2a2a;
+    color: #e6e6e6;
+    border: 1px solid #3a3a3a;
+}
+
+/* Running */
+.layout-container[data-theme="dark"] .status-badge.running {
+    background-color: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+/* Stopped */
+.layout-container[data-theme="dark"] .status-badge.stopped {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
 }

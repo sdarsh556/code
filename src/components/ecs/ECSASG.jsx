@@ -222,7 +222,7 @@ function ECSASG() {
 
                                 {asgData?.status && (
                                     <span className="status-tag-modern">
-                                        {asgData.status.toUpperCase()}
+                                        {(asgData.status || 'unknown').toUpperCase()}
                                     </span>
                                 )}
                             </p>
