@@ -134,7 +134,8 @@ function RDSAnalytics() {
     const navigate = useNavigate();
     const { setBgContext } = useOutletContext();
     const [searchParams, setSearchParams] = useSearchParams();
-    const viewMode = searchParams.get('view') === 'aurora' ? 'aurora' : 'rds';
+    const viewModeParam = searchParams.get('view');
+    const viewMode = (viewModeParam === 'aurora' || viewModeParam === 'docdb') ? viewModeParam : 'rds';
 
     const setViewMode = (mode) => {
         setSearchParams({ view: mode }, { replace: true });
@@ -263,6 +264,37 @@ function RDSAnalytics() {
                 status: 'available',
                 trend: 'down'
             }
+        ],
+        docdb: [
+            {
+                cluster_name: "docdb-prod-cluster",
+                db_name: "prod-mobile-api",
+                instances_count: 3,
+                avg_cpu_utilization: 28.5,
+                avg_connections: 120,
+                avg_read_iops: 650,
+                avg_write_iops: 80,
+                approx_cost: 92.00,
+                active_days_count: 30,
+                active_dates: ["2026-03-01", "2026-03-30"],
+                status: 'available',
+                trend: 'stable',
+                is_aws: true
+            },
+            {
+                cluster_name: "docdb-staging-cluster",
+                db_name: "staging-app",
+                instances_count: 2,
+                avg_cpu_utilization: 12.4,
+                avg_connections: 25,
+                avg_read_iops: 150,
+                avg_write_iops: 20,
+                approx_cost: 45.50,
+                active_days_count: 15,
+                active_dates: ["2026-03-15", "2026-03-30"],
+                status: 'available',
+                trend: 'stable'
+            }
         ]
     };
     const currentData = allDbData[viewMode];
@@ -298,15 +330,13 @@ function RDSAnalytics() {
 
     const stats = useMemo(() => {
         const count = currentData.length;
-        if (viewMode === 'aurora') {
-            return {
-                count: 5,
-                avgCpu: 32.5,
-                avgConn: 45,
-                avgRead: 250,
-                avgWrite: 120,
-                totalCost: 132
-            };
+        if (viewMode === 'aurora' || viewMode === 'docdb') {
+            const avgCpu = (currentData.reduce((acc, item) => acc + item.avg_cpu_utilization, 0) / (count || 1)).toFixed(1);
+            const avgConn = Math.round(currentData.reduce((acc, item) => acc + item.avg_connections, 0) / (count || 1));
+            const avgRead = Math.round(currentData.reduce((acc, item) => acc + item.avg_read_iops, 0) / (count || 1));
+            const avgWrite = Math.round(currentData.reduce((acc, item) => acc + item.avg_write_iops, 0) / (count || 1));
+            const totalCost = currentData.reduce((acc, item) => acc + item.approx_cost, 0);
+            return { count, avgCpu, avgConn, avgRead, avgWrite, totalCost };
         }
         const avgCpu = (currentData.reduce((acc, item) => acc + item.avg_cpu_utilization, 0) / (count || 1)).toFixed(1);
         const avgConn = Math.round(currentData.reduce((acc, item) => acc + item.avg_connections, 0) / (count || 1));
@@ -329,7 +359,7 @@ function RDSAnalytics() {
     };
 
     const metricCards = [
-        { label: viewMode === 'aurora' ? 'Total Clusters' : 'Active Instances', value: stats.count, icon: Database, color: '#10b981', bg: 'rgba(16,185,129,0.1)', bars: [65, 45, 78, 90, 55] },
+        { label: (viewMode === 'aurora' || viewMode === 'docdb') ? 'Total Clusters' : 'Active Instances', value: stats.count, icon: Database, color: '#10b981', bg: 'rgba(16,185,129,0.1)', bars: [65, 45, 78, 90, 55] },
         { label: 'Avg CPU Utilization', value: `${stats.avgCpu}%`, icon: Cpu, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', bars: [32, 28, 45, 65, 55] },
         { label: 'Avg Connections', value: stats.avgConn, icon: Network, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', bars: [120, 95, 210, 450, 380] },
         { label: 'Avg Read IOPS', value: stats.avgRead, icon: ArrowRight, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', bars: [450, 380, 820, 1250, 980] },
@@ -344,11 +374,15 @@ function RDSAnalytics() {
                 <div className="rds-page-header">
                     <div className="rds-header-left">
                         <div className={`rds-header-icon ${viewMode}`}>
-                            <Database size={28} />
+                            {viewMode === 'docdb' ? <HardDrive size={28} /> : <Database size={28} />}
                             <div className="rds-icon-ring" />
                         </div>
                         <div>
-                            <h1 className="rds-page-title">{viewMode === 'rds' ? 'RDS Analytics' : 'Aurora Analytics'}</h1>
+                            <h1 className="rds-page-title">
+                                {viewMode === 'rds' ? 'RDS Analytics' : 
+                                 viewMode === 'aurora' ? 'Aurora Analytics' : 
+                                 'DocumentDB Analytics'}
+                            </h1>
                             <p className="rds-page-sub">Database fleet performance & connection intelligence</p>
                         </div>
                     </div>
@@ -361,6 +395,9 @@ function RDSAnalytics() {
                             </button>
                             <button className={`rds-mode-toggle-btn ${viewMode === 'aurora' ? 'active' : ''}`} onClick={() => setViewMode('aurora')}>
                                 <Cloud size={14} /> Aurora
+                            </button>
+                            <button className={`rds-mode-toggle-btn ${viewMode === 'docdb' ? 'active' : ''}`} onClick={() => setViewMode('docdb')}>
+                                <HardDrive size={14} /> DocDB
                             </button>
                         </div>
 
@@ -414,21 +451,21 @@ function RDSAnalytics() {
                     <div className="rds-panel-header-new">
                         <div className="rds-panel-title-group">
                             <Zap size={20} className="rds-panel-title-icon" />
-                            <h2>{viewMode === 'aurora' ? 'Active Clusters' : 'Active Instances'}</h2>
+                            <h2>{(viewMode === 'aurora' || viewMode === 'docdb') ? 'Active Clusters' : 'Active Instances'}</h2>
                             <span className="rds-panel-period-badge">{getActiveLabel()}</span>
                         </div>
                         <div className="rds-panel-subtitle">Click trend icon to view detailed metrics</div>
                     </div>
 
-                    <div className={viewMode === 'aurora' ? "aurora-clusters-grid" : "rds-instances-grid"}>
-                        {viewMode === 'aurora' ? (
+                    <div className={(viewMode === 'aurora' || viewMode === 'docdb') ? "aurora-clusters-grid" : "rds-instances-grid"}>
+                        {(viewMode === 'aurora' || viewMode === 'docdb') ? (
                             currentData.map((cluster, idx) => (
                                 <div
                                     key={cluster.cluster_name}
                                     className="aurora-cluster-card"
                                     style={{ animationDelay: `${0.2 + idx * 0.1}s` }}
                                     onClick={() => navigate(`/analytics/rds/cluster/${cluster.cluster_name}`, {
-                                        state: { cluster, selectedRange, customRange }
+                                        state: { cluster, selectedRange, customRange, engine: viewMode === 'docdb' ? 'DocumentDB' : 'Aurora' }
                                     })}
                                 >
                                     <div className="aurora-cluster-status-glow" />
@@ -647,7 +684,9 @@ function RDSAnalytics() {
 
                 {/* --- Comparison Table --- */}
                 <ComparisonTable
-                    title={viewMode === 'rds' ? "RDS Instance Comparison" : "Aurora Cluster Comparison"}
+                    title={viewMode === 'rds' ? "RDS Instance Comparison" : 
+                           viewMode === 'aurora' ? "Aurora Cluster Comparison" : 
+                           "DocumentDB Cluster Comparison"}
                     subtitle="Detailed technical breakdown with multi-sort capability"
                     data={currentData.map(db => ({
                         ...db,

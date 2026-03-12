@@ -56,7 +56,13 @@ function RDSGraphModal({ isOpen, onClose, instance, excludeMetrics = [] }) {
         );
     }, [excludeMetrics]);
 
-    const config = metricConfig[activeMetric] || metricConfig.cpu;
+    // Derived config based on activeMetric state or first available
+    const config = useMemo(() => {
+        if (metricConfig[activeMetric]) return metricConfig[activeMetric];
+        const firstAvailable = Object.values(metricConfig)[0];
+        return firstAvailable;
+    }, [metricConfig, activeMetric]);
+
     const data = chartData;
 
     if (!config || !data) return null;
@@ -102,22 +108,24 @@ function RDSGraphModal({ isOpen, onClose, instance, excludeMetrics = [] }) {
                     </div>
 
                     <div className="rds-gm-header-right">
-                        <div className="rds-gm-metric-toggle">
-                            {Object.entries(metricConfig).map(([key, cfg]) => (
-                                <button
-                                    key={key}
-                                    className={`rds-gm-toggle-btn ${activeMetric === key ? 'active' : ''}`}
-                                    onClick={() => setActiveMetric(key)}
-                                    style={{
-                                        background: activeMetric === key ? cfg.gradient : '',
-                                        color: activeMetric === key ? 'white' : ''
-                                    }}
-                                >
-                                    <cfg.icon size={14} />
-                                    {key.toUpperCase()}
-                                </button>
-                            ))}
-                        </div>
+                        {Object.keys(metricConfig).length > 1 && (
+                            <div className="rds-gm-metric-toggle">
+                                {Object.entries(metricConfig).map(([key, cfg]) => (
+                                    <button
+                                        key={key}
+                                        className={`rds-gm-toggle-btn ${activeMetric === key ? 'active' : ''}`}
+                                        onClick={() => setActiveMetric(key)}
+                                        style={{
+                                            background: activeMetric === key ? cfg.gradient : '',
+                                            color: activeMetric === key ? 'white' : ''
+                                        }}
+                                    >
+                                        <cfg.icon size={14} />
+                                        {key.toUpperCase()}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         <button className="rds-gm-close-btn" onClick={onClose}><X size={20} /></button>
                     </div>
                 </div>

@@ -14,7 +14,7 @@ function AuroraClusterDetails() {
     const { clusterName } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
-    const { cluster, selectedRange, customRange } = location.state || {};
+    const { cluster, selectedRange, customRange, engine = 'Aurora' } = location.state || {};
     const { setBgContext } = useOutletContext();
 
     const [selectedInstance, setSelectedInstance] = useState(null);
@@ -61,59 +61,65 @@ function AuroraClusterDetails() {
 
 
     // Mock Data based on user request
-    const clusterData = useMemo(() => ({
-        cluster_info: {
-            cluster_identifier: clusterName || "aurora-prod-cluster",
-            engine: "aurora-mysql",
-            status: "available"
-        },
-        instances: [
-            {
-                instance_identifier: `${clusterName}-instance-1` || "aurora-prod-instance-1",
-                instance_class: "db.r5.large",
-                role: "WRITER",
-                status: "available",
-                avg_cpu_utilization: 30.0,
-                avg_database_connections: 48.0,
-                avg_read_iops: 290.0,
-                avg_write_iops: 145.0,
-                days_active: 30,
-                active_dates: ["2026-03-30", "2026-03-29", "2026-03-28", "2026-03-15", "2026-03-01"]
+    const clusterData = useMemo(() => {
+        const isDocDB = engine === 'DocumentDB' || (clusterName && clusterName.startsWith('docdb'));
+        const currentEngine = isDocDB ? 'docdb' : 'aurora-mysql';
+        
+        return {
+            cluster_info: {
+                cluster_identifier: clusterName || (isDocDB ? "docdb-prod-cluster" : "aurora-prod-cluster"),
+                engine: currentEngine,
+                status: "available"
             },
-            {
-                instance_identifier: `${clusterName}-instance-2` || "aurora-prod-instance-2",
-                instance_class: "db.r5.large",
-                role: "READER",
-                status: "available",
-                avg_cpu_utilization: 25.0,
-                avg_database_connections: 42.0,
-                avg_read_iops: 245.0,
-                avg_write_iops: 5.0,
-                days_active: 30,
-                active_dates: ["2026-03-30", "2026-03-25", "2026-03-20", "2026-03-15"]
-            },
-            {
-                instance_identifier: `${clusterName}-instance-3` || "aurora-prod-instance-3",
-                instance_class: "db.r5.xlarge",
-                role: "READER",
-                status: "available",
-                avg_cpu_utilization: 15.0,
-                avg_database_connections: 12.0,
-                avg_read_iops: 120.0,
-                avg_write_iops: 2.0,
-                days_active: 15,
-                active_dates: ["2026-03-15", "2026-03-14", "2026-03-10"]
+            instances: [
+                {
+                    instance_identifier: `${clusterName}-instance-1`,
+                    instance_class: isDocDB ? "db.r5.large" : "db.r5.large",
+                    role: "WRITER",
+                    status: "available",
+                    avg_cpu_utilization: 30.0,
+                    avg_database_connections: isDocDB ? 120.0 : 48.0,
+                    avg_read_iops: isDocDB ? 650.0 : 290.0,
+                    avg_write_iops: isDocDB ? 80.0 : 145.0,
+                    days_active: 30,
+                    active_dates: ["2026-03-30", "2026-03-29", "2026-03-28", "2026-03-15", "2026-03-01"]
+                },
+                {
+                    instance_identifier: `${clusterName}-instance-2`,
+                    instance_class: "db.r5.large",
+                    role: "READER",
+                    status: "available",
+                    avg_cpu_utilization: 25.0,
+                    avg_database_connections: isDocDB ? 85.0 : 42.0,
+                    avg_read_iops: isDocDB ? 450.0 : 245.0,
+                    avg_write_iops: 5.0,
+                    days_active: 30,
+                    active_dates: ["2026-03-30", "2026-03-25", "2026-03-20", "2026-03-15"]
+                },
+                {
+                    instance_identifier: `${clusterName}-instance-3`,
+                    instance_class: isDocDB ? "db.r5.large" : "db.r5.xlarge",
+                    role: "READER",
+                    status: "available",
+                    avg_cpu_utilization: 15.0,
+                    avg_database_connections: 12.0,
+                    avg_read_iops: 120.0,
+                    avg_write_iops: 2.0,
+                    days_active: 15,
+                    active_dates: ["2026-03-15", "2026-03-14", "2026-03-10"]
+                }
+            ],
+            metric_summary: {
+                date_range: {
+                    start: "2026-02-04",
+                    end: "2026-03-05"
+                },
+                total_days: 30,
+                total_instances: 3,
+                total_cost: isDocDB ? 92 : 84
             }
-        ],
-        metric_summary: {
-            date_range: {
-                start: "2026-02-04",
-                end: "2026-03-05"
-            },
-            total_days: 30,
-            total_instances: 3
-        }
-    }), [clusterName, cluster]);
+        };
+    }, [clusterName, cluster, engine]);
 
     useEffect(() => {
     }, [clusterName, selectedRange, customRange]);
@@ -125,7 +131,7 @@ function AuroraClusterDetails() {
             <div className="aurora-details-page">
                 <div className="ad-content">
                     <div style={{ padding: "40px", textAlign: "center" }}>
-                        Loading Aurora Cluster Metrics...
+                        Loading {engine} Cluster Metrics...
                     </div>
                 </div>
             </div>
@@ -272,7 +278,7 @@ function AuroraClusterDetails() {
                         </div>
                         <div>
                             <h1 className="cd-title">{clusterData.cluster_info.cluster_identifier}</h1>
-                            <p className="cd-subtitle">{clusterData.cluster_info.engine} · Daily performance breakdown</p>
+                            <p className="cd-subtitle">{engine} · Daily performance breakdown</p>
                         </div>
                     </div>
 
