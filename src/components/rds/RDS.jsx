@@ -30,13 +30,81 @@ const DUMMY_DATABASES = [
         schedule: null
     },
     {
+        id: 'db-124',
+        db_identifier: 'staging-pg-main',
+        is_aurora: false,
+        engine: 'postgres',
+        engine_version: '14.5',
+        instance_class: 'db.m5.large',
+        storage_allocated: 500,
+        storage_used: 312.4,
+        status: 'available',
+        vcpu: 4,
+        memory: 16,
+        is_24_7: true,
+        never_start: false,
+        daily_exception: false,
+        schedule: null
+    },
+    {
+        id: 'db-125',
+        db_identifier: 'dev-mysql-backup',
+        is_aurora: false,
+        engine: 'mysql',
+        engine_version: '8.0.28',
+        instance_class: 'db.t3.micro',
+        storage_allocated: 50,
+        storage_used: 12.1,
+        status: 'stopped',
+        vcpu: 2,
+        memory: 1,
+        is_24_7: false,
+        never_start: true,
+        daily_exception: false,
+        schedule: null
+    },
+    {
+        id: 'db-126',
+        db_identifier: 'analytics-replica',
+        is_aurora: false,
+        engine: 'postgres',
+        engine_version: '13.4',
+        instance_class: 'db.r6g.xlarge',
+        storage_allocated: 1000,
+        storage_used: 840.2,
+        status: 'available',
+        vcpu: 4,
+        memory: 32,
+        is_24_7: false,
+        never_start: false,
+        daily_exception: true,
+        schedule: null
+    },
+    {
         id: 'cluster-456',
-        db_identifier: 'staging-aurora-cluster',
+        db_identifier: 'prod-aurora-cluster',
         is_aurora: true,
         engine: 'aurora-postgresql',
-        engine_version: '13.7',
+        engine_version: '14.7',
         storage_allocated: null,
-        storage_used: 120.8,
+        storage_used: 540.8,
+        status: 'available',
+        vcpu: null,
+        memory: null,
+        is_24_7: true,
+        never_start: false,
+        daily_exception: false,
+        schedule: null,
+        instances: []
+    },
+    {
+        id: 'cluster-457',
+        db_identifier: 'staging-aurora-cluster',
+        is_aurora: true,
+        engine: 'aurora-mysql',
+        engine_version: '3.02.2',
+        storage_allocated: null,
+        storage_used: 120.4,
         status: 'available',
         vcpu: null,
         memory: null,
@@ -44,26 +112,92 @@ const DUMMY_DATABASES = [
         never_start: false,
         daily_exception: true,
         schedule: null,
-        instances: [
-            {
-                id: 'inst-1',
-                db_identifier: 'staging-aurora-instance-1',
-                role: 'writer',
-                instance_class: 'db.r5.large',
-                status: 'available',
-                vcpu: 2,
-                memory: 16
-            },
-            {
-                id: 'inst-2',
-                db_identifier: 'staging-aurora-instance-2',
-                role: 'reader',
-                instance_class: 'db.r5.large',
-                status: 'available',
-                vcpu: 2,
-                memory: 16
-            }
-        ]
+        instances: []
+    },
+    {
+        id: 'cluster-458',
+        db_identifier: 'dev-aurora-serverless',
+        is_aurora: true,
+        engine: 'aurora-postgresql',
+        engine_version: '13.7',
+        storage_allocated: null,
+        storage_used: 45.2,
+        status: 'stopped',
+        vcpu: null,
+        memory: null,
+        is_24_7: false,
+        never_start: true,
+        daily_exception: false,
+        schedule: null,
+        instances: []
+    },
+    {
+        id: 'cluster-459',
+        db_identifier: 'qa-aurora-test',
+        is_aurora: true,
+        engine: 'aurora-mysql',
+        engine_version: '2.11.1',
+        storage_allocated: null,
+        storage_used: 28.9,
+        status: 'available',
+        vcpu: null,
+        memory: null,
+        is_24_7: false,
+        never_start: false,
+        daily_exception: false,
+        schedule: null,
+        instances: []
+    },
+    {
+        id: 'docdb-701',
+        db_identifier: 'prod-docdb-cluster',
+        is_docdb: true,
+        engine: 'docdb',
+        engine_version: '4.0.0',
+        storage_allocated: null,
+        storage_used: 850.4,
+        status: 'available',
+        vcpu: null,
+        memory: null,
+        is_24_7: true,
+        never_start: false,
+        daily_exception: false,
+        schedule: null,
+        instances: []
+    },
+    {
+        id: 'docdb-702',
+        db_identifier: 'staging-docdb-main',
+        is_docdb: true,
+        engine: 'docdb',
+        engine_version: '3.6.0',
+        storage_allocated: null,
+        storage_used: 120.5,
+        status: 'available',
+        vcpu: null,
+        memory: null,
+        is_24_7: false,
+        never_start: false,
+        daily_exception: true,
+        schedule: null,
+        instances: []
+    },
+    {
+        id: 'docdb-703',
+        db_identifier: 'dev-docdb-sandbox',
+        is_docdb: true,
+        engine: 'docdb',
+        engine_version: '4.0.0',
+        storage_allocated: null,
+        storage_used: 45.2,
+        status: 'stopped',
+        vcpu: null,
+        memory: null,
+        is_24_7: false,
+        never_start: true,
+        daily_exception: false,
+        schedule: null,
+        instances: []
     }
 ];
 
@@ -127,10 +261,366 @@ const getScheduleStatus = (db) => {
     return null;
 };
 
+// --- Custom SVG Storage Charts ---
+
+// Utilities for Charts
+const generateColors = (count) => {
+    const gradients = [];
+    const goldenRatioConjugate = 0.618033988749895;
+    // Expanded cool spectrum: 160 (Turquoise) to 300 (Magenta)
+    const HUE_START = 160;
+    const HUE_RANGE = 140; 
+    
+    let h = Math.random();
+
+    for (let i = 0; i < count; i++) {
+        h += goldenRatioConjugate;
+        h %= 1;
+
+        const hue = HUE_START + (h * HUE_RANGE);
+        
+        // Dynamic saturation/lightness oscillation for maximum distinction
+        const sat = 55 + (Math.sin(i * 1.5) * 15);
+        const light = 50 + (Math.cos(i * 0.8) * 10);
+
+        gradients.push({
+            id: `chart-grad-${i}-${Math.floor(hue)}`,
+            start: `hsl(${hue}, ${sat + 10}%, ${light + 10}%)`,
+            stop: `hsl(${hue + 20}, ${sat}%, ${light - 10}%)`,
+            solid: `hsl(${hue}, ${sat}%, ${light}%)`
+        });
+    }
+    return gradients;
+};
+
+// Common SVG Filter Definitions
+const ChartFilters = () => (
+    <defs>
+        <filter id="bloom-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur" />
+            <feOffset in="blur" dx="0" dy="0" result="offsetBlur" />
+            <feFlood floodColor="var(--rds-chart-glow)" floodOpacity="var(--rds-chart-glow-opacity)" result="flood" />
+            <feComposite in="flood" in2="offsetBlur" operator="in" result="glow" />
+            <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+            </feMerge>
+        </filter>
+    </defs>
+);
+
+const RDSStorageRingChart = ({ databases }) => {
+    const [hoveredData, setHoveredData] = useState(null);
+    const size = 260;
+    const padding = 1.35;
+    const boxSize = padding * 2;
+    const radius = 1;
+    const strokeWidth = 0.35;
+
+    const rdsInstances = databases.filter(db => !db.is_aurora && !db.is_docdb && db.storage_used > 0)
+        .sort((a, b) => b.storage_used - a.storage_used);
+
+    const gradients = useMemo(() => generateColors(Math.max(rdsInstances.length, 1)), [rdsInstances.length]);
+    const totalUsed = rdsInstances.reduce((sum, db) => sum + (db.storage_used || 0), 0);
+    const calcedAllocated = rdsInstances.reduce((sum, db) => sum + (db.storage_allocated || db.storage_used || 0), 0);
+    const effectiveAllocated = Math.max(calcedAllocated || 0, totalUsed);
+
+    let cumulativePercent = 0;
+
+    return (
+        <div className="rds-custom-chart-container">
+            <svg width={size} height={size} viewBox={`-${padding} -${padding} ${boxSize} ${boxSize}`} style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
+                <ChartFilters />
+                <defs>
+                    {gradients.map(g => (
+                        <linearGradient key={g.id} id={g.id} x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor={g.start} />
+                            <stop offset="100%" stopColor={g.stop} />
+                        </linearGradient>
+                    ))}
+                </defs>
+
+                <circle cx="0" cy="0" r={radius} fill="none" stroke="var(--rds-chart-track)" strokeWidth={strokeWidth} />
+
+                {effectiveAllocated > 0 && rdsInstances.map((db, index) => {
+                    const slicePercent = db.storage_used / effectiveAllocated;
+                    if (slicePercent <= 0) return null;
+
+                    const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+                    cumulativePercent += slicePercent;
+                    const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+                    const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
+
+                    const isHovered = hoveredData?.name === db.db_identifier;
+                    const finalStrokeWidth = isHovered ? strokeWidth * 1.3 : strokeWidth;
+                    const gradId = gradients[index].id;
+
+                    if (slicePercent === 1) {
+                        return (
+                            <circle
+                                key={db.id}
+                                cx="0" cy="0" r={radius}
+                                fill="none"
+                                stroke={`url(#${gradId})`}
+                                strokeWidth={finalStrokeWidth}
+                                className="rds-chart-segment"
+                                style={{ filter: isHovered ? 'url(#bloom-glow)' : 'none' }}
+                                onMouseEnter={() => setHoveredData({ name: db.db_identifier, value: db.storage_used, color: gradients[index].solid })}
+                                onMouseLeave={() => setHoveredData(null)}
+                            />
+                        );
+                    }
+
+                    const pathData = [
+                        `M ${startX * radius} ${startY * radius}`,
+                        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX * radius} ${endY * radius}`
+                    ].join(' ');
+
+                    return (
+                        <path
+                            key={db.id}
+                            d={pathData}
+                            fill="none"
+                            stroke={`url(#${gradId})`}
+                            strokeWidth={finalStrokeWidth}
+                            strokeLinecap="round"
+                            className="rds-chart-segment"
+                            style={{ filter: isHovered ? 'url(#bloom-glow)' : 'none' }}
+                            onMouseEnter={() => setHoveredData({ name: db.db_identifier, value: db.storage_used, color: gradients[index].solid })}
+                            onMouseLeave={() => setHoveredData(null)}
+                        />
+                    );
+                })}
+            </svg>
+
+            <div className="rds-chart-center-info">
+                <div className="rds-chart-center-used">{totalUsed.toFixed(1)}GB</div>
+                <div className="rds-chart-center-sub">of {effectiveAllocated.toFixed(1)}GB ALC</div>
+                <div className="rds-chart-center-count">{rdsInstances.length} Instances</div>
+            </div>
+
+            {hoveredData && (
+                <div className="rds-chart-tooltip">
+                    <div className="rds-tooltip-dot" style={{ background: hoveredData.color, boxShadow: `0 0 12px ${hoveredData.color}` }}></div>
+                    <div className="rds-tooltip-content">
+                        <div className="rds-tooltip-name">{hoveredData.name}</div>
+                        <div className="rds-tooltip-value" style={{ color: hoveredData.color }}>{hoveredData.value.toFixed(2)} GB Used</div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Math helper for precise Pie slices
+const getCoordinatesForPercent = (percent) => {
+    const x = Math.cos(2 * Math.PI * percent);
+    const y = Math.sin(2 * Math.PI * percent);
+    return [x, y];
+};
+
+const AuroraStoragePieChart = ({ databases }) => {
+    const [hoveredData, setHoveredData] = useState(null);
+    const size = 260;
+    const padding = 1.25;
+    const boxSize = padding * 2;
+    const radius = 1;
+
+    const auroraClusters = databases.filter(db => db.is_aurora && db.storage_used > 0)
+        .sort((a, b) => b.storage_used - a.storage_used);
+
+    const gradients = useMemo(() => generateColors(Math.max(auroraClusters.length, 1)), [auroraClusters.length]);
+    const totalUsed = auroraClusters.reduce((sum, db) => sum + (db.storage_used || 0), 0);
+
+    let cumulativePercent = 0;
+
+    return (
+        <div className="rds-custom-chart-container">
+            <svg width={size} height={size} viewBox={`-${padding} -${padding} ${boxSize} ${boxSize}`} style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
+                <ChartFilters />
+                <defs>
+                    {gradients.map(g => (
+                        <linearGradient key={g.id} id={g.id} x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor={g.start} />
+                            <stop offset="100%" stopColor={g.stop} />
+                        </linearGradient>
+                    ))}
+                </defs>
+
+                {totalUsed === 0 ? (
+                    <circle cx="0" cy="0" r={radius} fill="var(--rds-chart-track)" />
+                ) : (
+                    auroraClusters.map((db, index) => {
+                        const slicePercent = db.storage_used / totalUsed;
+                        if (slicePercent <= 0) return null;
+
+                        const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+                        cumulativePercent += slicePercent;
+                        const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+                        const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
+
+                        const isHovered = hoveredData?.name === db.db_identifier;
+                        const currentRadius = isHovered ? radius * 1.05 : radius;
+                        const gradId = gradients[index].id;
+
+                        if (slicePercent === 1) {
+                            return (
+                                <circle
+                                    key={db.id}
+                                    cx="0" cy="0" r={currentRadius}
+                                    fill={`url(#${gradId})`}
+                                    className="rds-chart-segment"
+                                    style={{ filter: isHovered ? 'url(#bloom-glow)' : 'none' }}
+                                    onMouseEnter={() => setHoveredData({ name: db.db_identifier, value: db.storage_used, color: gradients[index].solid })}
+                                    onMouseLeave={() => setHoveredData(null)}
+                                />
+                            );
+                        }
+
+                        const pathData = [
+                            `M ${startX * currentRadius} ${startY * currentRadius}`,
+                            `A ${currentRadius} ${currentRadius} 0 ${largeArcFlag} 1 ${endX * currentRadius} ${endY * currentRadius}`,
+                            `L 0 0`,
+                            `Z`
+                        ].join(' ');
+
+                        return (
+                            <path
+                                key={db.id}
+                                d={pathData}
+                                fill={`url(#${gradId})`}
+                                className="rds-chart-segment"
+                                style={{ filter: isHovered ? 'url(#bloom-glow)' : 'none' }}
+                                onMouseEnter={() => setHoveredData({ name: db.db_identifier, value: db.storage_used, color: gradients[index].solid })}
+                                onMouseLeave={() => setHoveredData(null)}
+                            />
+                        );
+                    })
+                )}
+            </svg>
+
+            <div className="rds-pie-center-info">
+                <div className="rds-chart-center-total">{totalUsed.toFixed(1)}GB</div>
+                <div className="rds-chart-center-sub">Storage</div>
+                <div className="rds-chart-center-count">{auroraClusters.length} Clusters</div>
+            </div>
+
+            {hoveredData && (
+                <div className="rds-chart-tooltip">
+                    <div className="rds-tooltip-dot" style={{ background: hoveredData.color, boxShadow: `0 0 12px ${hoveredData.color}` }}></div>
+                    <div className="rds-tooltip-content">
+                        <div className="rds-tooltip-name">{hoveredData.name}</div>
+                        <div className="rds-tooltip-value" style={{ color: hoveredData.color }}>{hoveredData.value.toFixed(2)} GB Used</div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const DocumentDBStoragePieChart = ({ databases }) => {
+    const [hoveredData, setHoveredData] = useState(null);
+    const size = 260;
+    const padding = 1.25;
+    const boxSize = padding * 2;
+    const radius = 1;
+
+    const docDbClusters = databases.filter(db => db.is_docdb && db.storage_used > 0)
+        .sort((a, b) => b.storage_used - a.storage_used);
+
+    const gradients = useMemo(() => generateColors(Math.max(docDbClusters.length, 1)), [docDbClusters.length]);
+    const totalUsed = docDbClusters.reduce((sum, db) => sum + (db.storage_used || 0), 0);
+
+    let cumulativePercent = 0;
+
+    return (
+        <div className="rds-custom-chart-container">
+            <svg width={size} height={size} viewBox={`-${padding} -${padding} ${boxSize} ${boxSize}`} style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
+                <ChartFilters />
+                <defs>
+                    {gradients.map(g => (
+                        <linearGradient key={g.id} id={g.id} x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor={g.start} />
+                            <stop offset="100%" stopColor={g.stop} />
+                        </linearGradient>
+                    ))}
+                </defs>
+
+                {totalUsed === 0 ? (
+                    <circle cx="0" cy="0" r={radius} fill="var(--rds-chart-track)" />
+                ) : (
+                    docDbClusters.map((db, index) => {
+                        const slicePercent = db.storage_used / totalUsed;
+                        if (slicePercent <= 0) return null;
+
+                        const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+                        cumulativePercent += slicePercent;
+                        const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+                        const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
+
+                        const isHovered = hoveredData?.name === db.db_identifier;
+                        const currentRadius = isHovered ? radius * 1.05 : radius;
+                        const gradId = gradients[index].id;
+
+                        if (slicePercent === 1) {
+                            return (
+                                <circle
+                                    key={db.id}
+                                    cx="0" cy="0" r={currentRadius}
+                                    fill={`url(#${gradId})`}
+                                    className="rds-chart-segment"
+                                    style={{ filter: isHovered ? 'url(#bloom-glow)' : 'none' }}
+                                    onMouseEnter={() => setHoveredData({ name: db.db_identifier, value: db.storage_used, color: gradients[index].solid })}
+                                    onMouseLeave={() => setHoveredData(null)}
+                                />
+                            );
+                        }
+
+                        const pathData = [
+                            `M ${startX * currentRadius} ${startY * currentRadius}`,
+                            `A ${currentRadius} ${currentRadius} 0 ${largeArcFlag} 1 ${endX * currentRadius} ${endY * currentRadius}`,
+                            `L 0 0`,
+                            `Z`
+                        ].join(' ');
+
+                        return (
+                            <path
+                                key={db.id}
+                                d={pathData}
+                                fill={`url(#${gradId})`}
+                                className="rds-chart-segment"
+                                style={{ filter: isHovered ? 'url(#bloom-glow)' : 'none' }}
+                                onMouseEnter={() => setHoveredData({ name: db.db_identifier, value: db.storage_used, color: gradients[index].solid })}
+                                onMouseLeave={() => setHoveredData(null)}
+                            />
+                        );
+                    })
+                )}
+            </svg>
+
+            <div className="rds-pie-center-info">
+                <div className="rds-chart-center-total">{totalUsed.toFixed(1)}GB</div>
+                <div className="rds-chart-center-sub">Storage</div>
+                <div className="rds-chart-center-count">{docDbClusters.length} Clusters</div>
+            </div>
+
+            {hoveredData && (
+                <div className="rds-chart-tooltip">
+                    <div className="rds-tooltip-dot" style={{ background: hoveredData.color, boxShadow: `0 0 12px ${hoveredData.color}` }}></div>
+                    <div className="rds-tooltip-content">
+                        <div className="rds-tooltip-name">{hoveredData.name}</div>
+                        <div className="rds-tooltip-value" style={{ color: hoveredData.color }}>{hoveredData.value.toFixed(2)} GB Used</div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function RDS() {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterType, setFilterType] = useState('all'); // 'all', 'rds', 'aurora'
+    const [filterType, setFilterType] = useState('all'); // 'all', 'rds', 'aurora', 'docdb'
     const [activeStatFilter, setActiveStatFilter] = useState(null); // 'available', 'stopped', '247', 'never', 'exception'
     const [selectedRows, setSelectedRows] = useState([]);
     const [expandedClusters, setExpandedClusters] = useState({});
@@ -877,9 +1367,10 @@ export default function RDS() {
     // Filtering
     const filteredDatabases = useMemo(() => {
         return databases.filter(db => {
-            // Type Filter (RDS/Aurora)
-            if (filterType === 'rds' && db.is_aurora) return false;
+            // Type Filter (RDS/Aurora/DocDB)
+            if (filterType === 'rds' && (db.is_aurora || db.is_docdb)) return false;
             if (filterType === 'aurora' && !db.is_aurora) return false;
+            if (filterType === 'docdb' && !db.is_docdb) return false;
 
             // Search Filter
             if (searchQuery && !db.db_identifier.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -1133,115 +1624,18 @@ export default function RDS() {
                 </div>
             </div>
 
-            {/* EC2 Style Stats & Actions Grid - Row 1 */}
-            <div className="rds-stats-grid rds-ec2-style">
-                <div className="rds-stat-card rds-glass-card rds-ec2-card">
-                    <div className="rds-stat-header-ec2">
-                        <span className="rds-stat-title-ec2">Total Databases</span>
-                        <Database size={24} className="rds-stat-icon-ec2 rds-blue" />
+            {/* Quick Operations Banner */}
+            <div className="rds-action-panel">
+                <div className="rds-action-info">
+                    <div className="rds-action-icon-wrapper">
+                        <Activity size={24} />
                     </div>
-                    <div className="rds-stat-value-ec2 rds-glow-text">{statsLoading ? '—' : dashboardStats?.total_databases ?? 0}</div>
+                    <div>
+                        <p className="rds-action-title">Quick Operations</p>
+                        <p className="rds-action-subtitle">Manage cluster state and exception policies</p>
+                    </div>
                 </div>
-
-                <div className="rds-stat-card rds-glass-card rds-storage-card rds-ec2-card">
-                    <div className="rds-stat-header-ec2">
-                        <span className="rds-stat-title-ec2">RDS Storage & Count</span>
-                    </div>
-                    <div className="rds-capsule-display rds-mt-2">
-                        <div className="rds-capsule-bar rds-bar">
-                            <div
-                                className="rds-used"
-                                style={{ flex: dashboardStats?.rds_used_storage_gb || 0 }}
-                            ></div>
-
-                            <div
-                                className="rds-free"
-                                style={{
-                                    flex: Math.max(
-                                        (dashboardStats?.rds_allocated_storage_gb || 0) -
-                                        (dashboardStats?.rds_used_storage_gb || 0),
-                                        0
-                                    )
-                                }}
-                            ></div>
-                        </div>
-                        <div className="rds-capsule-labels-ec2">
-                            <span>Used: <span className="rds-used-value">{dashboardStats?.rds_used_storage_gb ?? 0}GB</span></span>
-                            <span>Alloc: <span className="rds-used-value">{dashboardStats?.rds_allocated_storage_gb ?? 0}GB</span></span>
-                        </div>
-                    </div>
-                    <div className="rds-stat-subtext-ec2 rds-mt-auto">Active Instances: <span className="rds-used-value">{dashboardStats?.rds_count ?? 0}</span></div>
-                </div>
-
-                <div className="rds-stat-card rds-glass-card rds-aurora-storage-card rds-ec2-card">
-                    <div className="rds-stat-header-ec2">
-                        <span className="rds-stat-title-ec2">Aurora Usage</span>
-                        <HardDrive size={18} className="rds-stat-icon-ec2 rds-purple" />
-                    </div>
-                    <div className="rds-stat-value-ec2 rds-glow-text rds-aurora-stat-value">{dashboardStats?.aurora_used_storage_gb ?? 0} GB</div>
-                    <div className="rds-stat-subtext-ec2 rds-mt-auto">Active Clusters: <span className="rds-used-value">{dashboardStats?.aurora_count ?? 0}</span></div>
-                </div>
-
-                <div
-                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'available' ? 'rds-active-filter-green' : ''}`}
-                    onClick={() => toggleStatFilter('available')}
-                >
-                    <div className="rds-stat-header-ec2">
-                        <span className="rds-stat-title-ec2">Available</span>
-                        <Activity size={24} className="rds-stat-icon-ec2 rds-green" />
-                    </div>
-                    <div className="rds-stat-value-ec2 rds-green-text">{dashboardStats?.running_count ?? 0}</div>
-                </div>
-
-                <div
-                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'stopped' ? 'rds-active-filter-red' : ''}`}
-                    onClick={() => toggleStatFilter('stopped')}
-                >
-                    <div className="rds-stat-header-ec2">
-                        <span className="rds-stat-title-ec2">Stopped</span>
-                        <Activity size={24} className="rds-stat-icon-ec2 rds-red" />
-                    </div>
-                    <div className="rds-stat-value-ec2 rds-red-text">{dashboardStats?.stopped_count ?? 0}</div>
-                </div>
-            </div>
-
-            {/* EC2 Style Stats & Actions Grid - Row 2 */}
-            <div className="rds-stats-grid rds-ec2-style">
-                <div
-                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === '247' ? 'rds-active-filter-blue' : ''}`}
-                    onClick={() => toggleStatFilter('247')}
-                >
-                    <div className="rds-stat-header-ec2">
-                        <span className="rds-stat-title-ec2">24/7 Protected</span>
-                        <Shield size={24} className="rds-stat-icon-ec2 rds-blue" />
-                    </div>
-                    <div className="rds-stat-value-ec2 rds-blue-text">{dashboardStats?.always_running_count ?? 0}</div>
-                </div>
-
-                <div
-                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'never' ? 'rds-active-filter-orange' : ''}`}
-                    onClick={() => toggleStatFilter('never')}
-                >
-                    <div className="rds-stat-header-ec2">
-                        <span className="rds-stat-title-ec2">Never-Start</span>
-                        <X size={24} className="rds-stat-icon-ec2 rds-orange" />
-                    </div>
-                    <div className="rds-stat-value-ec2 rds-orange-text">{dashboardStats?.never_start_count ?? 0}</div>
-                </div>
-
-                <div
-                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'exception' ? 'rds-active-filter-yellow' : ''}`}
-                    onClick={() => toggleStatFilter('exception')}
-                >
-                    <div className="rds-stat-header-ec2">
-                        <span className="rds-stat-title-ec2">Daily Exceptions</span>
-                        <FileUp size={24} className="rds-stat-icon-ec2 rds-yellow" />
-                    </div>
-                    <div className="rds-stat-value-ec2 rds-yellow-text">{dashboardStats?.daily_exceptions_count ?? 0}</div>
-                </div>
-
-                {/* Stack 1: Start/Stop */}
-                <div className="rds-button-stack-card">
+                <div className="rds-action-buttons">
                     <button
                         className="rds-btn-stack rds-btn-delta-updates rds-start-btn"
                         onClick={() => { setBulkAction('START'); setBulkModalOpen(true); }}
@@ -1260,10 +1654,6 @@ export default function RDS() {
                         </div>
                         <span>Stop</span>
                     </button>
-                </div>
-
-                {/* Stack 2: Updates/Upload */}
-                <div className="rds-button-stack-card">
                     <button
                         className="rds-btn-stack rds-btn-delta-updates rds-update-btn"
                         onClick={() => navigate('/rds/updates')}
@@ -1300,11 +1690,111 @@ export default function RDS() {
                 </div>
             </div>
 
+            {/* EC2 Style Stats & Actions Grid - Row 1 */}
+            <div className="rds-stats-grid rds-ec2-style">
+                <div className="rds-stat-card rds-glass-card rds-ec2-card">
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Total Databases</span>
+                        <Database size={24} className="rds-stat-icon-ec2 rds-blue" />
+                    </div>
+                    <div className="rds-stat-value-ec2 rds-glow-text">{statsLoading ? '—' : dashboardStats?.total_databases ?? 0}</div>
+                </div>
+
+                <div
+                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'available' ? 'rds-active-filter-green' : ''}`}
+                    onClick={() => toggleStatFilter('available')}
+                >
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Available</span>
+                        <Activity size={24} className="rds-stat-icon-ec2 rds-green" />
+                    </div>
+                    <div className="rds-stat-value-ec2 rds-green-text">{dashboardStats?.running_count ?? 0}</div>
+                </div>
+
+                <div
+                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'stopped' ? 'rds-active-filter-red' : ''}`}
+                    onClick={() => toggleStatFilter('stopped')}
+                >
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Stopped</span>
+                        <Activity size={24} className="rds-stat-icon-ec2 rds-red" />
+                    </div>
+                    <div className="rds-stat-value-ec2 rds-red-text">{dashboardStats?.stopped_count ?? 0}</div>
+                </div>
+
+                <div
+                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === '247' ? 'rds-active-filter-blue' : ''}`}
+                    onClick={() => toggleStatFilter('247')}
+                >
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">24/7 Protected</span>
+                        <Shield size={24} className="rds-stat-icon-ec2 rds-blue" />
+                    </div>
+                    <div className="rds-stat-value-ec2 rds-blue-text">{dashboardStats?.always_running_count ?? 0}</div>
+                </div>
+
+                <div
+                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'never' ? 'rds-active-filter-orange' : ''}`}
+                    onClick={() => toggleStatFilter('never')}
+                >
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Never-Start</span>
+                        <X size={24} className="rds-stat-icon-ec2 rds-orange" />
+                    </div>
+                    <div className="rds-stat-value-ec2 rds-orange-text">{dashboardStats?.never_start_count ?? 0}</div>
+                </div>
+
+                <div
+                    className={`rds-stat-card rds-glass-card rds-ec2-card rds-clickable-stat ${activeStatFilter === 'exception' ? 'rds-active-filter-yellow' : ''}`}
+                    onClick={() => toggleStatFilter('exception')}
+                >
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Daily Exceptions</span>
+                        <FileUp size={24} className="rds-stat-icon-ec2 rds-yellow" />
+                    </div>
+                    <div className="rds-stat-value-ec2 rds-yellow-text">{dashboardStats?.daily_exceptions_count ?? 0}</div>
+                </div>
+            </div>
+
+            {/* EC2 Style Stats & Actions Grid - Row 2 */}
+            <div className="rds-stats-grid rds-ec2-style rds-row-2">
+                <div className="rds-stat-card rds-glass-card rds-storage-card-advanced rds-ec2-card">
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">RDS Storage</span>
+                        <Database size={18} className="rds-stat-icon-ec2 rds-blue" />
+                    </div>
+                    <RDSStorageRingChart
+                        databases={databases}
+                    />
+                </div>
+
+                <div className="rds-stat-card rds-glass-card rds-storage-card-advanced rds-ec2-card">
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">Aurora Usage</span>
+                        <HardDrive size={18} className="rds-stat-icon-ec2 rds-purple" />
+                    </div>
+                    <AuroraStoragePieChart
+                        databases={databases}
+                    />
+                </div>
+
+                <div className="rds-stat-card rds-glass-card rds-storage-card-advanced rds-ec2-card">
+                    <div className="rds-stat-header-ec2">
+                        <span className="rds-stat-title-ec2">DocumentDB</span>
+                        <Server size={18} className="rds-stat-icon-ec2 rds-cyan" />
+                    </div>
+                    <DocumentDBStoragePieChart
+                        databases={databases}
+                    />
+                </div>
+            </div>
+
             {/* Filter and Search */}
             <div className="rds-controls-container rds-glass-panel">
                 <div className="rds-filter-group">
                     <FilterButton type="rds" label="RDS Instances" active={filterType === 'rds'} />
                     <FilterButton type="aurora" label="Aurora Clusters" active={filterType === 'aurora'} />
+                    <FilterButton type="docdb" label="DocumentDB" active={filterType === 'docdb'} />
                 </div>
                 <div className="rds-search-bar-new">
                     <Search className="rds-search-icon" size={18} />
@@ -1487,7 +1977,7 @@ export default function RDS() {
                                             <td className="rds-identifier-col">
                                                 <div className="rds-identifier-wrapper">
                                                     <div className="rds-expand-control-wrapper">
-                                                        {db.is_aurora ? (
+                                                        {(db.is_aurora || db.is_docdb) ? (
                                                             <button className="rds-expand-btn" onClick={() => toggleCluster(db.id)}>
                                                                 {expandedClusters[db.id] ? <Minus size={14} /> : <Plus size={14} />}
                                                             </button>
@@ -1515,7 +2005,7 @@ export default function RDS() {
                                         {visibleColumns.role && (
                                             <td>
                                                 <span className="rds-role-text-display">
-                                                    {db.is_aurora ? 'Cluster' : 'Instance'}
+                                                    {db.is_aurora || db.is_docdb ? 'Cluster' : 'Instance'}
                                                 </span>
                                             </td>
                                         )}
@@ -1529,7 +2019,7 @@ export default function RDS() {
                                         )}
                                         {visibleColumns.class && (
                                             <td>
-                                                {!db.is_aurora ? <span className="rds-instance-class-badge">{db.instance_class}</span> : '-'}
+                                                {(!db.is_aurora && !db.is_docdb) ? <span className="rds-instance-class-badge">{db.instance_class}</span> : '-'}
                                             </td>
                                         )}
                                         {visibleColumns.storage && (
@@ -1646,7 +2136,7 @@ export default function RDS() {
                                         )}
                                         {visibleColumns.edit && (
                                             <td>
-                                                {!db.is_aurora ? (
+                                                {(!db.is_aurora && !db.is_docdb) ? (
                                                     <button
                                                         className="rds-icon-btn rds-edit"
                                                         title="Edit Instance"
@@ -1665,8 +2155,8 @@ export default function RDS() {
                                         )}
                                     </tr>
 
-                                    {/* Expanded Aurora Instances */}
-                                    {db.is_aurora && expandedClusters[db.id] && db.instances?.map(inst => (
+                                    {/* Expanded Aurora/DocDB Instances */}
+                                    {(db.is_aurora || db.is_docdb) && expandedClusters[db.id] && db.instances?.map(inst => (
                                         <tr key={inst.id} className="rds-sub-row">
                                             <td></td>
                                             {visibleColumns.identifier && (
