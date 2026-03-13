@@ -1163,24 +1163,32 @@ function EC2() {
                 {/* Schedule Control Panel */}
                 <div className="schedule-panel">
                     <div className="schedule-info">
-                        <Clock size={20} className="schedule-icon" />
+                        <div className="schedule-icon-wrapper">
+                            <Clock size={24} />
+                        </div>
                         <div>
                             <p className="schedule-title">Automated Schedule (IST)</p>
                             <p className="schedule-subtitle">Start: 7:00 AM • Stop: 9:30 PM • Excludes 24/7 instances</p>
                         </div>
                     </div>
                     <div className="schedule-actions">
-                        <button onClick={handleManualStart} className="ec2schedule-btn ec2-manualstart-btn">
-                            <Play size={16} />
-                            Manual Start
+                        <button onClick={handleManualStart} className="ec2-btn-premium ec2-manualstart-btn">
+                            <div className="icon-wrapper">
+                                <Play size={16} />
+                            </div>
+                            <span>Manual Start</span>
                         </button>
-                        <button onClick={handleManualStop} className="ec2schedule-btn ec2stop-btn">
-                            <Square size={16} />
-                            Manual Stop
+                        <button onClick={handleManualStop} className="ec2-btn-premium ec2stop-btn">
+                            <div className="icon-wrapper">
+                                <Square size={16} />
+                            </div>
+                            <span>Manual Stop</span>
                         </button>
-                        <button onClick={() => { fetchScheduleLogs(); setShowScheduleLogsModal(true); }} className="ec2schedule-btn ec2logs-btn">
-                            <Clock size={16} />
-                            View Logs
+                        <button onClick={() => { fetchScheduleLogs(); setShowScheduleLogsModal(true); }} className="ec2-btn-premium ec2logs-btn">
+                            <div className="icon-wrapper">
+                                <Clock size={16} />
+                            </div>
+                            <span>View Logs</span>
                         </button>
                     </div>
                 </div>
