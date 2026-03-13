@@ -66,8 +66,8 @@
 
 .header-icon-modern svg,
 .header-icon-svg {
-    width: 60%;
-    height: 60%;
+    width: 78%;
+    height: 78%;
 }
 
 
@@ -154,11 +154,12 @@
     background: var(--gradient-primary);
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: centejr;
     color: white;
     box-shadow: var(--shadow-primary);
     flex-shrink: 0;
     transition: all var(--transition-base);
+    padding: 0.5rem;
 }
 
 .stat-card-modern:hover .stat-icon-modern {

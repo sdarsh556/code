@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import CPUGraphModal from './CPUGraphModal';
 import ComparisonTable from '../ComparisonTable';
+import ECSIcon from '../../common/ECSIcon';
 import '../../../css/analytics/ecs/ClusterDetails.css';
 import '../../../css/analytics/comparison-table.css';
 
@@ -76,7 +77,7 @@ function ClusterDetails() {
                 <div className="cd-header">
                     <div className="cd-header-left">
                         <div className="cd-header-icon">
-                            <Activity size={28} />
+                            <ECSIcon size={40} />
                         </div>
                         <div>
                             <h1 className="cd-title">{clusterName}</h1>

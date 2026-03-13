@@ -9,6 +9,7 @@ import {
 import '../../../css/analytics/ecs/ECSAnalytics.css';
 import '../../../css/analytics/comparison-table.css';
 import ComparisonTable from '../ComparisonTable';
+import ECSIcon from '../../common/ECSIcon';
 
 // ─── Custom Calendar Picker ───────────────────────────────────────────────────
 function CalendarPicker({ onRangeSelect, onClose }) {
@@ -316,7 +317,7 @@ function ECSAnalytics() {
                 <div className="ecs-page-header">
                     <div className="ecs-header-left">
                         <div className="ecs-header-icon">
-                            <Container size={28} />
+                            <ECSIcon size={40} />
                             <div className="ecs-icon-ring" />
                         </div>
                         <div>

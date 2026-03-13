@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import CPUGraphModal from './CPUGraphModal';
 import ComparisonTable from '../ComparisonTable';
+import ECSIcon from '../../common/ECSIcon';
 import '../../../css/analytics/ecs/ServiceDetails.css';
 import '../../../css/analytics/comparison-table.css';
 
@@ -96,7 +97,7 @@ function ServiceDetails() {
                 <div className="sd-header">
                     <div className="sd-header-left">
                         <div className="sd-header-icon">
-                            <Calendar size={26} />
+                            <ECSIcon size={40} />
                         </div>
                         <div>
                             <h1 className="sd-title">{formatDate(dayData?.date)}</h1>
@@ -143,7 +144,7 @@ function ServiceDetails() {
                                 {/* Header */}
                                 <div className="sd-card-header">
                                     <div className="sd-service-name-wrap">
-                                        <Activity size={16} className="sd-service-icon" />
+                                        <ECSIcon size={18} className="sd-service-icon" />
                                         <span className="sd-service-name">{service.serviceName}</span>
                                     </div>
                                     <div className={`sd-status-badge ${service.status}`}>

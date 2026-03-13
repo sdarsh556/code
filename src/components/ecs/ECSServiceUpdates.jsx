@@ -14,6 +14,7 @@ import {
     CheckCircle2,
     Edit
 } from 'lucide-react';
+import ECSIcon from '../common/ECSIcon';
 import '../../css/ecs/ECSServiceUpdates.css';
 import axiosClient from '../api/axiosClient'
 
@@ -315,7 +316,7 @@ const ECSServiceUpdates = () => {
                         <div key={update.cluster_name} className="cluster-delta-item">
                             <div className="cluster-item-header">
                                 <div className="cluster-name-block">
-                                    <Container size={20} className="c-icon" />
+                                    <ECSIcon size={20} className="c-icon" />
                                     <h3>{update.cluster_name}</h3>
                                     <span className="change-summary">
                                         {update.added.length > 0 && (
