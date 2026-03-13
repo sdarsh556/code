@@ -138,6 +138,8 @@ function EC2Analytics() {
     const [showCalendar, setShowCalendar] = useState(false);
     const [customRange, setCustomRange] = useState(null);
     const [selectedDaysInfo, setSelectedDaysInfo] = useState(null);
+    const [selectedDateDetail, setSelectedDateDetail] = useState(null);
+    const [isFlipped, setIsFlipped] = useState(false);
     const [selectedInstanceForGraph, setSelectedInstanceForGraph] = useState(null);
     const [allInstanceData, setAllInstanceData] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -227,10 +229,16 @@ function EC2Analytics() {
             avgCpu: 45.2,
             approxCost: 124.50,
             activeDays: 30,
+            isAwsConsole: true,
             dates: Array.from({ length: 30 }, (_, i) => {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                return d.toISOString();
+                return {
+                    date: d.toISOString(),
+                    cpu: (40 + Math.random() * 20).toFixed(1),
+                    cost: (3 + Math.random() * 2).toFixed(2),
+                    isAwsConsole: Math.random() > 0.3
+                };
             }),
             status: 'running'
         },
@@ -241,10 +249,16 @@ function EC2Analytics() {
             avgCpu: 78.5,
             approxCost: 310.20,
             activeDays: 30,
+            isAwsConsole: false,
             dates: Array.from({ length: 30 }, (_, i) => {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                return d.toISOString();
+                return {
+                    date: d.toISOString(),
+                    cpu: (70 + Math.random() * 15).toFixed(1),
+                    cost: (9 + Math.random() * 3).toFixed(2),
+                    isAwsConsole: Math.random() > 0.7
+                };
             }),
             status: 'running'
         },
@@ -255,10 +269,16 @@ function EC2Analytics() {
             avgCpu: 12.8,
             approxCost: 85.00,
             activeDays: 25,
+            isAwsConsole: true,
             dates: Array.from({ length: 25 }, (_, i) => {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                return d.toISOString();
+                return {
+                    date: d.toISOString(),
+                    cpu: (10 + Math.random() * 5).toFixed(1),
+                    cost: (2 + Math.random() * 1.5).toFixed(2),
+                    isAwsConsole: true
+                };
             }),
             status: 'running'
         },
@@ -269,10 +289,16 @@ function EC2Analytics() {
             avgCpu: 5.4,
             approxCost: 42.15,
             activeDays: 12,
+            isAwsConsole: false,
             dates: Array.from({ length: 12 }, (_, i) => {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                return d.toISOString();
+                return {
+                    date: d.toISOString(),
+                    cpu: (4 + Math.random() * 3).toFixed(1),
+                    cost: (1 + Math.random() * 1).toFixed(2),
+                    isAwsConsole: false
+                };
             }),
             status: 'stopped'
         }
@@ -295,6 +321,15 @@ function EC2Analytics() {
         totalCost: instanceData.reduce((s, c) => s + c.approxCost, 0),
         avgCpu: instanceData.length ? (instanceData.reduce((s, c) => s + c.avgCpu, 0) / instanceData.length).toFixed(1) : 0,
     }), [instanceData]);
+
+    const is24hRange = useMemo(() => {
+        if (selectedRange === '24h') return true;
+        if (selectedRange === 'custom' && customRange) {
+            const diff = Math.abs(customRange.end - customRange.start);
+            return diff <= (1000 * 60 * 60 * 24 + 1000); // 24h with 1s buffer
+        }
+        return false;
+    }, [selectedRange, customRange]);
 
     const handleCustomRange = (range) => {
         setCustomRange(range);
@@ -528,6 +563,12 @@ function EC2Analytics() {
                                                 </div>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                {is24hRange && instance.isAwsConsole && (
+                                                    <div className="ec2-aws-tag">
+                                                        <Server size={10} strokeWidth={3} />
+                                                        <span>AWS</span>
+                                                    </div>
+                                                )}
                                                 <button
                                                     className="instance-graph-btn"
                                                     onClick={(e) => {
@@ -548,25 +589,16 @@ function EC2Analytics() {
                                             </div>
                                             <div className="instance-stat-divider" />
                                             <div
-                                                className="instance-stat-item clickable-calendar"
+                                                className={`instance-stat-item ${instance.activeDays > 1 ? 'clickable-calendar' : 'non-clickable-stat'}`}
                                                 onClick={(e) => {
+                                                    if (instance.activeDays <= 1) return;
                                                     e.stopPropagation();
                                                     // Calculate dates for the display
-                                                    const dates = (instance.dates || []).map(d => {
-                                                        const dt = new Date(d);
-
-                                                        return dt.toLocaleDateString('en-US', {
-                                                            timeZone: 'Asia/Kolkata',
-                                                            month: 'short',
-                                                            day: 'numeric',
-                                                            year: 'numeric'
-                                                        });
-                                                    });
                                                     setSelectedDaysInfo({
                                                         name: instance.instanceName,
                                                         id: instance.instanceId,
                                                         days: instance.activeDays,
-                                                        dates: dates
+                                                        rawDates: instance.dates
                                                     });
                                                 }}
                                             >
@@ -673,25 +705,100 @@ function EC2Analytics() {
             )}
 
             {selectedDaysInfo && (
-                <div className="days-info-overlay" onClick={() => setSelectedDaysInfo(null)}>
-                    <div className="days-info-modal" onClick={e => e.stopPropagation()}>
-                        <div className="dim-header">
-                            <Calendar size={24} className="dim-icon" />
-                            <div>
-                                <div className="dim-title">Active Timeline</div>
-                                <div className="dim-subtitle">{selectedDaysInfo.name}</div>
+                <div className="days-info-overlay" onClick={() => {
+                    setSelectedDaysInfo(null);
+                    setIsFlipped(false);
+                    setSelectedDateDetail(null);
+                }}>
+                    <div className={`days-info-modal-wrap ${isFlipped ? 'flipped' : ''}`} onClick={e => e.stopPropagation()}>
+                        {/* Front Side: List of Dates */}
+                        <div className="days-info-modal-front">
+                            <div className="dim-header">
+                                <Calendar size={24} className="dim-icon" />
+                                <div>
+                                    <div className="dim-title">Active Timeline</div>
+                                    <div className="dim-subtitle">{selectedDaysInfo.name}</div>
+                                </div>
                             </div>
-                        </div>
-                        <div className="dim-content">
-                            <div className="dim-value">{selectedDaysInfo.days}</div>
-                            <div className="dim-label">Days Active</div>
-                            <div className="dim-dates-list">
-                                {selectedDaysInfo.dates.map((date, idx) => (
-                                    <div key={idx} className="dim-date-chip">{date}</div>
-                                ))}
+                            <div className="dim-content">
+                                <div className="dim-value">{selectedDaysInfo.days}</div>
+                                <div className="dim-label">Days Active</div>
+                                <div className="dim-dates-list">
+                                    {(selectedDaysInfo.rawDates || []).map((dateObj, idx) => {
+                                        const dt = new Date(dateObj.date);
+                                        const dateStr = dt.toLocaleDateString('en-US', {
+                                            month: 'short', day: 'numeric', year: 'numeric'
+                                        });
+
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className={`dim-date-chip ${is24hRange ? 'non-clickable' : 'clickable'}`}
+                                                onClick={() => {
+                                                    if (!is24hRange) {
+                                                        setSelectedDateDetail({
+                                                            ...dateObj,
+                                                            formattedDate: dateStr
+                                                        });
+                                                        setIsFlipped(true);
+                                                    }
+                                                }}
+                                            >
+                                                {dateStr}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
+                            <button className="dim-close-btn" onClick={() => setSelectedDaysInfo(null)}>Got it</button>
                         </div>
-                        <button className="dim-close-btn" onClick={() => setSelectedDaysInfo(null)}>Got it</button>
+
+                        {/* Back Side: Date Details */}
+                        <div className="days-info-modal-back">
+                            {selectedDateDetail && (
+                                <>
+                                    <div className="dim-header details-header">
+                                        <button className="dim-back-arrow" onClick={() => setIsFlipped(false)}>
+                                            <ArrowLeft size={20} />
+                                        </button>
+                                        <div className="dim-header-identity">
+                                            <div className="dim-title">{selectedDaysInfo.name}</div>
+                                            <div className="dim-instance-id">{selectedDaysInfo.id}</div>
+                                        </div>
+                                        {selectedDateDetail.isAwsConsole && (
+                                            <div className="ec2-aws-tag modal-tag">
+                                                <Server size={10} strokeWidth={3} />
+                                                <span>AWS</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="dim-detail-context">
+                                        <div className="ddc-date-pill">
+                                            <Calendar size={14} />
+                                            <span>{selectedDateDetail.formattedDate} Insight</span>
+                                        </div>
+                                    </div>
+                                    <div className="dim-detail-content">
+                                        <div className="dim-detail-card-row">
+                                            <div className="dim-detail-card cpu">
+                                                <div className="ddc-icon"><Cpu size={18} /></div>
+                                                <div className="ddc-val">{selectedDateDetail.cpu}%</div>
+                                                <div className="ddc-lbl">CPU Usage</div>
+                                            </div>
+                                            <div className="dim-detail-card cost">
+                                                <div className="ddc-icon"><DollarSign size={18} /></div>
+                                                <div className="ddc-val">${selectedDateDetail.cost}</div>
+                                                <div className="ddc-lbl">Daily Cost</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button className="dim-close-btn" onClick={() => {
+                                        setSelectedDaysInfo(null);
+                                        setIsFlipped(false);
+                                    }}>Close Details</button>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
