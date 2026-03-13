@@ -517,6 +517,25 @@
   font-weight: 600;
   padding-left: 1.15rem;
   margin-top: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.rds-id-separator {
+  margin: 0 6px;
+  color: var(--rds-emerald);
+  font-size: 1.1rem;
+  line-height: 0;
+  text-shadow: 0 0 8px var(--rds-emerald-glow);
+  opacity: 0.8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rds-engine-id-part, 
+.rds-class-id-part {
+  opacity: 0.9;
 }
 
 .aurora-cluster-name-group {

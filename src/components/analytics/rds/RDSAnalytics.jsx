@@ -618,7 +618,11 @@ function RDSAnalytics() {
                                                 <div className={`rds-instance-status-dot ${db.status}`} />
                                                 <span className="rds-instance-name-text">{db.db_identifier}</span>
                                             </div>
-                                            <div className="rds-instance-id-text">{db.engine}.{db.instance_class}</div>
+                                            <div className="rds-instance-id-text">
+                                                <span className="rds-engine-id-part">{db.engine}</span>
+                                                <span className="rds-id-separator">•</span>
+                                                <span className="rds-class-id-part">{db.instance_class}</span>
+                                            </div>
                                         </div>
                                         <div className="rds-instance-card-actions-row">
                                             {selectedRange === '24h' && db.is_aws && (
