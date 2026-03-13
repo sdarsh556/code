@@ -145,6 +145,8 @@ function RDSAnalytics() {
     const [showCalendar, setShowCalendar] = useState(false);
     const [customRange, setCustomRange] = useState(null);
     const [selectedDaysInfo, setSelectedDaysInfo] = useState(null);
+    const [isFlipped, setIsFlipped] = useState(false);
+    const [selectedDateDetail, setSelectedDateDetail] = useState(null);
     const [selectedInstanceForTrend, setSelectedInstanceForTrend] = useState(null);
     const [selectedClusterForTrend, setSelectedClusterForTrend] = useState(null);
 
@@ -173,7 +175,11 @@ function RDSAnalytics() {
                 avg_write_iops: 100,
                 approx_cost: 17,
                 active_days_count: 28,
-                active_dates: ["2026-02-06", "2026-02-07", "2026-03-05"],
+                dates: [
+                    { date: "2026-02-06", cpu: 42, connections: 65, readIops: 240, writeIops: 120, cost: 0.60, isAwsConsole: true },
+                    { date: "2026-02-07", cpu: 38, connections: 48, readIops: 180, writeIops: 95, cost: 0.58, isAwsConsole: false },
+                    { date: "2026-03-05", cpu: 45, connections: 72, readIops: 310, writeIops: 155, cost: 0.65, isAwsConsole: true }
+                ],
                 status: 'available',
                 is_aws: true
             },
@@ -188,7 +194,11 @@ function RDSAnalytics() {
                 avg_write_iops: 45,
                 approx_cost: 8.20,
                 active_days_count: 7,
-                active_dates: ["2026-03-01", "2026-03-02", "2026-03-03"],
+                dates: [
+                    { date: "2026-03-01", cpu: 15, connections: 18, readIops: 95, writeIops: 50, cost: 0.28, isAwsConsole: false },
+                    { date: "2026-03-02", cpu: 10, connections: 10, readIops: 70, writeIops: 40, cost: 0.27, isAwsConsole: false },
+                    { date: "2026-03-03", cpu: 12, connections: 12, readIops: 80, writeIops: 45, cost: 0.28, isAwsConsole: true }
+                ],
                 status: 'available'
             },
             {
@@ -202,7 +212,11 @@ function RDSAnalytics() {
                 avg_write_iops: 150,
                 approx_cost: 4.50,
                 active_days_count: 30,
-                active_dates: ["2026-02-01", "2026-02-15", "2026-03-05"],
+                dates: [
+                    { date: "2026-02-01", cpu: 60, connections: 4, readIops: 280, writeIops: 140, cost: 0.15, isAwsConsole: false },
+                    { date: "2026-02-15", cpu: 68, connections: 6, readIops: 320, writeIops: 160, cost: 0.16, isAwsConsole: true },
+                    { date: "2026-03-05", cpu: 65, connections: 5, readIops: 300, writeIops: 150, cost: 0.15, isAwsConsole: false }
+                ],
                 status: 'modifying'
             },
             {
@@ -216,7 +230,10 @@ function RDSAnalytics() {
                 avg_write_iops: 220,
                 approx_cost: 55.00,
                 active_days_count: 28,
-                active_dates: ["2026-02-06", "2026-03-05"],
+                dates: [
+                    { date: "2026-02-06", cpu: 25, connections: 230, readIops: 480, writeIops: 240, cost: 1.95, isAwsConsole: true },
+                    { date: "2026-03-05", cpu: 22, connections: 210, readIops: 450, writeIops: 220, cost: 1.92, isAwsConsole: false }
+                ],
                 status: 'backing-up'
             },
         ],
@@ -231,7 +248,10 @@ function RDSAnalytics() {
                 avg_write_iops: 220,
                 approx_cost: 84.50,
                 active_days_count: 28,
-                active_dates: ["2026-03-01", "2026-03-05"],
+                dates: [
+                    { date: "2026-03-01", cpu: 45, connections: 95, readIops: 480, writeIops: 240, cost: 2.95, isAwsConsole: true },
+                    { date: "2026-03-05", cpu: 42, connections: 85, readIops: 450, writeIops: 220, cost: 2.90, isAwsConsole: false }
+                ],
                 status: 'available',
                 trend: 'up',
                 is_aws: true
@@ -246,7 +266,10 @@ function RDSAnalytics() {
                 avg_write_iops: 45,
                 approx_cost: 32.20,
                 active_days_count: 7,
-                active_dates: ["2026-03-01", "2026-03-02"],
+                dates: [
+                    { date: "2026-03-01", cpu: 25, connections: 18, readIops: 130, writeIops: 50, cost: 1.15, isAwsConsole: true },
+                    { date: "2026-03-02", cpu: 22, connections: 15, readIops: 120, writeIops: 45, cost: 1.12, isAwsConsole: false }
+                ],
                 status: 'available',
                 trend: 'stable'
             },
@@ -260,7 +283,10 @@ function RDSAnalytics() {
                 avg_write_iops: 12,
                 approx_cost: 15.30,
                 active_days_count: 15,
-                active_dates: ["2026-02-15", "2026-03-01"],
+                dates: [
+                    { date: "2026-02-15", cpu: 18, connections: 6, readIops: 55, writeIops: 15, cost: 0.55, isAwsConsole: false },
+                    { date: "2026-03-01", cpu: 15, connections: 4, readIops: 45, writeIops: 12, cost: 0.52, isAwsConsole: true }
+                ],
                 status: 'available',
                 trend: 'down'
             }
@@ -276,7 +302,10 @@ function RDSAnalytics() {
                 avg_write_iops: 80,
                 approx_cost: 92.00,
                 active_days_count: 30,
-                active_dates: ["2026-03-01", "2026-03-30"],
+                dates: [
+                    { date: "2026-03-01", cpu: 32, connections: 140, readIops: 700, writeIops: 95, cost: 3.10, isAwsConsole: true },
+                    { date: "2026-03-30", cpu: 28, connections: 120, readIops: 650, writeIops: 80, cost: 3.05, isAwsConsole: false }
+                ],
                 status: 'available',
                 trend: 'stable',
                 is_aws: true
@@ -291,7 +320,10 @@ function RDSAnalytics() {
                 avg_write_iops: 20,
                 approx_cost: 45.50,
                 active_days_count: 15,
-                active_dates: ["2026-03-15", "2026-03-30"],
+                dates: [
+                    { date: "2026-03-15", cpu: 15, connections: 30, readIops: 180, writeIops: 25, cost: 1.55, isAwsConsole: false },
+                    { date: "2026-03-30", cpu: 12, connections: 25, readIops: 150, writeIops: 20, cost: 1.52, isAwsConsole: true }
+                ],
                 status: 'available',
                 trend: 'stable'
             }
@@ -471,12 +503,19 @@ function RDSAnalytics() {
                                     <div className="aurora-cluster-status-glow" />
 
                                     <div className="aurora-cluster-card-top">
-                                        <div className="aurora-cluster-name-row">
-                                            <div className={`aurora-cluster-status-dot ${cluster.status}`} />
-                                            <span className="aurora-cluster-name-text">{cluster.cluster_name}</span>
+                                        <div className="aurora-cluster-name-group">
+                                            <div className="aurora-cluster-status-row">
+                                                <div className={`aurora-cluster-status-dot ${cluster.status}`} />
+                                                <span className="aurora-cluster-name-text">{cluster.cluster_name}</span>
+                                            </div>
+                                            <div className="aurora-cluster-subheader">
+                                                <span className="aurora-engine-tag">{viewMode === 'docdb' ? 'DocumentDB' : 'Aurora'}</span>
+                                                <span className="aurora-id-separator">•</span>
+                                                <span className="aurora-instance-count">{cluster.instances_count} Nodes</span>
+                                            </div>
                                         </div>
                                         <div className="aurora-cluster-card-actions">
-                                            {cluster.is_aws && (
+                                            {selectedRange === '24h' && cluster.is_aws && (
                                                 <div className="rds-aws-tag">
                                                     <Server size={10} strokeWidth={3} />
                                                     AWS
@@ -486,24 +525,6 @@ function RDSAnalytics() {
                                                 className="aurora-cluster-trend-btn"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-
-                                                    const today = new Date();
-                                                    const metrics = [];
-
-                                                    for (let i = 29; i >= 0; i--) {
-                                                        const d = new Date(today);
-                                                        d.setDate(today.getDate() - i);
-
-                                                        metrics.push({
-                                                            date: d.toISOString().split("T")[0],
-                                                            cost: cluster.approx_cost / 30,
-                                                            cpu: 0,          // optional, fill if needed
-                                                            connections: 0,  // optional
-                                                            readIops: 0,
-                                                            writeIops: 0
-                                                        });
-                                                    }
-
                                                     setSelectedClusterForTrend({
                                                         db_identifier: cluster.cluster_name,
                                                         avg_cpu_utilization: cluster.avg_cpu_utilization,
@@ -526,10 +547,20 @@ function RDSAnalytics() {
                                             <div className="aurora-csi-label">Active</div>
                                         </div>
                                         <div className="aurora-cluster-stat-divider" />
-                                        <div className="aurora-cluster-stat-item">
-                                            <div className="aurora-csi-icon"><Database size={14} /></div>
-                                            <div className="aurora-csi-value">{cluster.instances_count}</div>
-                                            <div className="aurora-csi-label">Instances</div>
+                                        <div
+                                            className="aurora-cluster-stat-item aurora-clickable-calendar"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedDaysInfo({
+                                                    identifier: cluster.cluster_name,
+                                                    count: cluster.active_days_count,
+                                                    rawDates: cluster.dates
+                                                });
+                                            }}
+                                        >
+                                            <div className="aurora-csi-icon"><Calendar size={14} /></div>
+                                            <div className="aurora-csi-value">View</div>
+                                            <div className="aurora-csi-label">Days Active</div>
                                         </div>
                                         <div className="aurora-cluster-stat-divider" />
                                         <div className="aurora-cluster-stat-item">
@@ -590,7 +621,7 @@ function RDSAnalytics() {
                                             <div className="rds-instance-id-text">{db.engine}.{db.instance_class}</div>
                                         </div>
                                         <div className="rds-instance-card-actions-row">
-                                            {db.is_aws && (
+                                            {selectedRange === '24h' && db.is_aws && (
                                                 <div className="rds-aws-tag">
                                                     <Server size={10} strokeWidth={3} />
                                                     AWS
@@ -619,18 +650,10 @@ function RDSAnalytics() {
                                         <div
                                             className="rds-instance-stat-item rds-clickable-calendar"
                                             onClick={() => {
-                                                const formattedDates = (db.active_dates || []).map(d => {
-                                                    const dt = new Date(d);
-                                                    return dt.toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        year: 'numeric'
-                                                    });
-                                                });
                                                 setSelectedDaysInfo({
                                                     identifier: db.db_identifier,
                                                     count: db.active_days_count,
-                                                    dates: formattedDates
+                                                    rawDates: db.dates
                                                 });
                                             }}
                                         >
@@ -656,21 +679,21 @@ function RDSAnalytics() {
                                         </div>
                                         <div className="rds-resource-bar-item">
                                             <div className="rds-rb-header">
-                                                <span className="rds-rb-label"><Network size={12} /> Conn</span>
+                                                <span className="rds-rb-label"><Network size={12} /> DB Conn.</span>
                                                 <span className="rds-rb-value">{db.avg_connections}</span>
                                             </div>
-                                            <div className="rds-rb-track"><div className="rds-rb-fill conn" style={{ width: `${Math.min(100, (db.avg_connections / 500) * 100)}%` }} /></div>
+                                            <div className="rds-rb-track"><div className="rds-rb-fill conn" style={{ width: `${Math.min(100, (db.avg_connections / 200) * 100)}%` }} /></div>
                                         </div>
                                         <div className="rds-resource-bar-item">
                                             <div className="rds-rb-header">
-                                                <span className="rds-rb-label"><ArrowRight size={12} /> Read</span>
+                                                <span className="rds-rb-label"><ArrowRight size={12} /> Read IOPS</span>
                                                 <span className="rds-rb-value">{db.avg_read_iops}</span>
                                             </div>
                                             <div className="rds-rb-track"><div className="rds-rb-fill read" style={{ width: `${Math.min(100, (db.avg_read_iops / 1000) * 100)}%` }} /></div>
                                         </div>
                                         <div className="rds-resource-bar-item">
                                             <div className="rds-rb-header">
-                                                <span className="rds-rb-label"><Zap size={12} /> Write</span>
+                                                <span className="rds-rb-label"><Zap size={12} /> Write IOPS</span>
                                                 <span className="rds-rb-value">{db.avg_write_iops}</span>
                                             </div>
                                             <div className="rds-rb-track"><div className="rds-rb-fill write" style={{ width: `${Math.min(100, (db.avg_write_iops / 500) * 100)}%` }} /></div>
@@ -778,26 +801,130 @@ function RDSAnalytics() {
                 <CalendarPicker onRangeSelect={handleCustomRange} onClose={() => setShowCalendar(false)} />
             )}
 
+            {/* --- Timeline Flip-Modal --- */}
             {selectedDaysInfo && (
-                <div className="rds-days-info-overlay" onClick={() => setSelectedDaysInfo(null)}>
-                    <div className="rds-days-info-modal" onClick={e => e.stopPropagation()}>
-                        <div className="rds-dim-header">
-                            <Calendar size={24} className="rds-dim-icon" />
-                            <div>
-                                <div className="rds-dim-title">Active Timeline</div>
-                                <div className="rds-dim-subtitle">{selectedDaysInfo.identifier}</div>
+                <div className="rds-graph-modal-overlay days-info-overlay" onClick={() => {
+                    setSelectedDaysInfo(null);
+                    setIsFlipped(false);
+                }}>
+                    <div
+                        className={`rds-days-info-modal-inner ${isFlipped ? 'is-flipped' : ''}`}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Front Side: General Timeline */}
+                        <div className="rds-days-info-modal-front">
+                            <div className="rds-dim-header">
+                                <div className="rds-dim-icon"><Calendar size={24} /></div>
+                                <div>
+                                    <div className="rds-dim-header-title">Active Timeline</div>
+                                    <div className="rds-dim-header-subtitle">{selectedDaysInfo.identifier}</div>
+                                </div>
+                                <button className="rds-dim-modal-close" onClick={() => setSelectedDaysInfo(null)}><X size={20} /></button>
                             </div>
-                        </div>
-                        <div className="rds-dim-content">
-                            <div className="rds-dim-value">{selectedDaysInfo.count}</div>
-                            <div className="rds-dim-label">Days Active</div>
-                            <div className="rds-dim-dates-list">
-                                {selectedDaysInfo.dates.map((date, idx) => (
-                                    <div key={idx} className="rds-dim-date-chip">{date}</div>
-                                ))}
+
+                            <div className="rds-dim-hero">
+                                <div className="rds-dim-count-badge">{selectedDaysInfo.count}</div>
+                                <div className="rds-dim-count-label">Days Active</div>
                             </div>
+
+                            <div className="rds-dim-dates-grid-container">
+                                <div className="rds-dim-dates-grid">
+                                    {selectedDaysInfo.rawDates?.map((dateObj, i) => {
+                                        const date = new Date(dateObj.date);
+                                        const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                        return (
+                                            <div
+                                                key={i}
+                                                className="rds-dim-date-chip"
+                                                onClick={() => {
+                                                    setSelectedDateDetail({
+                                                        ...dateObj,
+                                                        formattedDate: formatted
+                                                    });
+                                                    setIsFlipped(true);
+                                                }}
+                                            >
+                                                {formatted}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <button className="rds-dim-close-btn" onClick={() => setSelectedDaysInfo(null)}>Got it</button>
                         </div>
-                        <button className="rds-dim-close-btn" onClick={() => setSelectedDaysInfo(null)}>Got it</button>
+
+                        {/* Back Side: Date Details */}
+                        <div className="rds-days-info-modal-back">
+                            {selectedDateDetail && (
+                                <>
+                                    <div className="rds-dim-header details-header">
+                                        <button className="rds-dim-back-arrow" onClick={() => setIsFlipped(false)}>
+                                            <ChevronLeft size={20} />
+                                        </button>
+                                        <div className="rds-dim-header-identity">
+                                            <div className="rds-dim-header-title">{selectedDaysInfo.identifier}</div>
+                                            <div className="rds-dim-date-context">{selectedDateDetail.formattedDate}</div>
+                                        </div>
+                                        {selectedDateDetail.isAwsConsole && (
+                                            <div className="rds-aws-tag modal-tag">
+                                                <Server size={10} strokeWidth={3} />
+                                                AWS
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="rds-dim-detail-content">
+                                        <div className="rds-dim-detail-grid">
+                                            <div className="rds-dim-detail-card rds-cpu">
+                                                <div className="rds-ddc-glass" />
+                                                <div className="rds-ddc-icon"><Cpu size={20} /></div>
+                                                <div className="rds-ddc-val">{selectedDateDetail.cpu}%</div>
+                                                <div className="rds-ddc-lbl">Resource CPU</div>
+                                            </div>
+                                            <div className="rds-dim-detail-card rds-conn">
+                                                <div className="rds-ddc-glass" />
+                                                <div className="rds-ddc-icon"><Network size={20} /></div>
+                                                <div className="rds-ddc-val">{selectedDateDetail.connections}</div>
+                                                <div className="rds-ddc-lbl">DB Connections</div>
+                                            </div>
+                                            <div className="rds-dim-detail-card rds-read">
+                                                <div className="rds-ddc-glass" />
+                                                <div className="rds-ddc-icon"><ArrowRight size={20} /></div>
+                                                <div className="rds-ddc-val">{selectedDateDetail.readIops}</div>
+                                                <div className="rds-ddc-lbl">Read throughput</div>
+                                            </div>
+                                            <div className="rds-dim-detail-card rds-write">
+                                                <div className="rds-ddc-glass" />
+                                                <div className="rds-ddc-icon"><Zap size={20} /></div>
+                                                <div className="rds-ddc-val">{selectedDateDetail.writeIops}</div>
+                                                <div className="rds-ddc-lbl">Write throughput</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="rds-dim-cost-banner-premium">
+                                            <div className="rds-dcb-inner">
+                                                <div className="rds-dcb-info">
+                                                    <div className="rds-dcb-lbl">ESTIMATED DAILY COST</div>
+                                                    <div className="rds-dcb-val">${selectedDateDetail.cost.toFixed(2)}</div>
+                                                </div>
+                                                <div className="rds-dcb-visual">
+                                                    <DollarSign size={28} className="rds-dcb-icon" />
+                                                    <div className="rds-dcb-glow" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button className="rds-dim-close-btn premium" onClick={() => {
+                                        setSelectedDaysInfo(null);
+                                        setIsFlipped(false);
+                                    }}>
+                                        <span>Close Details</span>
+                                        <X size={16} />
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
