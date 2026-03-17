@@ -24,10 +24,147 @@ function Dashboard() {
     const navigate = useNavigate();
     const [showHolidayModal, setShowHolidayModal] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [ecsStats, setEcsStats] = useState({
+        totalClusters: 0,
+        totalActiveServices: 0,
+        scheduledCount: 0
+    });
+    const [ec2Stats, setEc2Stats] = useState({
+        totalInstances: 0,
+        runningInstances: 0,
+        activeSchedules: 0
+    });
+    const [rdsStats, setRdsStats] = useState({
+        totalDatabases: 0,
+        runningDatabases: 0,
+        activeSchedules: 0
+    });
+    const [eksStats, setEksStats] = useState({
+        totalClusters: 0,
+        totalnamespaces: 0,
+        activeSchedules: 0
+    });
 
     useEffect(() => {
         setBgContext('default');
     }, [setBgContext]);
+
+    const fetchEcsStats = async () => {
+        try {
+            const response = await axiosClient.get('/ecs/clusters');
+            const result = response.data;
+
+            if (!result.success) return;
+
+            const clusters = result.data || [];
+            const totalClusters = clusters.length;
+            const totalActiveServices = clusters.reduce(
+                (sum, c) => sum + (c.active_services_count || 0),
+                0
+            );
+
+            const scheduledCount = clusters.filter(
+                (c) => c.is_scheduled
+            ).length;
+
+            setEcsStats({
+                totalClusters,
+                totalActiveServices,
+                scheduledCount
+            });
+        } catch (err) {
+            console.error('Dashboard ECS stats error:', err);
+        }
+    };
+
+    const fetchEc2Stats = async () => {
+        try {
+            const [instancesRes, schedulesRes] = await Promise.all([
+                axiosClient.get('/ec2/instances'),
+                axiosClient.get('/ec2/custom-schedules')
+            ]);
+
+            const instances = instancesRes.data || [];
+            const schedules = schedulesRes.data || [];
+            const totalInstances = instances.length;
+            const runningInstances = instances.filter(
+                (i) => i.state === 'running'
+            ).length;
+
+            const activeSchedules = schedules.length;
+
+            setEc2Stats({
+                totalInstances,
+                runningInstances,
+                activeSchedules
+            });
+
+        } catch (err) {
+            console.error('Dashboard EC2 stats error:', err);
+        }
+    };
+
+    const fetchRdsStats = async () => {
+        try {
+            const response = await axiosClient.get('/rds/dashboard/stats');
+            const result = response.data;
+
+            if (!result.success) return;
+
+            const data = result.data;
+
+            const totalDatabases = data.total_databases || 0;
+            const runningDatabases = data.running_count || 0;
+
+            const activeSchedules =
+                (data.daily_exceptions_count || 0) +
+                (data.custom_schedules_count || 0) +
+                (data.always_running_count || 0);
+
+            setRdsStats({
+                totalDatabases,
+                runningDatabases,
+                activeSchedules
+            });
+
+        } catch (err) {
+            console.error('Dashboard RDS stats error:', err);
+        }
+    };
+
+    const fetchEksStats = async () => {
+        try {
+            const response = await axiosClient.get('/eks/dashboard');
+            const result = response.data;
+
+            const stats = result.stats || {};
+
+            const totalClusters = Number(stats.total_clusters) || 0;
+
+            const totalnamespaces = Number(stats.scaled_up) || 0;
+
+            const activeSchedules =
+                (Number(stats.whitelisted) || 0) +
+                (Number(stats.daily_exceptions) || 0) +
+                (Number(stats.custom_schedules) || 0);
+
+            setEksStats({
+                totalClusters,
+                totalnamespaces,
+                activeSchedules
+            });
+
+        } catch (err) {
+            console.error('Dashboard EKS stats error:', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchEcsStats();
+        fetchEc2Stats();
+        fetchRdsStats();
+        fetchEksStats();
+    }, []);
 
     const [file, setFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -67,9 +204,9 @@ function Dashboard() {
             manageLink: '/ec2',
             analyticsLink: '/analytics/ec2',
             stats: [
-                { label: 'Running Inst.', value: '12' },
-                { label: 'Sched. Active', value: '4' },
-                { label: 'Healthy (%)', value: '100' }
+                { label: 'Total Instances', value: ec2Stats.totalInstances },
+                { label: 'Running Instances', value: ec2Stats.runningInstances },
+                { label: 'Active Schedules', value: ec2Stats.activeSchedules }
             ],
             gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)'
         },
@@ -82,11 +219,11 @@ function Dashboard() {
             color: 'purple',
             manageLink: '/ecs',
             analyticsLink: '/analytics/ecs',
-            isLive: true,
+            isLive: false,
             stats: [
-                { label: 'Clusters Act.', value: '5' },
-                { label: 'Services Act.', value: '24' },
-                { label: 'Sched. Count', value: '8' }
+                { label: 'Total Clusters', value: ecsStats.totalClusters },
+                { label: 'Active Services', value: ecsStats.totalActiveServices },
+                { label: 'Active Schedules', value: ecsStats.scheduledCount }
             ],
             gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)'
         },
@@ -100,9 +237,9 @@ function Dashboard() {
             manageLink: '/eks',
             analyticsLink: '/analytics/eks',
             stats: [
-                { label: 'Clusters Act.', value: '4' },
-                { label: 'Services Act.', value: '38' },
-                { label: 'Sched. Count', value: '12' }
+                { label: 'Total Clusters', value: eksStats.totalClusters },
+                { label: 'Total Namespaces', value: eksStats.totalnamespaces },
+                { label: 'Active Schedules', value: eksStats.activeSchedules }
             ],
             gradient: 'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)'
         },
@@ -116,9 +253,9 @@ function Dashboard() {
             manageLink: '/rds',
             analyticsLink: '/analytics/rds',
             stats: [
-                { label: 'DBs Online', value: '8' },
-                { label: 'Replicas', value: '3' },
-                { label: 'Schedules', value: '4' }
+                { label: 'Total Databases', value: rdsStats.totalDatabases },
+                { label: 'Running Databases', value: rdsStats.runningDatabases },
+                { label: 'Active Schedules', value: rdsStats.activeSchedules }
             ],
             gradient: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'
         }
@@ -135,29 +272,12 @@ function Dashboard() {
                         Your centralized AWS automation dashboard. Manage all your cloud resources in one place.
                     </p>
                 </div>
-                {/* <div className="hero-stats">
-                    <button className="upload-holiday-btn" onClick={() => setShowHolidayModal(true)}>
-                        <Calendar size={18} />
-                        Holidays
-                    </button>
-                </div> */}
-            </div>
-
-            <div className="analytics-explorer-header">
-                <TrendingUp size={16} className="trending-icon" />
-                <span>SELECT A SERVICE TO EXPLORE ANALYTICS</span>
             </div>
 
             <div className="service-analytics-grid">
                 {resourceCards.map((service) => (
                     <div key={service.id} className={`service-card card-${service.color}`}>
                         <div className="card-top-bar"></div>
-                        {service.isLive && (
-                            <div className="status-badge live">
-                                <span className="dot"></span>
-                                LIVE
-                            </div>
-                        )}
 
                         <button
                             className="action-graph-btn"
@@ -185,21 +305,21 @@ function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="card-divider"></div>
+                        {/* <div className="card-divider"></div> */}
 
-                        <div className="card-footer">
+                        <div className="dashboard-card-footer">
                             <button
                                 className="manage-link"
                                 onClick={() => navigate(service.manageLink)}
                             >
-                                Manage Fleet
+                                Manage
                                 <ArrowRight size={14} />
                             </button>
                             <button
                                 className="explore-link"
                                 onClick={() => navigate(service.analyticsLink)}
                             >
-                                Deep Analysis
+                                Analyse
                                 <ArrowRight size={14} />
                             </button>
                         </div>

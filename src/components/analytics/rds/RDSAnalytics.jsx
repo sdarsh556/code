@@ -9,6 +9,7 @@ import '../../../css/analytics/rds/RDSAnalytics.css';
 import '../../../css/analytics/comparison-table.css';
 import ComparisonTable from '../ComparisonTable';
 import RDSGraphModal from './RDSGraphModal';
+import axiosClient from '../../api/axiosClient';
 
 // --- Date Picker Logic ---
 function CalendarPicker({ onRangeSelect, onClose }) {
@@ -145,10 +146,20 @@ function RDSAnalytics() {
     const [showCalendar, setShowCalendar] = useState(false);
     const [customRange, setCustomRange] = useState(null);
     const [selectedDaysInfo, setSelectedDaysInfo] = useState(null);
-    const [isFlipped, setIsFlipped] = useState(false);
-    const [selectedDateDetail, setSelectedDateDetail] = useState(null);
     const [selectedInstanceForTrend, setSelectedInstanceForTrend] = useState(null);
     const [selectedClusterForTrend, setSelectedClusterForTrend] = useState(null);
+    const [loadingSummary, setLoadingSummary] = useState(true);
+    const [summaryData, setSummaryData] = useState({
+        rds: null,
+        aurora: null,
+        docdb: null
+    });
+    const [rdsInstances, setRdsInstances] = useState([]);
+    const [auroraClusters, setAuroraClusters] = useState([]);
+    const [docdbClusters, setDocdbClusters] = useState([])
+    const [loadingTrend, setLoadingTrend] = useState(false);
+    const [isFlipped, setIsFlipped] = useState(false);
+    const [selectedDateDetail, setSelectedDateDetail] = useState(null);
 
     useEffect(() => {
         setBgContext('analytics');
@@ -162,178 +173,21 @@ function RDSAnalytics() {
         { id: '30d', label: '30D', days: 30 },
     ];
 
-    const allDbData = {
-        rds: [
-            {
-                db_identifier: "db-prod-mysql-01",
-                db_name: "prod-mysql",
-                instance_class: "db.t3.large",
-                engine: "mysql",
-                avg_cpu_utilization: 35.5,
-                avg_connections: 50,
-                avg_read_iops: 200,
-                avg_write_iops: 100,
-                approx_cost: 17,
-                active_days_count: 28,
-                dates: [
-                    { date: "2026-02-06", cpu: 42, connections: 65, readIops: 240, writeIops: 120, cost: 0.60, isAwsConsole: true },
-                    { date: "2026-02-07", cpu: 38, connections: 48, readIops: 180, writeIops: 95, cost: 0.58, isAwsConsole: false },
-                    { date: "2026-03-05", cpu: 45, connections: 72, readIops: 310, writeIops: 155, cost: 0.65, isAwsConsole: true }
-                ],
-                status: 'available',
-                is_aws: true
-            },
-            {
-                db_identifier: "db-staging-psql-01",
-                db_name: "staging-psql",
-                instance_class: "db.t3.medium",
-                engine: "postgres",
-                avg_cpu_utilization: 12.2,
-                avg_connections: 12,
-                avg_read_iops: 80,
-                avg_write_iops: 45,
-                approx_cost: 8.20,
-                active_days_count: 7,
-                dates: [
-                    { date: "2026-03-01", cpu: 15, connections: 18, readIops: 95, writeIops: 50, cost: 0.28, isAwsConsole: false },
-                    { date: "2026-03-02", cpu: 10, connections: 10, readIops: 70, writeIops: 40, cost: 0.27, isAwsConsole: false },
-                    { date: "2026-03-03", cpu: 12, connections: 12, readIops: 80, writeIops: 45, cost: 0.28, isAwsConsole: true }
-                ],
-                status: 'available'
-            },
-            {
-                db_identifier: "db-dev-mariadb",
-                db_name: "dev-mariadb",
-                instance_class: "db.t2.micro",
-                engine: "mariadb",
-                avg_cpu_utilization: 65.8,
-                avg_connections: 5,
-                avg_read_iops: 300,
-                avg_write_iops: 150,
-                approx_cost: 4.50,
-                active_days_count: 30,
-                dates: [
-                    { date: "2026-02-01", cpu: 60, connections: 4, readIops: 280, writeIops: 140, cost: 0.15, isAwsConsole: false },
-                    { date: "2026-02-15", cpu: 68, connections: 6, readIops: 320, writeIops: 160, cost: 0.16, isAwsConsole: true },
-                    { date: "2026-03-05", cpu: 65, connections: 5, readIops: 300, writeIops: 150, cost: 0.15, isAwsConsole: false }
-                ],
-                status: 'modifying'
-            },
-            {
-                db_identifier: "db-replica-01",
-                db_name: "prod-replica",
-                instance_class: "db.r6g.large",
-                engine: "postgres",
-                avg_cpu_utilization: 22.1,
-                avg_connections: 210,
-                avg_read_iops: 450,
-                avg_write_iops: 220,
-                approx_cost: 55.00,
-                active_days_count: 28,
-                dates: [
-                    { date: "2026-02-06", cpu: 25, connections: 230, readIops: 480, writeIops: 240, cost: 1.95, isAwsConsole: true },
-                    { date: "2026-03-05", cpu: 22, connections: 210, readIops: 450, writeIops: 220, cost: 1.92, isAwsConsole: false }
-                ],
-                status: 'backing-up'
-            },
-        ],
-        aurora: [
-            {
-                cluster_name: "aurora-prod-cluster",
-                db_name: "prod-global-db",
-                instances_count: 3,
-                avg_cpu_utilization: 42.5,
-                avg_connections: 85,
-                avg_read_iops: 450,
-                avg_write_iops: 220,
-                approx_cost: 84.50,
-                active_days_count: 28,
-                dates: [
-                    { date: "2026-03-01", cpu: 45, connections: 95, readIops: 480, writeIops: 240, cost: 2.95, isAwsConsole: true },
-                    { date: "2026-03-05", cpu: 42, connections: 85, readIops: 450, writeIops: 220, cost: 2.90, isAwsConsole: false }
-                ],
-                status: 'available',
-                trend: 'up',
-                is_aws: true
-            },
-            {
-                cluster_name: "aurora-staging-cluster",
-                db_name: "staging-db",
-                instances_count: 2,
-                avg_cpu_utilization: 22.8,
-                avg_connections: 15,
-                avg_read_iops: 120,
-                avg_write_iops: 45,
-                approx_cost: 32.20,
-                active_days_count: 7,
-                dates: [
-                    { date: "2026-03-01", cpu: 25, connections: 18, readIops: 130, writeIops: 50, cost: 1.15, isAwsConsole: true },
-                    { date: "2026-03-02", cpu: 22, connections: 15, readIops: 120, writeIops: 45, cost: 1.12, isAwsConsole: false }
-                ],
-                status: 'available',
-                trend: 'stable'
-            },
-            {
-                cluster_name: "aurora-dev-cluster",
-                db_name: "dev-sandbox",
-                instances_count: 1,
-                avg_cpu_utilization: 15.2,
-                avg_connections: 4,
-                avg_read_iops: 45,
-                avg_write_iops: 12,
-                approx_cost: 15.30,
-                active_days_count: 15,
-                dates: [
-                    { date: "2026-02-15", cpu: 18, connections: 6, readIops: 55, writeIops: 15, cost: 0.55, isAwsConsole: false },
-                    { date: "2026-03-01", cpu: 15, connections: 4, readIops: 45, writeIops: 12, cost: 0.52, isAwsConsole: true }
-                ],
-                status: 'available',
-                trend: 'down'
-            }
-        ],
-        docdb: [
-            {
-                cluster_name: "docdb-prod-cluster",
-                db_name: "prod-mobile-api",
-                instances_count: 3,
-                avg_cpu_utilization: 28.5,
-                avg_connections: 120,
-                avg_read_iops: 650,
-                avg_write_iops: 80,
-                approx_cost: 92.00,
-                active_days_count: 30,
-                dates: [
-                    { date: "2026-03-01", cpu: 32, connections: 140, readIops: 700, writeIops: 95, cost: 3.10, isAwsConsole: true },
-                    { date: "2026-03-30", cpu: 28, connections: 120, readIops: 650, writeIops: 80, cost: 3.05, isAwsConsole: false }
-                ],
-                status: 'available',
-                trend: 'stable',
-                is_aws: true
-            },
-            {
-                cluster_name: "docdb-staging-cluster",
-                db_name: "staging-app",
-                instances_count: 2,
-                avg_cpu_utilization: 12.4,
-                avg_connections: 25,
-                avg_read_iops: 150,
-                avg_write_iops: 20,
-                approx_cost: 45.50,
-                active_days_count: 15,
-                dates: [
-                    { date: "2026-03-15", cpu: 15, connections: 30, readIops: 180, writeIops: 25, cost: 1.55, isAwsConsole: false },
-                    { date: "2026-03-30", cpu: 12, connections: 25, readIops: 150, writeIops: 20, cost: 1.52, isAwsConsole: true }
-                ],
-                status: 'available',
-                trend: 'stable'
-            }
-        ]
-    };
-    const currentData = allDbData[viewMode];
+    const currentData = useMemo(() => {
+        if (viewMode === "rds") return rdsInstances;
+        if (viewMode === "aurora") return auroraClusters;
+        if (viewMode === "docdb") return docdbClusters;
+        return [];
+    }, [viewMode, rdsInstances, auroraClusters, docdbClusters]);
 
     const formatDate = (date) => {
-        return date.toISOString().split('T')[0];
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+
+        return `${year}-${month}-${day}`;
     };
+
 
     const getDateRange = () => {
         const today = new Date();
@@ -356,27 +210,289 @@ function RDSAnalytics() {
         };
     };
 
+    const fetchSummary = async () => {
+        try {
+            setLoadingSummary(true);
+
+            // Dummy data instead of API call
+            setSummaryData({
+                rds: {
+                    total_instances: 5,
+                    avg_cpu: 45.2,
+                    avg_connections: 120,
+                    avg_read_iops: 500,
+                    avg_write_iops: 300,
+                    total_approx_cost: 1540.50
+                },
+                aurora: {
+                    total_clusters: 2,
+                    total_instances: 6,
+                    avg_cpu: 35.5,
+                    avg_connections: 400,
+                    avg_read_iops: 1200,
+                    avg_write_iops: 800,
+                    total_approx_cost: 3200.75
+                },
+                docdb: {
+                    total_clusters: 1,
+                    total_instances: 2,
+                    avg_cpu: 25.0,
+                    avg_connections: 50,
+                    avg_read_iops: 100,
+                    avg_write_iops: 50,
+                    total_approx_cost: 450.00
+                }
+            });
+            setLoadingSummary(false);
+            return;
+        } catch (error) {
+            console.error("Failed to fetch RDS summary:", error);
+            setLoadingSummary(false);
+        }
+    };
+
+    const fetchInstances = async () => {
+        try {
+            // Dummy data instead of API call
+            setRdsInstances([
+                {
+                    db_identifier: "prod-db-1",
+                    instance_class: "db.t3.large",
+                    engine: "mysql",
+                    status: "available",
+                    is_aws: true,
+                    dates: ["2026-03-17", "2026-03-16"],
+                    avg_cpu_utilization: 65,
+                    avg_connections: 150,
+                    avg_read_iops: 600,
+                    avg_write_iops: 400,
+                    active_days_count: 30,
+                    approx_cost: 150.75
+                },
+                {
+                    db_identifier: "staging-db-1",
+                    instance_class: "db.t3.medium",
+                    engine: "postgres",
+                    status: "available",
+                    is_aws: false,
+                    dates: ["2026-03-17"],
+                    avg_cpu_utilization: 25,
+                    avg_connections: 50,
+                    avg_read_iops: 100,
+                    avg_write_iops: 80,
+                    active_days_count: 15,
+                    approx_cost: 45.20
+                }
+            ]);
+            return;
+        } catch (error) {
+            console.error("Failed to fetch RDS instances:", error);
+        }
+    };
+
+    const fetchAuroraClusters = async () => {
+        try {
+            // Dummy data instead of API call
+            setAuroraClusters([
+                {
+                    cluster_name: "prod-aurora-cluster",
+                    instances_count: 3,
+                    approx_cost: 1200.5,
+                    active_days_count: 30,
+                    avg_cpu_utilization: 45,
+                    avg_connections: 350,
+                    avg_read_iops: 800,
+                    avg_write_iops: 500,
+                    status: "available",
+                    trend: "stable",
+                    engine: "Aurora",
+                    is_aws: true,
+                    dates: ["2026-03-17", "2026-03-16", "2026-03-15"]
+                }
+            ]);
+            return;
+        } catch (error) {
+            console.error("Failed to fetch Aurora clusters:", error);
+        }
+    };
+
+    const fetchDocdbClusters = async () => {
+        try {
+            // Dummy data instead of API call
+            setDocdbClusters([
+                {
+                    cluster_name: "prod-docdb-cluster",
+                    instances_count: 2,
+                    approx_cost: 450.0,
+                    active_days_count: 30,
+                    avg_cpu_utilization: 25,
+                    avg_connections: 50,
+                    avg_read_iops: 100,
+                    avg_write_iops: 50,
+                    status: "available",
+                    trend: "stable",
+                    engine: "DocumentDB",
+                    is_aws: true,
+                    dates: ["2026-03-17", "2026-03-16", "2026-03-15"]
+                }
+            ]);
+            return;
+        } catch (error) {
+            console.error("Failed to fetch DocDB clusters:", error);
+        }
+    };
+
+    const fetchClusterActiveDates = async (clusterName, activeDays) => {
+        try {
+            // Dummy data instead of API call
+            setSelectedDaysInfo({
+                identifier: clusterName,
+                count: activeDays,
+                rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
+                metricsByDate: {
+                    "2026-03-17": { cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
+                    "2026-03-16": { cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
+                    "2026-03-15": { cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
+                }
+            });
+            return;
+        } catch (err) {
+            console.error("Failed to fetch cluster active dates", err);
+        }
+    };
+
+
+
+    const fetchInstanceMetrics = async (dbIdentifier, baseInstance) => {
+        try {
+            setLoadingTrend(true);
+            
+            // Dummy data instead of API call
+            setSelectedInstanceForTrend({
+                ...baseInstance,
+                metrics: [
+                    { date: "2026-03-15", cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2 },
+                    { date: "2026-03-16", cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0 },
+                    { date: "2026-03-17", cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5 }
+                ]
+            });
+            setLoadingTrend(false);
+            return;
+        } catch (err) {
+            console.error("Failed to fetch instance metrics", err);
+            setLoadingTrend(false);
+        }
+    };
+
+    const fetchRdsInstanceActiveDates = async (dbIdentifier, activeDays) => {
+        try {
+            // Dummy data instead of API call
+            setSelectedDaysInfo({
+                identifier: dbIdentifier,
+                count: activeDays,
+                rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
+                metricsByDate: {
+                    "2026-03-17": { cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
+                    "2026-03-16": { cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
+                    "2026-03-15": { cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
+                }
+            });
+            return;
+        } catch (err) {
+            console.error("Failed to fetch RDS instance active dates", err);
+        }
+    };
+
+    const fetchDocdbClusterActiveDates = async (clusterName, activeDays) => {
+        try {
+            // Dummy data instead of API call
+            setSelectedDaysInfo({
+                identifier: clusterName,
+                count: activeDays,
+                rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
+                metricsByDate: {
+                    "2026-03-17": { cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
+                    "2026-03-16": { cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
+                    "2026-03-15": { cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
+                }
+            });
+            return;
+        } catch (err) {
+            console.error("Failed to fetch DocumentDB cluster active dates", err);
+        }
+    };
+
+
+
     useEffect(() => {
         if (selectedRange === "custom" && !customRange) return;
-    }, [selectedRange, customRange]);
+
+        fetchSummary();
+
+        if (viewMode === "rds") {
+            setAuroraClusters([]);
+            setDocdbClusters([]);
+            fetchInstances();
+        }
+
+        if (viewMode === "aurora") {
+            setRdsInstances([]);
+            setDocdbClusters([]);
+            fetchAuroraClusters();
+        }
+
+        if (viewMode === "docdb") {
+            setRdsInstances([]);
+            setAuroraClusters([]);
+            fetchDocdbClusters();
+        }
+
+    }, [selectedRange, customRange, viewMode]);
 
     const stats = useMemo(() => {
-        const count = currentData.length;
-        if (viewMode === 'aurora' || viewMode === 'docdb') {
-            const avgCpu = (currentData.reduce((acc, item) => acc + item.avg_cpu_utilization, 0) / (count || 1)).toFixed(1);
-            const avgConn = Math.round(currentData.reduce((acc, item) => acc + item.avg_connections, 0) / (count || 1));
-            const avgRead = Math.round(currentData.reduce((acc, item) => acc + item.avg_read_iops, 0) / (count || 1));
-            const avgWrite = Math.round(currentData.reduce((acc, item) => acc + item.avg_write_iops, 0) / (count || 1));
-            const totalCost = currentData.reduce((acc, item) => acc + item.approx_cost, 0);
-            return { count, avgCpu, avgConn, avgRead, avgWrite, totalCost };
+        if (!summaryData) {
+            return {
+                count: 0,
+                avgCpu: 0,
+                avgConn: 0,
+                avgRead: 0,
+                avgWrite: 0,
+                totalCost: 0
+            };
         }
-        const avgCpu = (currentData.reduce((acc, item) => acc + item.avg_cpu_utilization, 0) / (count || 1)).toFixed(1);
-        const avgConn = Math.round(currentData.reduce((acc, item) => acc + item.avg_connections, 0) / (count || 1));
-        const avgRead = Math.round(currentData.reduce((acc, item) => acc + item.avg_read_iops, 0) / (count || 1));
-        const avgWrite = Math.round(currentData.reduce((acc, item) => acc + item.avg_write_iops, 0) / (count || 1));
-        const totalCost = currentData.reduce((acc, item) => acc + item.approx_cost, 0);
-        return { count, avgCpu, avgConn, avgRead, avgWrite, totalCost };
-    }, [currentData, viewMode]);
+
+        const data =
+            viewMode === "rds"
+                ? summaryData.rds
+                : viewMode === "aurora"
+                    ? summaryData.aurora
+                    : summaryData.docdb;
+
+        if (!data) {
+            return {
+                count: 0,
+                avgCpu: 0,
+                avgConn: 0,
+                avgRead: 0,
+                avgWrite: 0,
+                totalCost: 0
+            };
+        }
+
+        return {
+            count:
+                viewMode === "rds"
+                    ? data.total_instances
+                    : data.total_clusters,
+            avgCpu: data.avg_cpu || 0,
+            avgConn: data.avg_connections || 0,
+            avgRead: data.avg_read_iops || 0,
+            avgWrite: data.avg_write_iops || 0,
+            totalCost: data.total_approx_cost || 0
+        };
+
+    }, [summaryData, viewMode]);
+
 
     const handleCustomRange = (range) => {
         setCustomRange(range);
@@ -396,7 +512,7 @@ function RDSAnalytics() {
         { label: 'Avg Connections', value: stats.avgConn, icon: Network, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', bars: [120, 95, 210, 450, 380] },
         { label: 'Avg Read IOPS', value: stats.avgRead, icon: ArrowRight, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', bars: [450, 380, 820, 1250, 980] },
         { label: 'Avg Write IOPS', value: stats.avgWrite, icon: Zap, color: '#ec4899', bg: 'rgba(236,72,153,0.1)', bars: [120, 90, 310, 580, 420] },
-        { label: 'Approx Cost', value: `$${stats.totalCost.toFixed(0)}`, icon: TrendingUp, color: '#06b6d4', bg: 'rgba(6,182,212,0.1)', progress: 72 },
+        { label: 'Approx Cost', value: `$${(stats.totalCost || 0).toFixed(2)}`, icon: TrendingUp, color: '#06b6d4', bg: 'rgba(6,182,212,0.1)', progress: 72 },
     ];
 
     return (
@@ -411,9 +527,9 @@ function RDSAnalytics() {
                         </div>
                         <div>
                             <h1 className="rds-page-title">
-                                {viewMode === 'rds' ? 'RDS Analytics' : 
-                                 viewMode === 'aurora' ? 'Aurora Analytics' : 
-                                 'DocumentDB Analytics'}
+                                {viewMode === 'rds' ? 'RDS Analytics' :
+                                    viewMode === 'aurora' ? 'Aurora Analytics' :
+                                        'DocumentDB Analytics'}
                             </h1>
                             <p className="rds-page-sub">Database fleet performance & connection intelligence</p>
                         </div>
@@ -521,22 +637,15 @@ function RDSAnalytics() {
                                                     AWS
                                                 </div>
                                             )}
-                                            <button
+                                            {/* <button
                                                 className="aurora-cluster-trend-btn"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setSelectedClusterForTrend({
-                                                        db_identifier: cluster.cluster_name,
-                                                        avg_cpu_utilization: cluster.avg_cpu_utilization,
-                                                        avg_connections: cluster.avg_connections,
-                                                        avg_read_iops: cluster.avg_read_iops,
-                                                        avg_write_iops: cluster.avg_write_iops,
-                                                        cost: cluster.approx_cost
-                                                    });
+                                                    fetchClusterMetrics(cluster.cluster_name, cluster);
                                                 }}
                                             >
                                                 <BarChart3 size={16} />
-                                            </button>
+                                            </button> */}
                                         </div>
                                     </div>
 
@@ -551,12 +660,20 @@ function RDSAnalytics() {
                                             className="aurora-cluster-stat-item aurora-clickable-calendar"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                setSelectedDaysInfo({
-                                                    identifier: cluster.cluster_name,
-                                                    count: cluster.active_days_count,
-                                                    rawDates: cluster.dates
-                                                });
+                                                if (viewMode === "docdb") {
+                                                    fetchDocdbClusterActiveDates(
+                                                        cluster.cluster_name,
+                                                        cluster.active_days_count
+                                                    );
+                                                } else {
+                                                    fetchClusterActiveDates(
+                                                        cluster.cluster_name,
+                                                        cluster.active_days_count
+                                                    );
+                                                }
+
                                             }}
+
                                         >
                                             <div className="aurora-csi-icon"><Calendar size={14} /></div>
                                             <div className="aurora-csi-value">View</div>
@@ -565,7 +682,7 @@ function RDSAnalytics() {
                                         <div className="aurora-cluster-stat-divider" />
                                         <div className="aurora-cluster-stat-item">
                                             <div className="aurora-csi-icon"><DollarSign size={14} /></div>
-                                            <div className="aurora-csi-value">${cluster.approx_cost.toFixed(0)}</div>
+                                            <div className="aurora-csi-value">${(cluster.approx_cost || 0).toFixed(2)}</div>
                                             <div className="aurora-csi-label">Cost</div>
                                         </div>
                                     </div>
@@ -576,7 +693,7 @@ function RDSAnalytics() {
                                                 <span className="aurora-rb-label"><Cpu size={12} /> CPU</span>
                                                 <span className="aurora-rb-value">{cluster.avg_cpu_utilization}%</span>
                                             </div>
-                                            <div className="aurora-rb-track"><div className="aurora-rb-fill cpu" style={{ width: `${cluster.avg_cpu_utilization}%` }} /></div>
+                                            <div className="aurora-rb-track"><div className="aurora-rb-fill cpu" style={{ width: `${Math.min(100, cluster.avg_cpu_utilization)}%` }} /></div>
                                         </div>
                                         <div className="aurora-rb-item">
                                             <div className="aurora-rb-header">
@@ -601,7 +718,17 @@ function RDSAnalytics() {
                                         </div>
                                     </div>
 
-                                    <div className="aurora-cluster-footer">
+                                    <div
+                                        className="aurora-cluster-footer"
+                                        onClick={() => navigate(`/analytics/rds/cluster/${cluster.cluster_name}`, {
+                                            state: {
+                                                cluster,
+                                                selectedRange,
+                                                customRange,
+                                                engine: viewMode === 'aurora' ? 'Aurora' : 'DocumentDB'
+                                            }
+                                        })}
+                                    >
                                         <span>View Daily Breakdown</span>
                                         <ArrowRight size={16} />
                                     </div>
@@ -635,7 +762,7 @@ function RDSAnalytics() {
                                                 className="rds-instance-graph-btn"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setSelectedInstanceForTrend(db);
+                                                    fetchInstanceMetrics(db.db_identifier, db);
                                                 }}
                                                 title="View 30-Day Trend"
                                             >
@@ -653,13 +780,15 @@ function RDSAnalytics() {
                                         <div className="rds-instance-stat-divider" />
                                         <div
                                             className="rds-instance-stat-item rds-clickable-calendar"
-                                            onClick={() => {
-                                                setSelectedDaysInfo({
-                                                    identifier: db.db_identifier,
-                                                    count: db.active_days_count,
-                                                    rawDates: db.dates
-                                                });
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+
+                                                fetchRdsInstanceActiveDates(
+                                                    db.db_identifier,
+                                                    db.active_days_count
+                                                );
                                             }}
+
                                         >
                                             <div className="rds-isi-icon"><Calendar size={14} /></div>
                                             <div className="rds-isi-value">View</div>
@@ -668,7 +797,7 @@ function RDSAnalytics() {
                                         <div className="rds-instance-stat-divider" />
                                         <div className="rds-instance-stat-item">
                                             <div className="rds-isi-icon"><DollarSign size={14} /></div>
-                                            <div className="rds-isi-value">${db.approx_cost.toFixed(0)}</div>
+                                            <div className="rds-isi-value">${(db.approx_cost || 0).toFixed(2)}</div>
                                             <div className="rds-isi-label">Instance Cost</div>
                                         </div>
                                     </div>
@@ -679,7 +808,7 @@ function RDSAnalytics() {
                                                 <span className="rds-rb-label"><Cpu size={12} /> CPU</span>
                                                 <span className="rds-rb-value">{db.avg_cpu_utilization}%</span>
                                             </div>
-                                            <div className="rds-rb-track"><div className="rds-rb-fill cpu" style={{ width: `${db.avg_cpu_utilization}%` }} /></div>
+                                            <div className="rds-rb-track"><div className="rds-rb-fill cpu" style={{ width: `${Math.min(100, db.avg_cpu_utilization)}%` }} /></div>
                                         </div>
                                         <div className="rds-resource-bar-item">
                                             <div className="rds-rb-header">
@@ -711,9 +840,9 @@ function RDSAnalytics() {
 
                 {/* --- Comparison Table --- */}
                 <ComparisonTable
-                    title={viewMode === 'rds' ? "RDS Instance Comparison" : 
-                           viewMode === 'aurora' ? "Aurora Cluster Comparison" : 
-                           "DocumentDB Cluster Comparison"}
+                    title={viewMode === 'rds' ? "RDS Instance Comparison" :
+                        viewMode === 'aurora' ? "Aurora Cluster Comparison" :
+                            "DocumentDB Cluster Comparison"}
                     subtitle="Detailed technical breakdown with multi-sort capability"
                     data={currentData.map(db => ({
                         ...db,
@@ -805,7 +934,6 @@ function RDSAnalytics() {
                 <CalendarPicker onRangeSelect={handleCustomRange} onClose={() => setShowCalendar(false)} />
             )}
 
-            {/* --- Timeline Flip-Modal --- */}
             {selectedDaysInfo && (
                 <div className="rds-graph-modal-overlay days-info-overlay" onClick={() => {
                     setSelectedDaysInfo(null);
@@ -825,7 +953,6 @@ function RDSAnalytics() {
                                 </div>
                                 <button className="rds-dim-modal-close" onClick={() => setSelectedDaysInfo(null)}><X size={20} /></button>
                             </div>
-
                             <div className="rds-dim-hero">
                                 <div className="rds-dim-count-badge">{selectedDaysInfo.count}</div>
                                 <div className="rds-dim-count-label">Days Active</div>
@@ -833,18 +960,32 @@ function RDSAnalytics() {
 
                             <div className="rds-dim-dates-grid-container">
                                 <div className="rds-dim-dates-grid">
-                                    {selectedDaysInfo.rawDates?.map((dateObj, i) => {
-                                        const date = new Date(dateObj.date);
-                                        const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                    {selectedDaysInfo.rawDates?.map((dateStr, i) => {
+                                        const date = new Date(dateStr);
+                                        const formatted = date.toLocaleDateString('en-US', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            year: 'numeric'
+                                        });
+
                                         return (
                                             <div
                                                 key={i}
                                                 className="rds-dim-date-chip"
                                                 onClick={() => {
+                                                    const metrics = selectedDaysInfo.metricsByDate?.[dateStr] || {};
+
                                                     setSelectedDateDetail({
-                                                        ...dateObj,
-                                                        formattedDate: formatted
+                                                        date: dateStr,
+                                                        formattedDate: formatted,
+                                                        cpu: metrics.cpu || 0,
+                                                        connections: metrics.connections || 0,
+                                                        readIops: metrics.readIops || 0,
+                                                        writeIops: metrics.writeIops || 0,
+                                                        cost: metrics.cost || 0,
+                                                        isAwsConsole: metrics.isAwsConsole || false
                                                     });
+
                                                     setIsFlipped(true);
                                                 }}
                                             >
@@ -904,7 +1045,7 @@ function RDSAnalytics() {
                                                 <div className="rds-ddc-lbl">Write throughput</div>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="rds-dim-cost-banner-premium">
                                             <div className="rds-dcb-inner">
                                                 <div className="rds-dcb-info">
@@ -931,8 +1072,9 @@ function RDSAnalytics() {
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }
 

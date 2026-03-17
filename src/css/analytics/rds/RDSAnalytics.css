@@ -533,7 +533,7 @@
   justify-content: center;
 }
 
-.rds-engine-id-part, 
+.rds-engine-id-part,
 .rds-class-id-part {
   opacity: 0.9;
 }
@@ -1349,10 +1349,21 @@
   filter: drop-shadow(0 0 8px currentColor);
 }
 
-.rds-dim-detail-card.rds-cpu .rds-ddc-icon { color: #3b82f6; }
-.rds-dim-detail-card.rds-conn .rds-ddc-icon { color: #f59e0b; }
-.rds-dim-detail-card.rds-read .rds-ddc-icon { color: #10b981; }
-.rds-dim-detail-card.rds-write .rds-ddc-icon { color: #ec4899; }
+.rds-dim-detail-card.rds-cpu .rds-ddc-icon {
+  color: #3b82f6;
+}
+
+.rds-dim-detail-card.rds-conn .rds-ddc-icon {
+  color: #f59e0b;
+}
+
+.rds-dim-detail-card.rds-read .rds-ddc-icon {
+  color: #10b981;
+}
+
+.rds-dim-detail-card.rds-write .rds-ddc-icon {
+  color: #ec4899;
+}
 
 .rds-ddc-val {
   font-size: 1.625rem;
@@ -1439,8 +1450,17 @@
 }
 
 @keyframes rds-aura-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.4); opacity: 0.8; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: scale(1.4);
+    opacity: 0.8;
+  }
 }
 
 .rds-dim-close-btn.premium {
@@ -1471,6 +1491,7 @@
 .modal-tag {
   margin-left: auto;
 }
+
 .rds-days-info-overlay {
   position: fixed;
   inset: 0;

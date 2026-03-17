@@ -9,6 +9,7 @@ import ComparisonTable from '../ComparisonTable';
 import RDSGraphModal from './RDSGraphModal'; // Reusing the RDS Graph Modal
 import '../../../css/analytics/rds/AuroraClusterDetails.css';
 import '../../../css/analytics/comparison-table.css';
+import axiosClient from '../../api/axiosClient';
 
 function AuroraClusterDetails() {
     const { clusterName } = useParams();
@@ -21,6 +22,9 @@ function AuroraClusterDetails() {
     const [showGraphModal, setShowGraphModal] = useState(false);
     const [showTimelineModal, setShowTimelineModal] = useState(false);
     const [timelineInstance, setTimelineInstance] = useState(null);
+    const [clusterData, setClusterData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [instanceMetrics, setInstanceMetrics] = useState([]);
 
     useEffect(() => {
         setBgContext('analytics');
@@ -61,70 +65,141 @@ function AuroraClusterDetails() {
 
 
     // Mock Data based on user request
-    const clusterData = useMemo(() => {
-        const isDocDB = engine === 'DocumentDB' || (clusterName && clusterName.startsWith('docdb'));
-        const currentEngine = isDocDB ? 'docdb' : 'aurora-mysql';
-        
-        return {
-            cluster_info: {
-                cluster_identifier: clusterName || (isDocDB ? "docdb-prod-cluster" : "aurora-prod-cluster"),
-                engine: currentEngine,
-                status: "available"
-            },
-            instances: [
-                {
-                    instance_identifier: `${clusterName}-instance-1`,
-                    instance_class: isDocDB ? "db.r5.large" : "db.r5.large",
-                    role: "WRITER",
-                    status: "available",
-                    avg_cpu_utilization: 30.0,
-                    avg_database_connections: isDocDB ? 120.0 : 48.0,
-                    avg_read_iops: isDocDB ? 650.0 : 290.0,
-                    avg_write_iops: isDocDB ? 80.0 : 145.0,
-                    days_active: 30,
-                    active_dates: ["2026-03-30", "2026-03-29", "2026-03-28", "2026-03-15", "2026-03-01"]
+    // const clusterData = useMemo(() => ({
+    //     cluster_info: {
+    //         cluster_identifier: clusterName || "aurora-prod-cluster",
+    //         engine: "aurora-mysql",
+    //         status: "available"
+    //     },
+    //     instances: [
+    //         {
+    //             instance_identifier: `${clusterName}-instance-1` || "aurora-prod-instance-1",
+    //             instance_class: "db.r5.large",
+    //             role: "WRITER",
+    //             status: "available",
+    //             avg_cpu_utilization: 30.0,
+    //             avg_database_connections: 48.0,
+    //             avg_read_iops: 290.0,
+    //             avg_write_iops: 145.0,
+    //             days_active: 30,
+    //             active_dates: ["2026-03-30", "2026-03-29", "2026-03-28", "2026-03-15", "2026-03-01"]
+    //         },
+    //         {
+    //             instance_identifier: `${clusterName}-instance-2` || "aurora-prod-instance-2",
+    //             instance_class: "db.r5.large",
+    //             role: "READER",
+    //             status: "available",
+    //             avg_cpu_utilization: 25.0,
+    //             avg_database_connections: 42.0,
+    //             avg_read_iops: 245.0,
+    //             avg_write_iops: 5.0,
+    //             days_active: 30,
+    //             active_dates: ["2026-03-30", "2026-03-25", "2026-03-20", "2026-03-15"]
+    //         },
+    //         {
+    //             instance_identifier: `${clusterName}-instance-3` || "aurora-prod-instance-3",
+    //             instance_class: "db.r5.xlarge",
+    //             role: "READER",
+    //             status: "available",
+    //             avg_cpu_utilization: 15.0,
+    //             avg_database_connections: 12.0,
+    //             avg_read_iops: 120.0,
+    //             avg_write_iops: 2.0,
+    //             days_active: 15,
+    //             active_dates: ["2026-03-15", "2026-03-14", "2026-03-10"]
+    //         }
+    //     ],
+    //     metric_summary: {
+    //         date_range: {
+    //             start: "2026-02-04",
+    //             end: "2026-03-05"
+    //         },
+    //         total_days: 30,
+    //         total_instances: 3
+    //     }
+    // }), [clusterName]);
+
+    const fetchClusterMetrics = async () => {
+        try {
+            setLoading(false);
+            setClusterData({
+                cluster_info: {
+                    cluster_identifier: clusterName || "aurora-prod-cluster",
+                    engine: engine || "aurora-mysql",
+                    status: "available"
                 },
-                {
-                    instance_identifier: `${clusterName}-instance-2`,
-                    instance_class: "db.r5.large",
-                    role: "READER",
-                    status: "available",
-                    avg_cpu_utilization: 25.0,
-                    avg_database_connections: isDocDB ? 85.0 : 42.0,
-                    avg_read_iops: isDocDB ? 450.0 : 245.0,
-                    avg_write_iops: 5.0,
-                    days_active: 30,
-                    active_dates: ["2026-03-30", "2026-03-25", "2026-03-20", "2026-03-15"]
-                },
-                {
-                    instance_identifier: `${clusterName}-instance-3`,
-                    instance_class: isDocDB ? "db.r5.large" : "db.r5.xlarge",
-                    role: "READER",
-                    status: "available",
-                    avg_cpu_utilization: 15.0,
-                    avg_database_connections: 12.0,
-                    avg_read_iops: 120.0,
-                    avg_write_iops: 2.0,
-                    days_active: 15,
-                    active_dates: ["2026-03-15", "2026-03-14", "2026-03-10"]
+                instances: [
+                    {
+                        instance_identifier: `${clusterName}-instance-1`,
+                        instance_class: "db.r5.large",
+                        role: "WRITER",
+                        status: "available",
+                        avg_cpu_utilization: 30.0,
+                        avg_database_connections: 48.0,
+                        avg_read_iops: 290.0,
+                        avg_write_iops: 145.0,
+                        days_active: 30,
+                        active_dates: ["2026-03-17", "2026-03-16", "2026-03-15", "2026-03-14", "2026-03-13"]
+                    },
+                    {
+                        instance_identifier: `${clusterName}-instance-2`,
+                        instance_class: "db.r5.large",
+                        role: "READER",
+                        status: "available",
+                        avg_cpu_utilization: 25.0,
+                        avg_database_connections: 42.0,
+                        avg_read_iops: 245.0,
+                        avg_write_iops: 5.0,
+                        days_active: 30,
+                        active_dates: ["2026-03-17", "2026-03-16", "2026-03-15", "2026-03-14"]
+                    },
+                    {
+                        instance_identifier: `${clusterName}-instance-3`,
+                        instance_class: "db.r5.xlarge",
+                        role: "READER",
+                        status: "available",
+                        avg_cpu_utilization: 15.0,
+                        avg_database_connections: 12.0,
+                        avg_read_iops: 120.0,
+                        avg_write_iops: 2.0,
+                        days_active: 15,
+                        active_dates: ["2026-03-17", "2026-03-16", "2026-03-15"]
+                    }
+                ],
+                metric_summary: {
+                    date_range: {
+                        start: "2026-02-15",
+                        end: "2026-03-17"
+                    },
+                    total_days: 30,
+                    total_cost: 1500.50,
+                    total_instances: 3
                 }
-            ],
-            metric_summary: {
-                date_range: {
-                    start: "2026-02-04",
-                    end: "2026-03-05"
-                },
-                total_days: 30,
-                total_instances: 3,
-                total_cost: isDocDB ? 92 : 84
-            }
-        };
-    }, [clusterName, cluster, engine]);
+            });
+            return;
+        } catch (err) {
+            console.error("Failed to fetch Aurora cluster metrics", err);
+            setLoading(false);
+        }
+    };
+
+    const fetchInstanceMetrics = async (instanceIdentifier) => {
+        try {
+            // Dummy data instead of API call
+            return [
+                { date: "2026-03-15", cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2 },
+                { date: "2026-03-16", cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0 },
+                { date: "2026-03-17", cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5 }
+            ];
+        } catch (err) {
+            console.error("Failed to fetch Aurora instance metrics", err);
+            return [];
+        }
+    };
 
     useEffect(() => {
+        fetchClusterMetrics();
     }, [clusterName, selectedRange, customRange]);
-
-    const loading = false;
 
     if (loading || !clusterData) {
         return (
@@ -138,10 +213,13 @@ function AuroraClusterDetails() {
         );
     }
 
-    const handleViewTrend = (instance) => {
+    const handleViewTrend = async (instance) => {
+        const identifier = instance.instance_identifier;
+        const metrics = await fetchInstanceMetrics(identifier);
         setSelectedInstance({
-            db_identifier: instance.instance_identifier,
-            ...instance
+            db_identifier: identifier,
+            ...instance,
+            metrics: metrics   // ✅ attach metrics here
         });
         setShowGraphModal(true);
     };
@@ -440,6 +518,7 @@ function AuroraClusterDetails() {
                     onClose={() => {
                         setShowGraphModal(false);
                         setSelectedInstance(null);
+                        setInstanceMetrics([]);
                     }}
                 />
             )}
