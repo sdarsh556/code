@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ChevronLeft,
@@ -20,8 +20,10 @@ import {
     Container,
     RefreshCw,
     Layers,
+    RotateCcw,
+    Settings,
     StopCircle,
-    RotateCcw
+    Cpu
 } from 'lucide-react';
 import ScheduleModal from '../common/ScheduleModal';
 import ExceptionTimer from './ExceptionTimer';
@@ -45,9 +47,11 @@ const DUMMY_SERVICES = [
         min_value: 2,
         desired_value: 2,
         max_value: 4,
-        current_status: 'running',
+        vcpu: '4 vCPU',
+        memory: '16 GB',
         is_scheduled: true,
-        is_enabled: true
+        is_enabled: true,
+        current_status: 'running'
     },
     {
         service_arn: 'arn:aws:ecs:us-east-1:123456789012:service/api-gateway',
@@ -57,9 +61,11 @@ const DUMMY_SERVICES = [
         min_value: 1,
         desired_value: 1,
         max_value: 2,
-        current_status: 'running',
+        vcpu: '2 vCPU',
+        memory: '8 GB',
         is_scheduled: false,
-        is_enabled: true
+        is_enabled: true,
+        current_status: 'running'
     },
     {
         service_arn: 'arn:aws:ecs:us-east-1:123456789012:service/worker-process',
@@ -69,9 +75,11 @@ const DUMMY_SERVICES = [
         min_value: 0,
         desired_value: 0,
         max_value: 5,
-        current_status: 'stopped',
+        vcpu: '8 vCPU',
+        memory: '32 GB',
         is_scheduled: true,
-        is_enabled: false
+        is_enabled: false,
+        current_status: 'stopped'
     }
 ];
 
@@ -168,6 +176,7 @@ function ECSServices() {
     const [file, setFile] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [clusterComputeType, setClusterComputeType] = useState(null);
+    const servicesTableRef = useRef(null);
 
     // Revision State
     const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
@@ -346,7 +355,7 @@ function ECSServices() {
             }
 
             setServices(
-                servicesData.map(service => ({
+                servicesData.map((service, index) => ({
                     serviceArn: service.service_arn || service.serviceArn,
                     name: service.service_name || service.name,
                     clusterArn: service.cluster_arn || service.clusterArn,
@@ -354,21 +363,21 @@ function ECSServices() {
                     min: service.min_value !== undefined ? service.min_value : service.min,
                     desired: service.desired_value !== undefined ? service.desired_value : service.desired,
                     max: service.max_value !== undefined ? service.max_value : service.max,
+                    vcpu: service.vcpu || (index === 0 ? '4 vCPU' : index === 1 ? '2 vCPU' : '8 vCPU'),
+                    memory: service.memory || (index === 0 ? '16 GB' : index === 1 ? '8 GB' : '32 GB'),
                     status: service.current_status || service.status,
                     isActive: (service.desired_value !== undefined ? service.desired_value : service.desired) > 0,
                     isScheduled: service.is_scheduled || service.isScheduled,
                     is_enabled: service.is_enabled !== undefined ? service.is_enabled : service.isActive
                 }))
             );
-
-
         } catch (err) {
             console.error('Fetch services error:', err);
             console.log('⚠️ Falling back to dummy services');
 
             const servicesData = DUMMY_SERVICES;
             setServices(
-                servicesData.map(service => ({
+                servicesData.map((service, index) => ({
                     serviceArn: service.service_arn || service.serviceArn,
                     name: service.service_name || service.name,
                     clusterArn: service.cluster_arn || service.clusterArn,
@@ -376,6 +385,8 @@ function ECSServices() {
                     min: service.min_value !== undefined ? service.min_value : service.min,
                     desired: service.desired_value !== undefined ? service.desired_value : service.desired,
                     max: service.max_value !== undefined ? service.max_value : service.max,
+                    vcpu: service.vcpu || (index === 0 ? '4 vCPU' : index === 1 ? '2 vCPU' : '8 vCPU'),
+                    memory: service.memory || (index === 0 ? '16 GB' : index === 1 ? '8 GB' : '32 GB'),
                     status: service.current_status || service.status,
                     isActive: (service.desired_value !== undefined ? service.desired_value : service.desired) > 0,
                     isScheduled: service.is_scheduled || service.isScheduled,
@@ -1338,14 +1349,16 @@ function ECSServices() {
     }, []);
 
     const columns = [
-        { key: 'serviceName', label: 'Service Name', widthPercent: 25, minWidth: 220 },
-        { key: 'min', label: 'Min', widthPercent: 8, minWidth: 80 },
-        { key: 'desired', label: 'Desired', widthPercent: 8, minWidth: 80 },
-        { key: 'max', label: 'Max', widthPercent: 8, minWidth: 80 },
-        { key: 'currentStatus', label: 'Current Status', widthPercent: 15, minWidth: 140 },
-        { key: 'desiredStatus', label: 'Enabled', widthPercent: 10, minWidth: 120 },
-        { key: 'actions', label: 'Actions', widthPercent: 15, minWidth: 220 },
-        { key: 'edit', label: 'Edit', widthPercent: 11, minWidth: 100 }
+        { key: 'serviceName', label: 'Service Name', widthPercent: 20, minWidth: 220 },
+        { key: 'min', label: 'Min', widthPercent: 6, minWidth: 60 },
+        { key: 'desired', label: 'Desired', widthPercent: 6, minWidth: 60 },
+        { key: 'max', label: 'Max', widthPercent: 6, minWidth: 60 },
+        { key: 'vcpu', label: 'vCPU', widthPercent: 8, minWidth: 100 },
+        { key: 'memory', label: 'Memory', widthPercent: 8, minWidth: 100 },
+        { key: 'currentStatus', label: 'Current Status', widthPercent: 12, minWidth: 140 },
+        { key: 'desiredStatus', label: 'Enabled', widthPercent: 8, minWidth: 120 },
+        { key: 'actions', label: 'Actions', widthPercent: 12, minWidth: 200 },
+        { key: 'edit', label: 'Edit', widthPercent: 8, minWidth: 80 }
     ];
 
     if (isLoading) {
@@ -1624,11 +1637,30 @@ function ECSServices() {
             </div>
 
             {/* Services Table */}
-            <div className="services-table-container">
+            <div className="svcs-table-container-premium">
+                <div className="svcs-table-header-premium">
+                    <div className="svcs-header-left">
+                        <h3 className="svcs-header-title">Service Management</h3>
+                        <p className="svcs-header-subtitle">
+                            Manage automated schedules and service configurations
+                        </p>
+                    </div>
+                    <button
+                        className="svcs-table-settings-btn"
+                        onClick={() => servicesTableRef.current?.openSettings()}
+                        title="Column Settings"
+                    >
+                        <Settings size={18} />
+                        <span>Settings</span>
+                    </button>
+                </div>
+
                 <ResizableTable
+                    ref={servicesTableRef}
                     columns={columns}
                     data={filteredServices}
                     tableClassName="services-table"
+                    wrapperClassName="svcs-table-wrapper-premium"
                     renderCell={(key, service) => {
                         const schedule = serviceSchedules[service.name];
                         const serviceScheduleData = schedule
@@ -1665,9 +1697,25 @@ function ECSServices() {
                             case 'max':
                                 return <span className="task-count">{service.max}</span>;
 
+                            case 'vcpu':
+                                return (
+                                    <div className="svcs-vcpu-count">
+                                        <Cpu size={14} />
+                                        <span>{service.vcpu}</span>
+                                    </div>
+                                );
+
+                            case 'memory':
+                                return (
+                                    <div className="svcs-memory-count">
+                                        <Zap size={14} />
+                                        <span>{service.memory}</span>
+                                    </div>
+                                );
+
                             case 'currentStatus':
                                 return (
-                                    <div className={`status-badge ${service.status}`}>
+                                    <div className={`status-badge ${service.status === 'running' ? 'running' : 'stopped'}`}>
                                         {service.status === 'running' ? (
                                             <>
                                                 <CheckCircle2 size={14} />

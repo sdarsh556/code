@@ -2,9 +2,29 @@
    WRAPPER
    ========================================= */
 
-.resizable-table-wrapper {
+.table-responsive {
     width: 100%;
     overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-medium) transparent;
+}
+
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: var(--border-medium);
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
 }
 
 /* =========================================
@@ -97,15 +117,330 @@
    DARK MODE
    ========================================= */
 
-.layout-container[data-theme="dark"] .resizable-table th {
-    background: rgba(51, 65, 85, 0.6);
+[data-theme="dark"] .resizable-table th {
+    background: rgba(15, 23, 42, 0.6);
     border-bottom: 2px solid rgba(148, 163, 184, 0.2);
 }
 
-.layout-container[data-theme="dark"] .resizable-table td {
+[data-theme="dark"] .resizable-table td {
     border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
-.layout-container[data-theme="dark"] .resize-handle::after {
+[data-theme="dark"] .resize-handle::after {
     background: rgba(148, 163, 184, 0.3);
+}
+
+/* =========================================
+   COLUMN SETTINGS MODAL
+   ========================================= */
+
+.rt-column-settings-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: rdsFadeIn 0.2s ease-out;
+}
+
+@keyframes rdsFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.rt-csm-modal {
+    width: 480px;
+    background: var(--surface-glass);
+    border: 1px solid var(--border-light);
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg), 0 0 40px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .rt-csm-modal {
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 20px rgba(45, 212, 191, 0.05);
+}
+
+@keyframes modalSlideUp {
+    from {
+        transform: translateY(30px) scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.rt-csm-header {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface-hover);
+}
+
+.rt-csm-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rt-csm-icon {
+    color: var(--accent-primary);
+}
+
+.rt-csm-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.rt-csm-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition-base);
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.rt-csm-close:hover {
+    color: var(--text-primary);
+    transform: rotate(90deg);
+}
+
+.rt-csm-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.rt-csm-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+}
+
+/* Toggles Grid */
+.rt-column-toggles-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.rt-column-toggles-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.rt-column-toggles-grid::-webkit-scrollbar-thumb {
+    background: var(--border-medium);
+    border-radius: 3px;
+}
+
+.rt-column-toggle-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--surface-hover);
+    border-radius: 10px;
+    border: 1px solid transparent;
+    transition: var(--transition-base);
+    border: 1px solid var(--border-light);
+}
+
+.rt-column-toggle-item:hover {
+    border-color: var(--accent-primary);
+    background: var(--surface-elevated);
+}
+
+.rt-column-toggle-item.mandatory {
+    opacity: 0.6;
+}
+
+.rt-ct-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.rt-csm-footer {
+    padding: 20px 24px;
+    background: var(--surface-hover);
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.rt-csm-cancel {
+    background: transparent;
+    border: 1px solid var(--border-medium);
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition-base);
+}
+
+.rt-csm-cancel:hover {
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.rt-csm-submit {
+    background: var(--gradient-primary);
+    background-clip: padding-box;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    transition: var(--transition-base);
+    box-shadow: 0 4px 12px var(--shadow-sm); 
+}
+
+.rt-csm-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px var(--shadow-md);
+    filter: brightness(1.1);
+}
+
+/* Switch Styles */
+.rt-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.rt-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.rt-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #FB7185; /* Soft Rose for Stopped (Off) */
+    transition: .4s;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rt-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.rt-switch input:checked + .rt-slider {
+    background-color: #2DD4BF; /* Teal for Running (On) */
+}
+
+.rt-switch input:checked + .rt-slider:before {
+    transform: translateX(24px);
+}
+
+.rt-slider.rt-round {
+    border-radius: 34px;
+}
+
+.rt-slider.rt-round:before {
+    border-radius: 50%;
+}
+
+.rt-switch input:disabled + .rt-slider {
+    cursor: not-allowed;
+    opacity: 0.4;
+    filter: grayscale(1);
+}
+
+.rt-column-toggle-item.mandatory .rt-slider {
+    background: #94a3b8;
+    opacity: 0.5;
+}
+
+.rt-column-toggle-item.mandatory .rt-slider:before {
+    background: #cbd5e1;
+}
+
+/* =========================================
+   DARK MODE ENHANCEMENTS for CSM
+   ========================================= */
+
+[data-theme="dark"] .rt-column-settings-overlay {
+    background: rgba(8, 11, 19, 0.7);
+}
+
+[data-theme="dark"] .rt-csm-header,
+[data-theme="dark"] .rt-csm-footer {
+    background: rgba(30, 41, 59, 0.4);
+}
+
+[data-theme="dark"] .rt-csm-header h3,
+[data-theme="dark"] .rt-ct-label {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .rt-column-toggle-item {
+    background: rgba(30, 41, 59, 0.3);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .rt-column-toggle-item:hover {
+    background: rgba(30, 41, 59, 0.6);
+    border-color: rgba(45, 212, 191, 0.4);
+    box-shadow: 0 0 15px rgba(45, 212, 191, 0.05);
+}
+
+[data-theme="dark"] .rt-csm-cancel {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .rt-csm-cancel:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f1f5f9;
+    border-color: rgba(255, 255, 255, 0.2);
 }

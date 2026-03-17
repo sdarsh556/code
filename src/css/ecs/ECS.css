@@ -595,6 +595,74 @@
     border: 1px solid var(--border-light);
 }
 
+/* vCPU and Memory Column Badges */
+.vcpu-count,
+.memory-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    font-weight: 800;
+    font-size: 0.875rem;
+    transition: all var(--transition-bounce);
+    letter-spacing: 0.02em;
+    backdrop-filter: var(--backdrop-blur);
+}
+
+.vcpu-count {
+    color: #4F46E5; /* Indigo-600 */
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(99, 102, 241, 0.1) 100%);
+    border: 1px solid rgba(79, 70, 229, 0.2);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+}
+
+.memory-count {
+    color: #D97706; /* Amber-600 */
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.05) 0%, rgba(245, 158, 11, 0.1) 100%);
+    border: 1px solid rgba(217, 119, 6, 0.2);
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.1);
+}
+
+.vcpu-count:hover,
+.memory-count:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: var(--shadow-xl);
+    filter: brightness(1.05);
+}
+
+.vcpu-count:hover {
+    border-color: rgba(79, 70, 229, 0.4);
+}
+
+.memory-count:hover {
+    border-color: rgba(217, 119, 6, 0.4);
+}
+
+[data-theme="dark"] .vcpu-count {
+    color: #818CF8; /* Indigo-400 */
+    background: linear-gradient(135deg, rgba(129, 140, 248, 0.15) 0%, rgba(165, 180, 252, 0.05) 100%);
+    border-color: rgba(129, 140, 248, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 15px rgba(129, 140, 248, 0.1);
+}
+
+[data-theme="dark"] .memory-count {
+    color: #FBBF24; /* Amber-400 */
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(252, 211, 236, 0.05) 100%);
+    border-color: rgba(251, 191, 36, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 15px rgba(251, 191, 36, 0.1);
+}
+
+[data-theme="dark"] .vcpu-count:hover {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), var(--glow-primary);
+    border-color: var(--accent-primary);
+}
+
+[data-theme="dark"] .memory-count:hover {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), var(--glow-warning);
+    border-color: var(--accent-warning);
+}
+
 /* Compute Type Badge */
 .compute-badge {
     display: inline-flex;
@@ -1937,4 +2005,33 @@
     .ecs-stats-grid {
         grid-template-columns: 1fr;
     }
+}
+/* ============================================
+   TABLE SETTINGS BUTTON (MATCHING RDS)
+   ============================================ */
+
+.ecs-th-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--surface-hover);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-base);
+}
+
+.ecs-th-action-btn:hover {
+    background: var(--surface-elevated);
+    border-color: var(--accent-primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.ecs-settings-btn {
+    color: var(--accent-primary);
 }

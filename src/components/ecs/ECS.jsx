@@ -18,8 +18,8 @@ import {
     Zap,
     CalendarPlus,
     CalendarMinus,
-    Play
-
+    Play,
+    Settings
 } from 'lucide-react';
 import ECSIcon from '../common/ECSIcon';
 import ExceptionTimer from './ExceptionTimer';
@@ -41,6 +41,8 @@ const DUMMY_CLUSTERS = [
         runningServices: 10,
         closedServices: 2,
         computeType: 'FARGATE',
+        vcpu: '32 vCPU',
+        memory: '128 GB',
         isScheduled: true,
         schedule_start: null,
         schedule_end: null
@@ -52,6 +54,8 @@ const DUMMY_CLUSTERS = [
         runningServices: 8,
         closedServices: 0,
         computeType: 'FARGATE',
+        vcpu: '16 vCPU',
+        memory: '64 GB',
         isScheduled: false,
         schedule_start: null,
         schedule_end: null
@@ -63,6 +67,8 @@ const DUMMY_CLUSTERS = [
         runningServices: 5,
         closedServices: 10,
         computeType: 'ASG',
+        vcpu: '64 vCPU',
+        memory: '256 GB',
         isScheduled: true,
         schedule_start: null,
         schedule_end: null
@@ -139,6 +145,7 @@ const isCacheValid = (timestamp) => {
 };
 
 function ECS() {
+    const tableRef = useRef(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [uploadedFile, setUploadedFile] = useState(null);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -172,13 +179,15 @@ function ECS() {
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
     const columns = [
-        { key: 'name', label: 'Cluster Name', widthPercent: 22, minWidth: 180 },
-        { key: 'activeServices', label: 'Active Services', widthPercent: 13, minWidth: 130 },
-        { key: 'runningServices', label: 'Running Services', widthPercent: 14, minWidth: 130 },
-        { key: 'closedServices', label: 'Closed Services', widthPercent: 13, minWidth: 130 },
-        { key: 'computeType', label: 'Compute Type', widthPercent: 12, minWidth: 150 },
-        { key: 'schedule', label: 'Schedule', widthPercent: 15, minWidth: 150 },
-        { key: 'exception', label: 'Exception', widthPercent: 11, minWidth: 120 }
+        { key: 'name', label: 'Cluster Name', widthPercent: 20, minWidth: 180, mandatory: true },
+        { key: 'activeServices', label: 'Active Services', widthPercent: 12, minWidth: 120 },
+        { key: 'runningServices', label: 'Running Services', widthPercent: 12, minWidth: 120 },
+        { key: 'closedServices', label: 'Closed Services', widthPercent: 12, minWidth: 120 },
+        { key: 'computeType', label: 'Compute Type', widthPercent: 11, minWidth: 130 },
+        { key: 'vcpu', label: 'vCPU', widthPercent: 9, minWidth: 100 },
+        { key: 'memory', label: 'Memory', widthPercent: 9, minWidth: 100 },
+        { key: 'schedule', label: 'Schedule', widthPercent: 10, minWidth: 140 },
+        { key: 'exception', label: 'Exception', widthPercent: 5, minWidth: 80 }
     ];
 
 
@@ -201,6 +210,8 @@ function ECS() {
                     running_services_count: c.runningServices,
                     stopped_services_count: c.closedServices,
                     compute_type: c.computeType,
+                    vcpu_total: c.vcpu,
+                    memory_total: c.memory,
                     is_scheduled: c.isScheduled,
                     schedule_start: c.schedule_start,
                     schedule_end: c.schedule_end
@@ -214,6 +225,8 @@ function ECS() {
                 runningServices: c.running_services_count,
                 closedServices: c.stopped_services_count,
                 computeType: c.compute_type,
+                vcpu: c.vcpu_total || (index === 0 ? '32 vCPU' : index === 1 ? '16 vCPU' : '64 vCPU'),
+                memory: c.memory_total || (index === 0 ? '128 GB' : index === 1 ? '64 GB' : '256 GB'),
                 isScheduled: c.is_scheduled,
                 schedule_start: c.schedule_start,
                 schedule_end: c.schedule_end
@@ -935,15 +948,26 @@ Not Found: ${result.summary.clusters_not_found.length}`
 
             {/* Clusters Table */}
             <div className="clusters-table-modern">
-                <div className="table-header-modern">
-                    <h3 className="table-title">Cluster Schedule Management</h3>
-                    <p className="table-subtitle">
-                        Manage automated schedules and exceptions
-                    </p>
+                <div className="table-header-modern" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <h3 className="table-title">Cluster Schedule Management</h3>
+                        <p className="table-subtitle">
+                            Manage automated schedules and exceptions
+                        </p>
+                    </div>
+                    <button 
+                        className="ecs-th-action-btn ecs-settings-btn" 
+                        onClick={() => tableRef.current?.openSettings()}
+                        title="Column Settings"
+                    >
+                        <Settings size={18} />
+                        <span>Settings</span>
+                    </button>
                 </div>
 
                 <div className="table-container-modern">
                     <ResizableTable
+                        ref={tableRef}
                         columns={columns}
                         data={filteredClustersWithStatus}
                         tableClassName="modern-table"
@@ -1021,6 +1045,22 @@ Not Found: ${result.summary.clusters_not_found.length}`
                                             <Cpu size={16} />
                                             {cluster.computeType}
                                         </span>
+                                    );
+
+                                case 'vcpu':
+                                    return (
+                                        <div className="vcpu-count">
+                                            <Cpu size={16} />
+                                            <span>{cluster.vcpu}</span>
+                                        </div>
+                                    );
+
+                                case 'memory':
+                                    return (
+                                        <div className="memory-count">
+                                            <Zap size={16} />
+                                            <span>{cluster.memory}</span>
+                                        </div>
                                     );
 
                                 case 'schedule':
