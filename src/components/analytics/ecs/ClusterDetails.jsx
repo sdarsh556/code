@@ -77,7 +77,7 @@ function ClusterDetails() {
                 <div className="cd-header">
                     <div className="cd-header-left">
                         <div className="cd-header-icon">
-                            <ECSIcon size={40} />
+                            <ECSIcon size={40} color="inherit" />
                         </div>
                         <div>
                             <h1 className="cd-title">{clusterName}</h1>

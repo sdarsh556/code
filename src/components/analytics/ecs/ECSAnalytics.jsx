@@ -317,7 +317,7 @@ function ECSAnalytics() {
                 <div className="ecs-page-header">
                     <div className="ecs-header-left">
                         <div className="ecs-header-icon">
-                            <ECSIcon size={40} />
+                            <ECSIcon size={40} color="inherit" />
                             <div className="ecs-icon-ring" />
                         </div>
                         <div>
@@ -430,7 +430,7 @@ function ECSAnalytics() {
                             /* ── Empty State ── */
                             <div className="clusters-empty-state">
                                 <div className="empty-icon-wrap">
-                                    <SearchX size={48} className="empty-icon" />
+                                    <ECSIcon size={18} className="sd-service-icon" color="inherit" />
                                     <div className="empty-icon-ring" />
                                 </div>
                                 <h3 className="empty-title">No clusters found</h3>

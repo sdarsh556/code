@@ -522,16 +522,19 @@ function ECSServices() {
     const stats = useMemo(() => {
         let running = 0;
         let stopped = 0;
+        let schedules = 0;
 
         services.forEach(service => {
             if (service.status === 'running') running++;
             else if (service.status === 'stopped') stopped++;
+            if (service.isScheduled || serviceSchedules[service.name]) schedules++;
         });
 
         return {
             running,
             stopped,
-            total: services.length
+            total: services.length,
+            schedules
         };
     }, [services]);
 
@@ -1431,7 +1434,7 @@ function ECSServices() {
                 <div className="header-content">
                     <div className="header-left-section">
                         <div className="header-icon-modern">
-                            <ECSIcon className="header-icon-svg" />
+                            <ECSIcon className="header-icon-svg" color="inherit" />
                         </div>
                         <div className="header-text-column">
                             <button onClick={handleBack} className="tiny-back-btn">
@@ -1498,83 +1501,110 @@ function ECSServices() {
                 </div>
             </div>
 
-            {/* Stats & Actions Bar */}
-            <div className="stats-actions-container">
-                {/* Stats Cards */}
-                <div className="stats-cards-modern">
-                    <div className="stat-card-modern stat-success-modern">
-                        <div className="stat-icon-modern">
-                            <Zap size={28} />
-                        </div>
-                        <div className="stat-content-modern">
-                            <h3 className="stat-value-modern text-success">{stats.running}</h3>
-                            <p className="stat-label-modern">Running Services</p>
-                        </div>
+            {/* Quick Actions Panel - Premium RDS Replica */}
+            <div className="svcs-action-panel">
+                <div className="svcs-action-bg-glow"></div>
+                <div className="svcs-action-info">
+                    <div className="svcs-action-icon-wrapper">
+                        <Activity size={24} />
+                        <div className="svcs-icon-pulse"></div>
                     </div>
-
-                    <div className="stat-card-modern stat-stopped-modern">
-                        <div className="stat-icon-modern">
-                            <AlertCircle size={28} />
-                        </div>
-                        <div className="stat-content-modern">
-                            <h3 className="stat-value-modern text-danger">{stats.stopped}</h3>
-                            <p className="stat-label-modern">Stopped Services</p>
-                        </div>
-                    </div>
-
-                    <div className="stat-card-modern stat-info-modern">
-                        <div className="stat-icon-modern">
-                            <Server size={28} />
-                        </div>
-                        <div className="stat-content-modern">
-                            <h3 className="stat-value-modern">{stats.total}</h3>
-                            <p className="stat-label-modern">Total Services</p>
-                        </div>
+                    <div>
+                        <p className="svcs-action-title">Quick Actions</p>
+                        <p className="svcs-action-subtitle">Manage service states and cluster sync with real-time controls</p>
                     </div>
                 </div>
-
-                <div className="update-buttons-modern">
+                <div className="svcs-action-buttons">
                     <button
-                        className="action-btn-modern btn-update-action"
+                        className="svcs-btn-stack svcs-start-all-btn"
+                        onClick={() => setBulkAction({ open: true, action: 'START', mode: null })}
+                        disabled={isStartingAll || isProcessing}
+                    >
+                        <div className="svcs-icon-wrapper">
+                            <Play size={18} fill="currentColor" />
+                        </div>
+                        <span>Start All</span>
+                    </button>
+
+                    <button
+                        className="svcs-btn-stack svcs-stop-all-btn"
+                        onClick={() => setBulkAction({ open: true, action: 'STOP', mode: null })}
+                        disabled={isStoppingAll || isProcessing}
+                    >
+                        <div className="svcs-icon-wrapper">
+                            <StopCircle size={18} fill="currentColor" />
+                        </div>
+                        <span>Stop All</span>
+                    </button>
+
+                    <button
+                        className="svcs-btn-stack svcs-update-btn"
                         onClick={handleUpdateStatusWithConfirm}
                         disabled={isProcessing}
                     >
-                        <RefreshCw size={16} />
-                        <span>{isProcessing ? "Updating..." : "Update Status"}</span>
+                        <div className="svcs-icon-wrapper">
+                            <RefreshCw size={18} className={isProcessing ? 'svcs-spinning' : ''} />
+                        </div>
+                        <span>Update Status</span>
                     </button>
 
                     <button
-                        className="action-btn-modern btn-revision-action"
+                        className="svcs-btn-stack svcs-revision-btn"
                         onClick={fetchInventoryDates}
                         disabled={isRevisionLoading}
                     >
-                        <RotateCcw size={16} />
-                        <span>{isRevisionLoading ? "Loading..." : "Revision"}</span>
+                        <div className="svcs-icon-wrapper">
+                            <RotateCcw size={18} className={isRevisionLoading ? 'svcs-spinning' : ''} />
+                        </div>
+                        <span>Revision</span>
                     </button>
+                </div>
+            </div>
 
+            {/* Stats Grid - 4 Columns Premium */}
+            <div className="svcs-stats-grid">
+                <div className="svcs-stat-card">
+                    <div className="svcs-stat-header">
+                        <span className="svcs-stat-title">Running Services</span>
+                        <div className="svcs-stat-icon-wrapper svcs-emerald">
+                            <Zap size={22} />
+                        </div>
+                    </div>
+                    <h3 className="svcs-stat-value svcs-emerald-text">{stats.running}</h3>
+                    <div className="svcs-stat-shimmer"></div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="action-buttons-modern">
-                    <button
-                        className="action-btn-modern btn-start"
-                        onClick={() =>
-                            setBulkAction({ open: true, action: 'START', mode: null })
-                        }
-                    >
-                        <Play size={16} />
-                        Start All
-                    </button>
+                <div className="svcs-stat-card">
+                    <div className="svcs-stat-header">
+                        <span className="svcs-stat-title">Stopped Services</span>
+                        <div className="svcs-stat-icon-wrapper svcs-rose">
+                            <AlertCircle size={22} />
+                        </div>
+                    </div>
+                    <h3 className="svcs-stat-value svcs-rose-text">{stats.stopped}</h3>
+                    <div className="svcs-stat-shimmer"></div>
+                </div>
 
-                    <button
-                        className="action-btn-modern btn-stop"
-                        onClick={() =>
-                            setBulkAction({ open: true, action: 'STOP', mode: null })
-                        }
-                    >
-                        <StopCircle size={16} />
-                        Stop All
-                    </button>
+                <div className="svcs-stat-card">
+                    <div className="svcs-stat-header">
+                        <span className="svcs-stat-title">Total Services</span>
+                        <div className="svcs-stat-icon-wrapper svcs-blue">
+                            <Server size={22} />
+                        </div>
+                    </div>
+                    <h3 className="svcs-stat-value svcs-blue-text">{stats.total}</h3>
+                    <div className="svcs-stat-shimmer"></div>
+                </div>
+
+                <div className="svcs-stat-card">
+                    <div className="svcs-stat-header">
+                        <span className="svcs-stat-title">Total Schedules</span>
+                        <div className="svcs-stat-icon-wrapper svcs-purple">
+                            <Calendar size={22} />
+                        </div>
+                    </div>
+                    <h3 className="svcs-stat-value svcs-purple-text">{stats.schedules}</h3>
+                    <div className="svcs-stat-shimmer"></div>
                 </div>
             </div>
 

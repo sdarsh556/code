@@ -198,7 +198,7 @@ function ECSASG() {
                     {/* LEFT SIDE */}
                     <div className="header-left-cluster">
                         <div className="header-icon-modern">
-                            <ECSIcon className="header-icon-svg" />
+                            <ECSIcon className="header-icon-svg" color="inherit" />
                         </div>
 
                         <div className="header-text">

@@ -97,7 +97,7 @@ function ServiceDetails() {
                 <div className="sd-header">
                     <div className="sd-header-left">
                         <div className="sd-header-icon">
-                            <ECSIcon size={40} />
+                            <ECSIcon size={40} color="inherit" />
                         </div>
                         <div>
                             <h1 className="sd-title">{formatDate(dayData?.date)}</h1>
@@ -144,7 +144,7 @@ function ServiceDetails() {
                                 {/* Header */}
                                 <div className="sd-card-header">
                                     <div className="sd-service-name-wrap">
-                                        <ECSIcon size={18} className="sd-service-icon" />
+                                        <ECSIcon size={18} className="sd-service-icon" color="inherit" />
                                         <span className="sd-service-name">{service.serviceName}</span>
                                     </div>
                                     <div className={`sd-status-badge ${service.status}`}>

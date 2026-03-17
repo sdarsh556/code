@@ -17,7 +17,8 @@ import {
     Activity,
     Zap,
     CalendarPlus,
-    CalendarMinus
+    CalendarMinus,
+    Play
 
 } from 'lucide-react';
 import ECSIcon from '../common/ECSIcon';
@@ -526,6 +527,11 @@ function ECS() {
             0
         );
 
+        const stoppedServices = clusters.reduce(
+            (sum, c) => sum + (c.closedServices || 0),
+            0
+        );
+
         // Only count schedules from DB
         const activeScheduledCount = clusters.filter(
             (c) => c.isScheduled === true
@@ -534,7 +540,8 @@ function ECS() {
         return {
             totalClustersCount,
             totalServices,
-            activeExceptions: activeScheduledCount
+            stoppedServices,
+            activeSchedules: activeScheduledCount
         };
     }, [clusters]);
 
@@ -782,14 +789,14 @@ Not Found: ${result.summary.clusters_not_found.length}`
                 <div className="header-content-cluster">
                     <div className="header-left-cluster">
                         <div className="header-icon-modern">
-                            <ECSIcon className="header-icon-svg" />
+                            <ECSIcon className="header-icon-svg" color="inherit" />
                         </div>
                         <div className="header-text">
                             <h1 className="page-title-modern">ECS Cluster Dashboard</h1>
                         </div>
                     </div>
 
-                    <button
+                    {/* <button
                         className="btn-delta-updates"
                         onClick={handleNavigateToDeltaUpdates}
                     >
@@ -797,72 +804,115 @@ Not Found: ${result.summary.clusters_not_found.length}`
                             <GitCompare size={20} />
                         </div>
                         <span>Updates</span>
+                    </button> */}
+
+                    <button
+                        className={`ecs-btn-stack ecs-btn-delta-updates ecs-sync-btn ${isSyncing ? 'ecs-syncing' : ''}`}
+                        onClick={handleSyncWithConfirm}
+                        disabled={isSyncing}
+                    >
+                        <div className="ecs-icon-wrapper">
+                            <RefreshCw size={20} className={isSyncing ? 'ecs-spinning' : ''} />
+                        </div>
+                        <span>{isSyncing ? 'Syncing...' : 'Sync Clusters'}</span>
                     </button>
                 </div>
             </div>
 
-            {/* Stats & Actions Bar */}
-            <div className="stats-actions-container">
-                {/* Stats Cards */}
-                <div className="stats-cards-modern">
-                    <div className="stat-card-modern stat-primary-modern">
-                        <div className="stat-icon-modern">
-                            <ECSIcon />
-                        </div>
-                        <div className="stat-content-modern">
-                            <h3 className="stat-value-modern">{stats.totalClustersCount}</h3>
-                            <p className="stat-label-modern">Total Clusters</p>
-                        </div>
+            {/* Quick Actions Panel */}
+            <div className="ecs-action-panel">
+                <div className="ecs-action-info">
+                    <div className="ecs-action-icon-wrapper">
+                        <Activity size={24} />
                     </div>
-
-                    <div className="stat-card-modern stat-success-modern">
-                        <div className="stat-icon-modern">
-                            <Server size={28} />
-                        </div>
-                        <div className="stat-content-modern">
-                            <h3 className="stat-value-modern">{stats.totalServices}</h3>
-                            <p className="stat-label-modern">Total Services</p>
-                        </div>
-                    </div>
-
-                    <div className="stat-card-modern stat-info-modern">
-                        <div className="stat-icon-modern">
-                            <Clock size={28} />
-                        </div>
-                        <div className="stat-content-modern">
-                            <h3 className="stat-value-modern">{stats.activeExceptions}</h3>
-                            <p className="stat-label-modern">Active Schedules</p>
-                        </div>
+                    <div>
+                        <p className="ecs-action-title">Quick Actions</p>
+                        <p className="ecs-action-subtitle">Manage cluster state and exception policies</p>
                     </div>
                 </div>
-
-                {/* Action Buttons */}
-                <div className="action-buttons-modern">
+                <div className="ecs-action-buttons">
                     <button
-                        className={`action-btn-modern btn-sync ${isSyncing ? 'syncing' : ''}`}
-                        onClick={handleSyncWithConfirm}
-                        disabled={isSyncing}
+                        className="ecs-btn-stack ecs-btn-delta-updates ecs-start-all-btn"
+                        onClick={() => { /* Start All logic */ }}
                     >
-
-                        <RefreshCw size={20} className={isSyncing ? 'spinning' : ''} />
-                        <span>{isSyncing ? 'Syncing...' : 'Sync Clusters'}</span>
+                        <div className="ecs-icon-wrapper">
+                            <Play size={16} />
+                        </div>
+                        <span>Start All</span>
                     </button>
 
                     <button
-                        className="action-btn-modern btn-upload"
+                        className="ecs-btn-stack ecs-btn-delta-updates ecs-update-btn"
+                        onClick={() => { handleNavigateToDeltaUpdates }}
+                    >
+                        <div className="ecs-icon-wrapper">
+                            <Activity size={16} />
+                        </div>
+                        <span>Updates</span>
+                    </button>
+
+
+
+                    <button
+                        className="ecs-btn-stack ecs-btn-delta-updates ecs-upload-btn"
                         onClick={handleUploadClick}
                     >
-                        <Upload size={20} />
+                        <div className="ecs-icon-wrapper">
+                            <Upload size={16} />
+                        </div>
                         <span>Upload Exceptions</span>
-                        {uploadedFile && <span className="file-badge">{uploadedFile.name}</span>}
+                        {uploadedFile && <span className="ecs-file-badge">{uploadedFile.name}</span>}
                     </button>
                     <input
                         ref={fileInputRef}
                         type="file"
                         accept=".txt,.csv"
                         onChange={handleFileUpload}
-                        className="hidden-file-input"
+                        style={{ display: 'none' }}
                     />
+                </div>
+            </div>
+
+            {/* Premium Stats Grid - RDS Replica */}
+            <div className="ecs-stats-grid">
+                <div className="ecs-stat-card">
+                    <div className="ecs-stat-header">
+                        <span className="ecs-stat-title">Total Clusters</span>
+                        <div className="ecs-stat-icon-standard ecs-blue">
+                            <ECSIcon size={24} color="inherit" />
+                        </div>
+                    </div>
+                    <div className="ecs-stat-value ecs-glow-text">{stats.totalClustersCount}</div>
+                </div>
+
+                <div className="ecs-stat-card">
+                    <div className="ecs-stat-header">
+                        <span className="ecs-stat-title">Total Services</span>
+                        <div className="ecs-stat-icon-standard ecs-purple">
+                            <Cpu size={24} />
+                        </div>
+                    </div>
+                    <div className="ecs-stat-value ecs-purple-text">{stats.totalServices}</div>
+                </div>
+
+                <div className="ecs-stat-card">
+                    <div className="ecs-stat-header">
+                        <span className="ecs-stat-title">Stopped Services</span>
+                        <div className="ecs-stat-icon-standard ecs-red">
+                            <XCircle size={24} />
+                        </div>
+                    </div>
+                    <div className="ecs-stat-value ecs-red-text">{stats.stoppedServices}</div>
+                </div>
+
+                <div className="ecs-stat-card">
+                    <div className="ecs-stat-header">
+                        <span className="ecs-stat-title">Active Schedules</span>
+                        <div className="ecs-stat-icon-standard ecs-yellow">
+                            <Calendar size={24} />
+                        </div>
+                    </div>
+                    <div className="ecs-stat-value ecs-yellow-text">{stats.activeSchedules}</div>
                 </div>
             </div>
 

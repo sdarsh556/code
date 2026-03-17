@@ -316,7 +316,7 @@ const ECSServiceUpdates = () => {
                         <div key={update.cluster_name} className="cluster-delta-item">
                             <div className="cluster-item-header">
                                 <div className="cluster-name-block">
-                                    <ECSIcon size={20} className="c-icon" />
+                                    <ECSIcon size={20} className="c-icon" color="inherit" />
                                     <h3>{update.cluster_name}</h3>
                                     <span className="change-summary">
                                         {update.added.length > 0 && (

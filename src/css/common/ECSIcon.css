@@ -1,0 +1,47 @@
+/* ============================================
+   ECS ICON - GLOBAL THEME AWARE STYLES
+   ============================================ */
+
+.ecs-icon-container {
+    overflow: visible !important;
+    transition: all 0.3s ease;
+    display: inline-block;
+    /* Default theme-aware color if not overridden by parent/inline style */
+    color: #1e293b;
+}
+
+.layout-container[data-theme="dark"] .ecs-icon-container {
+    color: #ffffff;
+}
+
+/* Internal variables purely driven by currentColor/inheritance */
+.ecs-icon-container {
+    --ecs-icon-stroke-internal: var(--ecs-icon-stroke, currentColor);
+    /* In dark theme or when forced (active links), we use a semi-transparent white fill */
+    --ecs-icon-fill-internal: var(--ecs-icon-fill, rgba(255, 255, 255, 0.08));
+}
+
+/* Group styles */
+.ecs-icon-group {
+    stroke: var(--ecs-icon-stroke-internal);
+    fill: var(--ecs-icon-fill-internal);
+    transition: stroke 0.3s ease, fill 0.3s ease;
+}
+
+/* Light Theme Fill Adjustment */
+body:not([data-theme="dark"]) .ecs-icon-container {
+    --ecs-icon-fill-internal: var(--ecs-icon-fill, rgba(30, 41, 59, 0.05));
+}
+
+/* Sidebar Active State Override */
+.nav-link.active .ecs-icon-container {
+    color: #ffffff !important;
+    --ecs-icon-fill-internal: rgba(255, 255, 255, 0.2) !important;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)) !important;
+}
+
+/* Neon Glow for Dark Mode or Active Links */
+.layout-container[data-theme="dark"] .ecs-icon-group,
+.nav-link.active .ecs-icon-group {
+    filter: url(#neonGlow);
+}

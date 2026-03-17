@@ -1,4 +1,6 @@
-const ECSIcon = ({ size = 80, className = '' }) => {
+import '../../css/common/ECSIcon.css';
+
+const ECSIcon = ({ size = 80, className = '', color }) => {
     return (
         <svg
             width={size}
@@ -6,11 +8,8 @@ const ECSIcon = ({ size = 80, className = '' }) => {
             viewBox="0 0 100 100"
             version="1.1"
             xmlns="http://www.w3.org/2000/svg"
-            className={className}
-            style={{ 
-                filter: 'drop-shadow(0 0 15px rgba(255, 255, 255, 0.6))',
-                overflow: 'visible' 
-            }}
+            className={`ecs-icon-container ${className}`}
+            style={{ color }}
         >
             <defs>
                 {/* Glow Filter for deeper neon effect */}
@@ -20,11 +19,11 @@ const ECSIcon = ({ size = 80, className = '' }) => {
                 </filter>
             </defs>
             
-            <g stroke="white" strokeWidth="2.5" fill="rgba(255, 255, 255, 0.08)" strokeLinecap="round" strokeLinejoin="round" filter="url(#neonGlow)">
+            <g className="ecs-icon-group" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 {/* Orbital Ring - Polished white stroke */}
-                <ellipse 
-                    cx="50" cy="52" rx="42" ry="14" 
-                    strokeWidth="3" 
+                <ellipse
+                    cx="50" cy="52" rx="42" ry="14"
+                    strokeWidth="3"
                     fill="none"
                 />
 
@@ -44,7 +43,7 @@ const ECSIcon = ({ size = 80, className = '' }) => {
                     <path d="M0 -15 L15 -7.5 L0 0 L-15 -7.5 Z" />
                     <path d="M0 0 L15 -7.5 L15 12.5 L0 20 L-15 12.5 L-15 -7.5 Z" />
                 </g>
-                
+
                 {/* Node 2: Center-Bottom */}
                 <g transform="translate(50, 84) scale(0.72)">
                     <path d="M0 -15 L15 -7.5 L0 0 L-15 -7.5 Z" />
