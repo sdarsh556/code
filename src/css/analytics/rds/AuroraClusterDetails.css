@@ -420,8 +420,9 @@
 .aurora-ic-dot {
     width: 4px;
     height: 4px;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--border-strong);
     border-radius: 50%;
+    opacity: 0.5;
 }
 
 .aurora-ic-role {
@@ -462,18 +463,24 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.4rem 0.85rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--surface-card);
+    border: 1px solid var(--border-light);
     border-radius: 10px;
-    color: #94a3b8;
+    color: var(--text-secondary);
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--shadow-sm);
 }
 
 .rds-spec-tag:hover {
-    background: rgba(var(--gauge-accent-rgb), 0.1);
-    border-color: rgba(var(--gauge-accent-rgb), 0.3);
-    transform: translateY(-1px);
-    box-shadow: 0 0 15px rgba(var(--gauge-accent-rgb), 0.1);
+    background: var(--surface-elevated);
+    border-color: rgba(var(--gauge-accent-rgb), 0.4);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md), 0 0 15px rgba(var(--gauge-accent-rgb), 0.1);
+}
+
+.layout-container[data-theme="dark"] .rds-spec-tag {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 .rds-spec-tag.cpu { --gauge-accent-rgb: 59, 130, 246; }
@@ -495,8 +502,12 @@
 .rds-spec-value {
     font-size: 1rem;
     font-weight: 1000;
-    color: #f8fafc;
+    color: var(--text-primary);
     letter-spacing: -0.01em;
+}
+
+.layout-container[data-theme="dark"] .rds-spec-value {
+    color: #f8fafc;
 }
 
 .rds-spec-unit {
