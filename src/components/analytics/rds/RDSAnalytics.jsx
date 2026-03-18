@@ -271,6 +271,7 @@ function RDSAnalytics() {
                     total_read_iops: 2000,
                     total_write_iops: 1000,
                     total_connections: 5000,
+                    avg_connections: 320,
                     active_days_count: 30,
                     approx_cost: 150.75
                 },
@@ -290,6 +291,7 @@ function RDSAnalytics() {
                     total_read_iops: 1000,
                     total_write_iops: 500,
                     total_connections: 1000,
+                    avg_connections: 85,
                     active_days_count: 15,
                     approx_cost: 45.20
                 }
@@ -313,6 +315,7 @@ function RDSAnalytics() {
                     avg_memory_usage: 55.5,
                     avg_read_iops: 800,
                     avg_write_iops: 500,
+                    avg_connections: 450,
                     total_cpu: 16,
                     total_memory: 64,
                     total_read_iops: 4000,
@@ -344,6 +347,7 @@ function RDSAnalytics() {
                     avg_memory_usage: 32.8,
                     avg_read_iops: 100,
                     avg_write_iops: 50,
+                    avg_connections: 80,
                     total_cpu: 4,
                     total_memory: 8,
                     total_read_iops: 1000,
@@ -371,9 +375,9 @@ function RDSAnalytics() {
                 capacity,
                 rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
                 metricsByDate: {
-                    "2026-03-17": { cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
-                    "2026-03-16": { cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
-                    "2026-03-15": { cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
+                    "2026-03-17": { cpu: 45, memory: 58, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
+                    "2026-03-16": { cpu: 40, memory: 55, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
+                    "2026-03-15": { cpu: 42, memory: 56, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
                 }
             });
             return;
@@ -392,9 +396,9 @@ function RDSAnalytics() {
             setSelectedInstanceForTrend({
                 ...baseInstance,
                 metrics: [
-                    { date: "2026-03-15", cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2 },
-                    { date: "2026-03-16", cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0 },
-                    { date: "2026-03-17", cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5 }
+                    { date: "2026-03-15", cpu: 42, memory: 56, connections: 115, readIops: 480, writeIops: 290, cost: 15.2 },
+                    { date: "2026-03-16", cpu: 40, memory: 55, connections: 110, readIops: 450, writeIops: 280, cost: 15.0 },
+                    { date: "2026-03-17", cpu: 45, memory: 58, connections: 120, readIops: 500, writeIops: 300, cost: 15.5 }
                 ]
             });
             setLoadingTrend(false);
@@ -414,9 +418,9 @@ function RDSAnalytics() {
                 capacity,
                 rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
                 metricsByDate: {
-                    "2026-03-17": { cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
-                    "2026-03-16": { cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
-                    "2026-03-15": { cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
+                    "2026-03-17": { cpu: 45, memory: 35, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
+                    "2026-03-16": { cpu: 40, memory: 32, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
+                    "2026-03-15": { cpu: 42, memory: 34, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
                 }
             });
             return;
@@ -434,9 +438,9 @@ function RDSAnalytics() {
                 capacity,
                 rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
                 metricsByDate: {
-                    "2026-03-17": { cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
-                    "2026-03-16": { cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
-                    "2026-03-15": { cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
+                    "2026-03-17": { cpu: 45, memory: 42, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
+                    "2026-03-16": { cpu: 40, memory: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
+                    "2026-03-15": { cpu: 42, memory: 41, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
                 }
             });
             return;
@@ -913,7 +917,7 @@ function RDSAnalytics() {
                         db_identifier: db.cluster_name || db.db_identifier
                     }))}
                     exportFilename={`${viewMode}-analytics.csv`}
-                    gridTemplateColumns="52px 2.5fr 0.5fr 1.2fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr"
+                    gridTemplateColumns="52px 1.8fr 1.2fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 100px"
                     columns={[
                         {
                             key: 'db_identifier',
@@ -942,16 +946,26 @@ function RDSAnalytics() {
                             label: 'CPU',
                             icon: Cpu,
                             type: 'cpu',
+                            noThreshold: true,
                             sortable: true,
-                            align: 'center',
-                            render: (val) => `${val}%`
+                            align: 'center'
+                        },
+                        {
+                            key: 'avg_memory_usage',
+                            label: 'MEMORY',
+                            icon: Zap,
+                            type: 'memory',
+                            noThreshold: true,
+                            sortable: true,
+                            align: 'center'
                         },
                         {
                             key: 'avg_connections',
                             label: 'DB CONN',
                             icon: Network,
                             sortable: true,
-                            align: 'center'
+                            align: 'center',
+                            render: (val) => <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{val}</span>
                         },
                         {
                             key: 'avg_read_iops',
@@ -1042,6 +1056,7 @@ function RDSAnalytics() {
                                                         date: dateStr,
                                                         formattedDate: formatted,
                                                         cpu: metrics.cpu || 0,
+                                                        memory: metrics.memory || 0,
                                                         connections: metrics.connections || 0,
                                                         readIops: metrics.readIops || 0,
                                                         writeIops: metrics.writeIops || 0,
@@ -1118,15 +1133,27 @@ function RDSAnalytics() {
                                             </div>
                                         </div>
 
-                                        <div className="rds-dim-cost-banner-premium">
-                                            <div className="rds-dcb-inner">
-                                                <div className="rds-dcb-info">
-                                                    <div className="rds-dcb-lbl">ESTIMATED DAILY COST</div>
-                                                    <div className="rds-dcb-val">${selectedDateDetail.cost.toFixed(2)}</div>
-                                                </div>
-                                                <div className="rds-dcb-visual">
-                                                    <DollarSign size={28} className="rds-dcb-icon" />
-                                                    <div className="rds-dcb-glow" />
+                                        <div className="rds-dim-bottom-row">
+                                            <div className="rds-dim-detail-card rds-memory">
+                                                <div className="rds-ddc-glass" />
+                                                <div className="rds-ddc-icon"><Zap size={20} /></div>
+                                                {selectedDaysInfo?.capacity?.memory && (
+                                                    <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.memory} GB Total</div>
+                                                )}
+                                                <div className="rds-ddc-val">{selectedDateDetail.memory}%</div>
+                                                <div className="rds-ddc-lbl">Resource Memory</div>
+                                            </div>
+
+                                            <div className="rds-dim-cost-banner-premium half-width">
+                                                <div className="rds-dcb-inner">
+                                                    <div className="rds-dcb-info">
+                                                        <div className="rds-dcb-lbl">ESTIMATED COST</div>
+                                                        <div className="rds-dcb-val">${selectedDateDetail.cost.toFixed(2)}</div>
+                                                    </div>
+                                                    <div className="rds-dcb-visual">
+                                                        <DollarSign size={24} className="rds-dcb-icon" />
+                                                        <div className="rds-dcb-glow" />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
