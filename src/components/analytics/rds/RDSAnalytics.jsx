@@ -263,9 +263,14 @@ function RDSAnalytics() {
                     is_aws: true,
                     dates: ["2026-03-17", "2026-03-16"],
                     avg_cpu_utilization: 65,
-                    avg_connections: 150,
+                    avg_memory_usage: 42.5,
                     avg_read_iops: 600,
                     avg_write_iops: 400,
+                    total_cpu: 8,
+                    total_memory: 32,
+                    total_read_iops: 2000,
+                    total_write_iops: 1000,
+                    total_connections: 5000,
                     active_days_count: 30,
                     approx_cost: 150.75
                 },
@@ -277,9 +282,14 @@ function RDSAnalytics() {
                     is_aws: false,
                     dates: ["2026-03-17"],
                     avg_cpu_utilization: 25,
-                    avg_connections: 50,
+                    avg_memory_usage: 18.2,
                     avg_read_iops: 100,
                     avg_write_iops: 80,
+                    total_cpu: 2,
+                    total_memory: 4,
+                    total_read_iops: 1000,
+                    total_write_iops: 500,
+                    total_connections: 1000,
                     active_days_count: 15,
                     approx_cost: 45.20
                 }
@@ -300,9 +310,14 @@ function RDSAnalytics() {
                     approx_cost: 1200.5,
                     active_days_count: 30,
                     avg_cpu_utilization: 45,
-                    avg_connections: 350,
+                    avg_memory_usage: 55.5,
                     avg_read_iops: 800,
                     avg_write_iops: 500,
+                    total_cpu: 16,
+                    total_memory: 64,
+                    total_read_iops: 4000,
+                    total_write_iops: 2000,
+                    total_connections: 10000,
                     status: "available",
                     trend: "stable",
                     engine: "Aurora",
@@ -326,9 +341,14 @@ function RDSAnalytics() {
                     approx_cost: 450.0,
                     active_days_count: 30,
                     avg_cpu_utilization: 25,
-                    avg_connections: 50,
+                    avg_memory_usage: 32.8,
                     avg_read_iops: 100,
                     avg_write_iops: 50,
+                    total_cpu: 4,
+                    total_memory: 8,
+                    total_read_iops: 1000,
+                    total_write_iops: 500,
+                    total_connections: 2000,
                     status: "available",
                     trend: "stable",
                     engine: "DocumentDB",
@@ -342,12 +362,13 @@ function RDSAnalytics() {
         }
     };
 
-    const fetchClusterActiveDates = async (clusterName, activeDays) => {
+    const fetchClusterActiveDates = async (clusterName, activeDays, capacity = {}) => {
         try {
             // Dummy data instead of API call
             setSelectedDaysInfo({
                 identifier: clusterName,
                 count: activeDays,
+                capacity,
                 rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
                 metricsByDate: {
                     "2026-03-17": { cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
@@ -384,31 +405,13 @@ function RDSAnalytics() {
         }
     };
 
-    const fetchRdsInstanceActiveDates = async (dbIdentifier, activeDays) => {
-        try {
-            // Dummy data instead of API call
-            setSelectedDaysInfo({
-                identifier: dbIdentifier,
-                count: activeDays,
-                rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
-                metricsByDate: {
-                    "2026-03-17": { cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
-                    "2026-03-16": { cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
-                    "2026-03-15": { cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
-                }
-            });
-            return;
-        } catch (err) {
-            console.error("Failed to fetch RDS instance active dates", err);
-        }
-    };
-
-    const fetchDocdbClusterActiveDates = async (clusterName, activeDays) => {
+    const fetchDocdbClusterActiveDates = async (clusterName, activeDays, capacity = {}) => {
         try {
             // Dummy data instead of API call
             setSelectedDaysInfo({
                 identifier: clusterName,
                 count: activeDays,
+                capacity,
                 rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
                 metricsByDate: {
                     "2026-03-17": { cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
@@ -419,6 +422,26 @@ function RDSAnalytics() {
             return;
         } catch (err) {
             console.error("Failed to fetch DocumentDB cluster active dates", err);
+        }
+    };
+
+    const fetchRdsInstanceActiveDates = async (dbIdentifier, activeDays, capacity = {}) => {
+        try {
+            // Dummy data instead of API call
+            setSelectedDaysInfo({
+                identifier: dbIdentifier,
+                count: activeDays,
+                capacity,
+                rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
+                metricsByDate: {
+                    "2026-03-17": { cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
+                    "2026-03-16": { cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
+                    "2026-03-15": { cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
+                }
+            });
+            return;
+        } catch (err) {
+            console.error("Failed to fetch RDS instance active dates", err);
         }
     };
 
@@ -624,11 +647,6 @@ function RDSAnalytics() {
                                                 <div className={`aurora-cluster-status-dot ${cluster.status}`} />
                                                 <span className="aurora-cluster-name-text">{cluster.cluster_name}</span>
                                             </div>
-                                            <div className="aurora-cluster-subheader">
-                                                <span className="aurora-engine-tag">{viewMode === 'docdb' ? 'DocumentDB' : 'Aurora'}</span>
-                                                <span className="aurora-id-separator">•</span>
-                                                <span className="aurora-instance-count">{cluster.instances_count} Nodes</span>
-                                            </div>
                                         </div>
                                         <div className="aurora-cluster-card-actions">
                                             {selectedRange === '24h' && cluster.is_aws && (
@@ -637,17 +655,36 @@ function RDSAnalytics() {
                                                     AWS
                                                 </div>
                                             )}
-                                            {/* <button
-                                                className="aurora-cluster-trend-btn"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    fetchClusterMetrics(cluster.cluster_name, cluster);
-                                                }}
-                                            >
-                                                <BarChart3 size={16} />
-                                            </button> */}
                                         </div>
                                     </div>
+
+                                    <div className="aurora-cluster-subheader">
+                                        <span className="aurora-engine-tag">{viewMode === 'docdb' ? 'DocumentDB' : 'Aurora'}</span>
+                                        <span className="aurora-id-separator">•</span>
+                                        <span className="aurora-instance-count">{cluster.instances_count} Nodes</span>
+                                    </div>
+                                            <div className="rds-summary-specs">
+                                                <div className="rds-summary-tag">
+                                                    <Cpu size={12} />
+                                                    <span className="rds-spec-value">{cluster.total_cpu || 0}</span>
+                                                    <span className="rds-spec-unit">vCPU</span>
+                                                </div>
+                                                <div className="rds-summary-tag">
+                                                    <Zap size={12} />
+                                                    <span className="rds-spec-value">{cluster.total_memory || 0}</span>
+                                                    <span className="rds-spec-unit">GB RAM</span>
+                                                </div>
+                                                <div className="rds-summary-tag">
+                                                    <Network size={12} />
+                                                    <span className="rds-spec-value">{(cluster.total_connections || 0).toLocaleString()}</span>
+                                                    <span className="rds-spec-unit">Max Conn</span>
+                                                </div>
+                                                <div className="rds-summary-tag">
+                                                    <Activity size={12} />
+                                                    <span className="rds-spec-value">{((cluster?.total_read_iops || 0) + (cluster?.total_write_iops || 0)).toLocaleString()}</span>
+                                                    <span className="rds-spec-unit">Prov. IOPS</span>
+                                                </div>
+                                            </div>
 
                                     <div className="aurora-cluster-stats-row">
                                         <div className="aurora-cluster-stat-item">
@@ -663,12 +700,14 @@ function RDSAnalytics() {
                                                 if (viewMode === "docdb") {
                                                     fetchDocdbClusterActiveDates(
                                                         cluster.cluster_name,
-                                                        cluster.active_days_count
+                                                        cluster.active_days_count,
+                                                        { cpu: cluster.total_cpu, memory: cluster.total_memory, readIops: cluster.total_read_iops, writeIops: cluster.total_write_iops }
                                                     );
                                                 } else {
                                                     fetchClusterActiveDates(
                                                         cluster.cluster_name,
-                                                        cluster.active_days_count
+                                                        cluster.active_days_count,
+                                                        { cpu: cluster.total_cpu, memory: cluster.total_memory, readIops: cluster.total_read_iops, writeIops: cluster.total_write_iops }
                                                     );
                                                 }
 
@@ -697,24 +736,24 @@ function RDSAnalytics() {
                                         </div>
                                         <div className="aurora-rb-item">
                                             <div className="aurora-rb-header">
-                                                <span className="aurora-rb-label"><Network size={12} /> Connections</span>
-                                                <span className="aurora-rb-value">{cluster.avg_connections}</span>
+                                                <span className="aurora-rb-label"><Zap size={12} /> Memory</span>
+                                                <span className="aurora-rb-value">{cluster.avg_memory_usage || 0}%</span>
                                             </div>
-                                            <div className="aurora-rb-track"><div className="aurora-rb-fill conn" style={{ width: `${Math.min(100, (cluster.avg_connections / 200) * 100)}%` }} /></div>
+                                            <div className="aurora-rb-track"><div className="aurora-rb-fill mem" style={{ width: `${Math.min(100, cluster.avg_memory_usage || 0)}%` }} /></div>
                                         </div>
                                         <div className="aurora-rb-item">
                                             <div className="aurora-rb-header">
                                                 <span className="aurora-rb-label"><ArrowRight size={12} /> Read IOPS</span>
                                                 <span className="aurora-rb-value">{cluster.avg_read_iops}</span>
                                             </div>
-                                            <div className="aurora-rb-track"><div className="aurora-rb-fill read" style={{ width: `${Math.min(100, (cluster.avg_read_iops / 1000) * 100)}%` }} /></div>
+                                            <div className="aurora-rb-track"><div className="aurora-rb-fill read" style={{ width: `${Math.min(100, (cluster.avg_read_iops / (cluster.total_read_iops || 1000)) * 100)}%` }} /></div>
                                         </div>
                                         <div className="aurora-rb-item">
                                             <div className="aurora-rb-header">
                                                 <span className="aurora-rb-label"><Zap size={12} /> Write IOPS</span>
                                                 <span className="aurora-rb-value">{cluster.avg_write_iops}</span>
                                             </div>
-                                            <div className="aurora-rb-track"><div className="aurora-rb-fill write" style={{ width: `${Math.min(100, (cluster.avg_write_iops / 500) * 100)}%` }} /></div>
+                                            <div className="aurora-rb-track"><div className="aurora-rb-fill write" style={{ width: `${Math.min(100, (cluster.avg_write_iops / (cluster.total_write_iops || 500)) * 100)}%` }} /></div>
                                         </div>
                                     </div>
 
@@ -745,11 +784,6 @@ function RDSAnalytics() {
                                                 <div className={`rds-instance-status-dot ${db.status}`} />
                                                 <span className="rds-instance-name-text">{db.db_identifier}</span>
                                             </div>
-                                            <div className="rds-instance-id-text">
-                                                <span className="rds-engine-id-part">{db.engine}</span>
-                                                <span className="rds-id-separator">•</span>
-                                                <span className="rds-class-id-part">{db.instance_class}</span>
-                                            </div>
                                         </div>
                                         <div className="rds-instance-card-actions-row">
                                             {selectedRange === '24h' && db.is_aws && (
@@ -771,6 +805,35 @@ function RDSAnalytics() {
                                         </div>
                                     </div>
 
+                                    <div className="rds-instance-id-text">
+                                        <span className="rds-engine-id-part">{db.engine}</span>
+                                        <span className="rds-id-separator">•</span>
+                                        <span className="rds-class-id-part">{db.instance_class}</span>
+                                    </div>
+
+                                        <div className="rds-summary-specs">
+                                            <div className="rds-summary-tag">
+                                                <Cpu size={12} />
+                                                <span className="rds-spec-value">{db.total_cpu || 0}</span>
+                                                <span className="rds-spec-unit">vCPU</span>
+                                            </div>
+                                            <div className="rds-summary-tag">
+                                                <Zap size={12} />
+                                                <span className="rds-spec-value">{db.total_memory || 0}</span>
+                                                <span className="rds-spec-unit">GB RAM</span>
+                                            </div>
+                                            <div className="rds-summary-tag">
+                                                <Network size={12} />
+                                                <span className="rds-spec-value">{(db.total_connections || 0).toLocaleString()}</span>
+                                                <span className="rds-spec-unit">Max Conn</span>
+                                            </div>
+                                            <div className="rds-summary-tag">
+                                                <Activity size={12} />
+                                                <span className="rds-spec-value">{((db.total_read_iops || 0) + (db.total_write_iops || 0)).toLocaleString()}</span>
+                                                <span className="rds-spec-unit">Prov. IOPS</span>
+                                            </div>
+                                        </div>
+
                                     <div className="rds-instance-stats-row">
                                         <div className="rds-instance-stat-item">
                                             <div className="rds-isi-icon"><Clock size={14} /></div>
@@ -785,7 +848,8 @@ function RDSAnalytics() {
 
                                                 fetchRdsInstanceActiveDates(
                                                     db.db_identifier,
-                                                    db.active_days_count
+                                                    db.active_days_count,
+                                                    { cpu: db.total_cpu, memory: db.total_memory, readIops: db.total_read_iops, writeIops: db.total_write_iops }
                                                 );
                                             }}
 
@@ -801,7 +865,6 @@ function RDSAnalytics() {
                                             <div className="rds-isi-label">Instance Cost</div>
                                         </div>
                                     </div>
-
                                     <div className="rds-instance-resource-bars">
                                         <div className="rds-resource-bar-item">
                                             <div className="rds-rb-header">
@@ -812,24 +875,24 @@ function RDSAnalytics() {
                                         </div>
                                         <div className="rds-resource-bar-item">
                                             <div className="rds-rb-header">
-                                                <span className="rds-rb-label"><Network size={12} /> DB Conn.</span>
-                                                <span className="rds-rb-value">{db.avg_connections}</span>
+                                                <span className="rds-rb-label"><Zap size={12} /> Memory</span>
+                                                <span className="rds-rb-value">{db.avg_memory_usage || 0}%</span>
                                             </div>
-                                            <div className="rds-rb-track"><div className="rds-rb-fill conn" style={{ width: `${Math.min(100, (db.avg_connections / 200) * 100)}%` }} /></div>
+                                            <div className="rds-rb-track"><div className="rds-rb-fill mem" style={{ width: `${Math.min(100, db.avg_memory_usage || 0)}%` }} /></div>
                                         </div>
                                         <div className="rds-resource-bar-item">
                                             <div className="rds-rb-header">
                                                 <span className="rds-rb-label"><ArrowRight size={12} /> Read IOPS</span>
                                                 <span className="rds-rb-value">{db.avg_read_iops}</span>
                                             </div>
-                                            <div className="rds-rb-track"><div className="rds-rb-fill read" style={{ width: `${Math.min(100, (db.avg_read_iops / 1000) * 100)}%` }} /></div>
+                                            <div className="rds-rb-track"><div className="rds-rb-fill read" style={{ width: `${Math.min(100, (db.avg_read_iops / (db.total_read_iops || 1000)) * 100)}%` }} /></div>
                                         </div>
                                         <div className="rds-resource-bar-item">
                                             <div className="rds-rb-header">
                                                 <span className="rds-rb-label"><Zap size={12} /> Write IOPS</span>
                                                 <span className="rds-rb-value">{db.avg_write_iops}</span>
                                             </div>
-                                            <div className="rds-rb-track"><div className="rds-rb-fill write" style={{ width: `${Math.min(100, (db.avg_write_iops / 500) * 100)}%` }} /></div>
+                                            <div className="rds-rb-track"><div className="rds-rb-fill write" style={{ width: `${Math.min(100, (db.avg_write_iops / (db.total_write_iops || 500)) * 100)}%` }} /></div>
                                         </div>
                                     </div>
                                 </div>
@@ -1023,6 +1086,9 @@ function RDSAnalytics() {
                                             <div className="rds-dim-detail-card rds-cpu">
                                                 <div className="rds-ddc-glass" />
                                                 <div className="rds-ddc-icon"><Cpu size={20} /></div>
+                                                {selectedDaysInfo?.capacity?.cpu && (
+                                                    <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.cpu} vCPU Total</div>
+                                                )}
                                                 <div className="rds-ddc-val">{selectedDateDetail.cpu}%</div>
                                                 <div className="rds-ddc-lbl">Resource CPU</div>
                                             </div>
@@ -1035,12 +1101,18 @@ function RDSAnalytics() {
                                             <div className="rds-dim-detail-card rds-read">
                                                 <div className="rds-ddc-glass" />
                                                 <div className="rds-ddc-icon"><ArrowRight size={20} /></div>
+                                                {selectedDaysInfo?.capacity?.readIops && (
+                                                    <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.readIops.toLocaleString()} Prov.</div>
+                                                )}
                                                 <div className="rds-ddc-val">{selectedDateDetail.readIops}</div>
                                                 <div className="rds-ddc-lbl">Read throughput</div>
                                             </div>
                                             <div className="rds-dim-detail-card rds-write">
                                                 <div className="rds-ddc-glass" />
                                                 <div className="rds-ddc-icon"><Zap size={20} /></div>
+                                                {selectedDaysInfo?.capacity?.writeIops && (
+                                                    <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.writeIops.toLocaleString()} Prov.</div>
+                                                )}
                                                 <div className="rds-ddc-val">{selectedDateDetail.writeIops}</div>
                                                 <div className="rds-ddc-lbl">Write throughput</div>
                                             </div>

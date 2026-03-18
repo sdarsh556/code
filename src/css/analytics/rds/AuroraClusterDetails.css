@@ -404,8 +404,8 @@
 .aurora-ic-meta {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
-    margin-top: 0.75rem;
+    gap: 1.5rem;
+    margin-top: 1rem;
 }
 
 .aurora-ic-class {
@@ -426,17 +426,85 @@
 
 .aurora-ic-role {
     font-size: 0.8rem;
-    font-weight: 900;
+    font-weight: 1000;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .aurora-ic-role.writer {
     color: #c084fc;
+    border: 1px solid rgba(192, 132, 252, 0.2);
+    box-shadow: 0 0 15px rgba(192, 132, 252, 0.1);
 }
 
 .aurora-ic-role.reader {
     color: #22d3ee;
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    box-shadow: 0 0 15px rgba(34, 211, 238, 0.1);
+}
+
+/* --- Spec Tags --- */
+.rds-instance-specs {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.rds-instance-specs.aurora-compact {
+    gap: 1.15rem;
+}
+
+.rds-spec-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #94a3b8;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rds-spec-tag:hover {
+    background: rgba(var(--gauge-accent-rgb), 0.1);
+    border-color: rgba(var(--gauge-accent-rgb), 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 0 15px rgba(var(--gauge-accent-rgb), 0.1);
+}
+
+.rds-spec-tag.cpu { --gauge-accent-rgb: 59, 130, 246; }
+.rds-spec-tag.mem { --gauge-accent-rgb: 236, 72, 153; }
+.rds-spec-tag.conn { --gauge-accent-rgb: 245, 158, 11; }
+.rds-spec-tag.iops { --gauge-accent-rgb: 16, 185, 129; }
+
+.rds-spec-tag svg {
+    opacity: 0.9;
+    color: var(--accent-color, #06b6d4);
+    filter: drop-shadow(0 0 8px rgba(var(--gauge-accent-rgb), 0.4));
+}
+
+.rds-spec-tag.cpu svg { --accent-color: #3b82f6; }
+.rds-spec-tag.mem svg { --accent-color: #ec4899; }
+.rds-spec-tag.conn svg { --accent-color: #f59e0b; }
+.rds-spec-tag.iops svg { --accent-color: #10b981; }
+
+.rds-spec-value {
+    font-size: 1rem;
+    font-weight: 1000;
+    color: #f8fafc;
+    letter-spacing: -0.01em;
+}
+
+.rds-spec-unit {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    opacity: 0.6;
+    letter-spacing: 0.08em;
 }
 
 .aurora-ic-actions-top {
@@ -495,6 +563,12 @@
 .aurora-gauge-svg {
     width: 100%;
     height: 100%;
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aurora-instance-gauge:hover .aurora-gauge-svg {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 15px rgba(var(--gauge-accent-rgb), 0.3));
 }
 
 .aurora-gauge-info {
@@ -508,26 +582,49 @@
 }
 
 .aurora-gauge-val {
-    font-size: 3.2rem;
-    /* Even larger font */
+    font-size: 3.5rem;
     font-weight: 1000;
     line-height: 1;
-    margin-bottom: 2px;
+    margin-bottom: -5px;
     letter-spacing: -0.06em;
     text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aurora-instance-gauge:hover .aurora-gauge-val {
+    transform: scale(1.1);
+    text-shadow: 0 0 40px rgba(var(--gauge-accent-rgb), 0.5);
+}
+
+.aurora-gauge-unit {
+    font-size: 1.5rem;
+    margin-left: 2px;
+    opacity: 0.7;
+    font-weight: 800;
 }
 
 .aurora-gauge-label {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.8rem;
-    /* Slightly larger label */
+    font-size: 0.75rem;
     color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.15em;
-    font-weight: 900;
+    font-weight: 950;
+    margin-top: 6px;
+    transition: all 0.3s ease;
 }
+
+.aurora-instance-gauge:hover .aurora-gauge-label {
+    color: #fff;
+    letter-spacing: 0.2em;
+}
+
+.aurora-instance-gauge.cpu { --gauge-accent-rgb: 59, 130, 246; }
+.aurora-instance-gauge.mem { --gauge-accent-rgb: 236, 72, 153; }
+.aurora-instance-gauge.read { --gauge-accent-rgb: 16, 185, 129; }
+.aurora-instance-gauge.write { --gauge-accent-rgb: 168, 85, 247; }
 
 .aurora-ic-card-accent {
     position: absolute;

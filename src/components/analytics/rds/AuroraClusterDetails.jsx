@@ -22,8 +22,74 @@ function AuroraClusterDetails() {
     const [showGraphModal, setShowGraphModal] = useState(false);
     const [showTimelineModal, setShowTimelineModal] = useState(false);
     const [timelineInstance, setTimelineInstance] = useState(null);
-    const [clusterData, setClusterData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [clusterData, setClusterData] = useState({
+        cluster_info: {
+            cluster_identifier: clusterName || "aurora-prod-cluster",
+            engine: engine || "aurora-mysql",
+            status: "available"
+        },
+        instances: [
+            {
+                instance_identifier: `${clusterName}-instance-1`,
+                instance_class: "db.r5.large",
+                role: "WRITER",
+                status: "available",
+                avg_cpu_utilization: 30.0,
+                avg_database_connections: 48.0,
+                avg_read_iops: 290.0,
+                avg_write_iops: 145.0,
+                total_cpu: 2,
+                total_memory: 16,
+                total_read_iops: 1000,
+                total_write_iops: 500,
+                total_connections: 2000,
+                avg_memory_usage: 65.5,
+                days_active: 30,
+                active_dates: ["2026-03-17", "2026-03-16", "2026-03-15", "2026-03-14", "2026-03-13"]
+            },
+            {
+                instance_identifier: `${clusterName}-instance-2`,
+                instance_class: "db.r5.large",
+                role: "READER",
+                status: "available",
+                avg_cpu_utilization: 25.0,
+                avg_database_connections: 42.0,
+                avg_read_iops: 245.0,
+                avg_write_iops: 5.0,
+                total_cpu: 2,
+                total_memory: 16,
+                total_read_iops: 1000,
+                total_write_iops: 500,
+                total_connections: 2000,
+                avg_memory_usage: 72.2,
+                days_active: 30,
+                active_dates: ["2026-03-17", "2026-03-16", "2026-03-15", "2026-03-14"]
+            },
+            {
+                instance_identifier: `${clusterName}-instance-3`,
+                instance_class: "db.r5.xlarge",
+                role: "READER",
+                status: "available",
+                avg_cpu_utilization: 15.0,
+                avg_database_connections: 12.0,
+                avg_read_iops: 120.0,
+                avg_write_iops: 2.0,
+                total_cpu: 4,
+                total_memory: 32,
+                total_read_iops: 2000,
+                total_write_iops: 1000,
+                total_connections: 5000,
+                avg_memory_usage: 45.5,
+                days_active: 15,
+                active_dates: ["2026-03-17", "2026-03-16", "2026-03-15"]
+            }
+        ],
+        metric_summary: {
+            date_range: { start: "2026-02-15", end: "2026-03-17" },
+            total_days: 30, total_cost: 1500.50, total_instances: 3
+        }
+    });
+    const [loading, setLoading] = useState(false);
     const [instanceMetrics, setInstanceMetrics] = useState([]);
 
     useEffect(() => {
@@ -121,7 +187,6 @@ function AuroraClusterDetails() {
 
     const fetchClusterMetrics = async () => {
         try {
-            setLoading(false);
             setClusterData({
                 cluster_info: {
                     cluster_identifier: clusterName || "aurora-prod-cluster",
@@ -138,6 +203,12 @@ function AuroraClusterDetails() {
                         avg_database_connections: 48.0,
                         avg_read_iops: 290.0,
                         avg_write_iops: 145.0,
+                        total_cpu: 2,
+                        total_memory: 16,
+                        total_read_iops: 1000,
+                        total_write_iops: 500,
+                        total_connections: 2000,
+                        avg_memory_usage: 65.5,
                         days_active: 30,
                         active_dates: ["2026-03-17", "2026-03-16", "2026-03-15", "2026-03-14", "2026-03-13"]
                     },
@@ -150,6 +221,12 @@ function AuroraClusterDetails() {
                         avg_database_connections: 42.0,
                         avg_read_iops: 245.0,
                         avg_write_iops: 5.0,
+                        total_cpu: 2,
+                        total_memory: 16,
+                        total_read_iops: 1000,
+                        total_write_iops: 500,
+                        total_connections: 2000,
+                        avg_memory_usage: 72.2,
                         days_active: 30,
                         active_dates: ["2026-03-17", "2026-03-16", "2026-03-15", "2026-03-14"]
                     },
@@ -162,6 +239,12 @@ function AuroraClusterDetails() {
                         avg_database_connections: 12.0,
                         avg_read_iops: 120.0,
                         avg_write_iops: 2.0,
+                        total_cpu: 4,
+                        total_memory: 32,
+                        total_read_iops: 2000,
+                        total_write_iops: 1000,
+                        total_connections: 5000,
+                        avg_memory_usage: 45.5,
                         days_active: 15,
                         active_dates: ["2026-03-17", "2026-03-16", "2026-03-15"]
                     }
@@ -176,6 +259,7 @@ function AuroraClusterDetails() {
                     total_instances: 3
                 }
             });
+            setLoading(false);
             return;
         } catch (err) {
             console.error("Failed to fetch Aurora cluster metrics", err);
@@ -230,15 +314,14 @@ function AuroraClusterDetails() {
     };
 
     const getGaugeColor = (val, type) => {
-        if (type === 'cpu') {
-            if (val > 80) return ['#ef4444', '#f87171'];
-            if (val > 50) return ['#f59e0b', '#fbbf24'];
-            return ['#3b82f6', '#60a5fa'];
-        }
-        if (type === 'conn') return ['#f59e0b', '#fbbf24'];
-        if (type === 'read') return ['#10b981', '#34d399'];
-        if (type === 'write') return ['#ec4899', '#f472b6'];
-        return ['#94a3b8', '#cbd5e1'];
+        const normalizedType = String(type).toLowerCase().trim();
+        const colors = {
+            'cpu': ['#3b82f6', '#60a5fa'],
+            'mem': ['#ec4899', '#f472b6'],
+            'read': ['#10b981', '#34d399'],
+            'write': ['#a855f7', '#c084fc']
+        };
+        return colors[normalizedType] || ['#94a3b8', '#cbd5e1'];
     };
 
     const renderGauge = (val, max, label, Icon, type) => {
@@ -248,7 +331,7 @@ function AuroraClusterDetails() {
         const offset = circumference - (Math.min(val, max) / max) * circumference;
 
         return (
-            <div className="aurora-instance-gauge">
+            <div className={`aurora-instance-gauge ${type}`}>
                 <svg viewBox="0 0 100 100" className="aurora-gauge-svg">
                     <defs>
                         <linearGradient id={`grad-${type}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -278,7 +361,8 @@ function AuroraClusterDetails() {
                 </svg>
                 <div className="aurora-gauge-info">
                     <div className="aurora-gauge-val" style={{ color: c1 }}>
-                        {type === 'cpu' ? `${val.toFixed(0)}%` : val.toFixed(0)}
+                        {val.toFixed(0)}
+                        {(type === 'cpu' || type === 'mem') && <span className="aurora-gauge-unit">%</span>}
                     </div>
                     <div className="aurora-gauge-label">
                         <Icon size={12} />
@@ -340,7 +424,7 @@ function AuroraClusterDetails() {
             <div className="ad-content">
                 {/* Breadcrumb */}
                 <div className="cd-breadcrumb">
-                    <button className="cd-back-btn" onClick={() => navigate(-1)}>
+                    <button type="button" className="cd-back-btn" onClick={() => navigate('/analytics/rds')}>
                         <ArrowLeft size={16} />
                         <span>RDS Analytics</span>
                     </button>
@@ -408,6 +492,29 @@ function AuroraClusterDetails() {
                                         <span className="aurora-ic-class">{instance.instance_class}</span>
                                         <span className="aurora-ic-dot" />
                                         <span className={`aurora-ic-role ${instance.role.toLowerCase()}`}>{instance.role}</span>
+                                        <div className="aurora-ic-dot" />
+                                        <div className="rds-instance-specs aurora-compact">
+                                            <div className="rds-spec-tag cpu">
+                                                <Cpu size={14} />
+                                                <span className="rds-spec-value">{instance.total_cpu || 2}</span>
+                                                <span className="rds-spec-unit">vCPU</span>
+                                            </div>
+                                            <div className="rds-spec-tag mem">
+                                                <Zap size={14} />
+                                                <span className="rds-spec-value">{instance.total_memory || 16}</span>
+                                                <span className="rds-spec-unit">GB RAM</span>
+                                            </div>
+                                            <div className="rds-spec-tag conn">
+                                                <Network size={14} />
+                                                <span className="rds-spec-value">{(instance.total_connections || 2000).toLocaleString()}</span>
+                                                <span className="rds-spec-unit">Max Conn</span>
+                                            </div>
+                                            <div className="rds-spec-tag iops">
+                                                <Activity size={14} />
+                                                <span className="rds-spec-value">{((instance.total_read_iops || 1000) + (instance.total_write_iops || 500)).toLocaleString()}</span>
+                                                <span className="rds-spec-unit">IOPS</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -428,10 +535,10 @@ function AuroraClusterDetails() {
 
                             <div className="aurora-ic-main-content">
                                 <div className="aurora-ic-gauges-horizontal">
-                                    {renderGauge(instance.avg_cpu_utilization, 100, "CPU Usage", Cpu, 'cpu')}
-                                    {renderGauge(instance.avg_database_connections, 200, "Connections", Network, 'conn')}
-                                    {renderGauge(instance.avg_read_iops, 1000, "Read IOPS", ArrowRight, 'read')}
-                                    {renderGauge(instance.avg_write_iops, 500, "Write IOPS", Zap, 'write')}
+                                    {renderGauge(instance.avg_cpu_utilization || 0, 100, "CPU Usage", Cpu, 'cpu')}
+                                    {renderGauge(instance.avg_memory_usage || 65.5, 100, "Memory Usage", Zap, 'mem')}
+                                    {renderGauge(instance.avg_read_iops || 0, instance.total_read_iops || 1000, "Read IOPS", ArrowRight, 'read')}
+                                    {renderGauge(instance.avg_write_iops || 0, instance.total_write_iops || 500, "Write IOPS", Zap, 'write')}
                                 </div>
                             </div>
                             <div className="aurora-ic-card-accent" />
