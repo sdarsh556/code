@@ -4,16 +4,18 @@ import { X, TrendingUp, Activity, Cpu, Network, Zap, Database, DollarSign, Chevr
 /* ─── metric config ────────────────────────────────────────────────────────── */
 const METRIC_CONFIG = {
     cpu:         { label: 'CPU Usage',   unit: '%',  icon: Cpu,         color: '#3b82f6', c2: '#60a5fa',  key: 'cpu',      gId: 'grad-cpu'  },
+    memory:      { label: 'Mem Usage',   unit: '%',  icon: Zap,         color: '#8b5cf6', c2: '#a78bfa',  key: 'memory',   gId: 'grad-mem'  },
     connections: { label: 'DB Conn',     unit: '',   icon: Network,     color: '#f59e0b', c2: '#fbbf24',  key: 'connections', gId: 'grad-conn' },
     read:        { label: 'Read IOPS',   unit: '',   icon: Zap,         color: '#10b981', c2: '#34d399',  key: 'readIops', gId: 'grad-read' },
     write:       { label: 'Write IOPS',  unit: '',   icon: Zap,         color: '#a855f7', c2: '#c084fc',  key: 'writeIops',gId: 'grad-write'},
-    cost:        { label: 'Daily Cost',  unit: '$',  icon: DollarSign,  color: '#8b5cf6', c2: '#a78bfa',  key: 'cost',     gId: 'grad-cost' }
+    cost:        { label: 'Daily Cost',  unit: '$',  icon: DollarSign,  color: '#ec4899', c2: '#f472b6',  key: 'cost',     gId: 'grad-cost' }
 };
 
 /* ─── mock 30-day generator ────────────────────────────────────────────────── */
 function gen30Days(instance) {
     const today = new Date(); today.setHours(0,0,0,0);
     const baseCpu   = Number(instance?.avg_cpu_utilization) || 35;
+    const baseMem   = Number(instance?.avg_memory_usage)    || 42;
     const baseConn  = Number(instance?.avg_connections || instance?.avg_database_connections) || 60;
     const baseRead  = Number(instance?.avg_read_iops)   || 250;
     const baseWrite = Number(instance?.avg_write_iops)  || 120;
@@ -26,6 +28,7 @@ function gen30Days(instance) {
             dateStr: d.toISOString().split('T')[0],
             displayDate: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             cpu:         Math.min(100, baseCpu   * rand),
+            memory:      Math.min(100, baseMem   * rand),
             connections: Math.round(baseConn  * rand),
             readIops:    Math.round(baseRead  * rand),
             writeIops:   Math.round(baseWrite * rand),
@@ -44,6 +47,7 @@ function gen24Hours(dayData) {
             hour: h,
             displayHour: `${String(h).padStart(2,'0')}:00`,
             cpu:         Math.min(100, dayData.cpu * hourFactor),
+            memory:      Math.min(100, dayData.memory * hourFactor),
             connections: Math.round(dayData.connections * hourFactor),
             readIops:    Math.round(dayData.readIops * hourFactor),
             writeIops:   Math.round(dayData.writeIops * hourFactor),

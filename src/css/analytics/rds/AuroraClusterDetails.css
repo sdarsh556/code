@@ -348,7 +348,7 @@
 .aurora-ic-top-bar {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 2.5rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -521,6 +521,7 @@
 .aurora-ic-actions-top {
     display: flex;
     gap: 1rem;
+    margin-top: 0.25rem; /* Align with ID row text baseline/center */
 }
 
 .aurora-ic-btn {

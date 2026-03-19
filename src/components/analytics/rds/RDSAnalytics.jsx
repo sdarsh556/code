@@ -3,7 +3,7 @@ import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom
 import {
     Database, Activity, Cpu, Zap, Cloud, Server, ChevronLeft, ChevronRight,
     Calendar, Download, TrendingUp, SearchX, RefreshCw, BarChart3,
-    ArrowRight, HardDrive, Network, ShieldCheck, Gauge, Clock, DollarSign, X
+    ArrowRight, HardDrive, Network, ShieldCheck, Gauge, Clock, DollarSign, X, Search
 } from 'lucide-react';
 import '../../../css/analytics/rds/RDSAnalytics.css';
 import '../../../css/analytics/comparison-table.css';
@@ -160,6 +160,7 @@ function RDSAnalytics() {
     const [loadingTrend, setLoadingTrend] = useState(false);
     const [isFlipped, setIsFlipped] = useState(false);
     const [selectedDateDetail, setSelectedDateDetail] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         setBgContext('analytics');
@@ -179,6 +180,15 @@ function RDSAnalytics() {
         if (viewMode === "docdb") return docdbClusters;
         return [];
     }, [viewMode, rdsInstances, auroraClusters, docdbClusters]);
+
+    const filteredData = useMemo(() => {
+        if (!searchQuery.trim()) return currentData;
+        const query = searchQuery.toLowerCase();
+        return currentData.filter(item => {
+            const identifier = viewMode === "rds" ? item.db_identifier : item.cluster_name;
+            return identifier.toLowerCase().includes(query);
+        });
+    }, [currentData, searchQuery, viewMode]);
 
     const formatDate = (date) => {
         const year = date.getFullYear();
@@ -391,7 +401,7 @@ function RDSAnalytics() {
     const fetchInstanceMetrics = async (dbIdentifier, baseInstance) => {
         try {
             setLoadingTrend(true);
-            
+
             // Dummy data instead of API call
             setSelectedInstanceForTrend({
                 ...baseInstance,
@@ -621,6 +631,30 @@ function RDSAnalytics() {
                     ))}
                 </div>
 
+                {/* --- Search Bar Section --- */}
+                <div className="rds-search-section" style={{ animationDelay: '0.35s' }}>
+                    <div className="rds-search-container">
+                        <div className="rds-search-box">
+                            <Search className="rds-search-icon" size={20} />
+                            <input
+                                type="text"
+                                className="rds-search-input"
+                                placeholder={`Search ${viewMode === 'rds' ? 'RDS Instances' : viewMode === 'aurora' ? 'Aurora Clusters' : 'DocDB Clusters'}...`}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                            {searchQuery && (
+                                <button className="rds-search-clear" onClick={() => setSearchQuery('')}>
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+                        <div className="rds-search-count-badge">
+                            {filteredData.length} {filteredData.length === 1 ? 'result' : 'results'}
+                        </div>
+                    </div>
+                </div>
+
                 {/* --- Instances Panel (Mirroring EC2) --- */}
                 <div className="rds-instances-panel">
                     <div className="rds-panel-header-new">
@@ -634,186 +668,200 @@ function RDSAnalytics() {
 
                     <div className={(viewMode === 'aurora' || viewMode === 'docdb') ? "aurora-clusters-grid" : "rds-instances-grid"}>
                         {(viewMode === 'aurora' || viewMode === 'docdb') ? (
-                            currentData.map((cluster, idx) => (
-                                <div
-                                    key={cluster.cluster_name}
-                                    className="aurora-cluster-card"
-                                    style={{ animationDelay: `${0.2 + idx * 0.1}s` }}
-                                    onClick={() => navigate(`/analytics/rds/cluster/${cluster.cluster_name}`, {
-                                        state: { cluster, selectedRange, customRange, engine: viewMode === 'docdb' ? 'DocumentDB' : 'Aurora' }
-                                    })}
-                                >
-                                    <div className="aurora-cluster-status-glow" />
-
-                                    <div className="aurora-cluster-card-top">
-                                        <div className="aurora-cluster-name-group">
-                                            <div className="aurora-cluster-status-row">
-                                                <div className={`aurora-cluster-status-dot ${cluster.status}`} />
-                                                <span className="aurora-cluster-name-text">{cluster.cluster_name}</span>
-                                            </div>
-                                        </div>
-                                        <div className="aurora-cluster-card-actions">
-                                            {selectedRange === '24h' && cluster.is_aws && (
-                                                <div className="rds-aws-tag">
-                                                    <Server size={10} strokeWidth={3} />
-                                                    AWS
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="aurora-cluster-subheader">
-                                        <span className="aurora-engine-tag">{viewMode === 'docdb' ? 'DocumentDB' : 'Aurora'}</span>
-                                        <span className="aurora-id-separator">•</span>
-                                        <span className="aurora-instance-count">{cluster.instances_count} Nodes</span>
-                                    </div>
-                                            <div className="rds-summary-specs">
-                                                <div className="rds-summary-tag">
-                                                    <Cpu size={12} />
-                                                    <span className="rds-spec-value">{cluster.total_cpu || 0}</span>
-                                                    <span className="rds-spec-unit">vCPU</span>
-                                                </div>
-                                                <div className="rds-summary-tag">
-                                                    <Zap size={12} />
-                                                    <span className="rds-spec-value">{cluster.total_memory || 0}</span>
-                                                    <span className="rds-spec-unit">GB RAM</span>
-                                                </div>
-                                                <div className="rds-summary-tag">
-                                                    <Network size={12} />
-                                                    <span className="rds-spec-value">{(cluster.total_connections || 0).toLocaleString()}</span>
-                                                    <span className="rds-spec-unit">Max Conn</span>
-                                                </div>
-                                                <div className="rds-summary-tag">
-                                                    <Activity size={12} />
-                                                    <span className="rds-spec-value">{((cluster?.total_read_iops || 0) + (cluster?.total_write_iops || 0)).toLocaleString()}</span>
-                                                    <span className="rds-spec-unit">Prov. IOPS</span>
-                                                </div>
-                                            </div>
-
-                                    <div className="aurora-cluster-stats-row">
-                                        <div className="aurora-cluster-stat-item">
-                                            <div className="aurora-csi-icon"><Clock size={14} /></div>
-                                            <div className="aurora-csi-value">{cluster.active_days_count}d</div>
-                                            <div className="aurora-csi-label">Active</div>
-                                        </div>
-                                        <div className="aurora-cluster-stat-divider" />
-                                        <div
-                                            className="aurora-cluster-stat-item aurora-clickable-calendar"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (viewMode === "docdb") {
-                                                    fetchDocdbClusterActiveDates(
-                                                        cluster.cluster_name,
-                                                        cluster.active_days_count,
-                                                        { cpu: cluster.total_cpu, memory: cluster.total_memory, readIops: cluster.total_read_iops, writeIops: cluster.total_write_iops }
-                                                    );
-                                                } else {
-                                                    fetchClusterActiveDates(
-                                                        cluster.cluster_name,
-                                                        cluster.active_days_count,
-                                                        { cpu: cluster.total_cpu, memory: cluster.total_memory, readIops: cluster.total_read_iops, writeIops: cluster.total_write_iops }
-                                                    );
-                                                }
-
-                                            }}
-
-                                        >
-                                            <div className="aurora-csi-icon"><Calendar size={14} /></div>
-                                            <div className="aurora-csi-value">View</div>
-                                            <div className="aurora-csi-label">Days Active</div>
-                                        </div>
-                                        <div className="aurora-cluster-stat-divider" />
-                                        <div className="aurora-cluster-stat-item">
-                                            <div className="aurora-csi-icon"><DollarSign size={14} /></div>
-                                            <div className="aurora-csi-value">${(cluster.approx_cost || 0).toFixed(2)}</div>
-                                            <div className="aurora-csi-label">Cost</div>
-                                        </div>
-                                    </div>
-
-                                    <div className="aurora-cluster-resource-bars">
-                                        <div className="aurora-rb-item">
-                                            <div className="aurora-rb-header">
-                                                <span className="aurora-rb-label"><Cpu size={12} /> CPU</span>
-                                                <span className="aurora-rb-value">{cluster.avg_cpu_utilization}%</span>
-                                            </div>
-                                            <div className="aurora-rb-track"><div className="aurora-rb-fill cpu" style={{ width: `${Math.min(100, cluster.avg_cpu_utilization)}%` }} /></div>
-                                        </div>
-                                        <div className="aurora-rb-item">
-                                            <div className="aurora-rb-header">
-                                                <span className="aurora-rb-label"><Zap size={12} /> Memory</span>
-                                                <span className="aurora-rb-value">{cluster.avg_memory_usage || 0}%</span>
-                                            </div>
-                                            <div className="aurora-rb-track"><div className="aurora-rb-fill mem" style={{ width: `${Math.min(100, cluster.avg_memory_usage || 0)}%` }} /></div>
-                                        </div>
-                                        <div className="aurora-rb-item">
-                                            <div className="aurora-rb-header">
-                                                <span className="aurora-rb-label"><ArrowRight size={12} /> Read IOPS</span>
-                                                <span className="aurora-rb-value">{cluster.avg_read_iops}</span>
-                                            </div>
-                                            <div className="aurora-rb-track"><div className="aurora-rb-fill read" style={{ width: `${Math.min(100, (cluster.avg_read_iops / (cluster.total_read_iops || 1000)) * 100)}%` }} /></div>
-                                        </div>
-                                        <div className="aurora-rb-item">
-                                            <div className="aurora-rb-header">
-                                                <span className="aurora-rb-label"><Zap size={12} /> Write IOPS</span>
-                                                <span className="aurora-rb-value">{cluster.avg_write_iops}</span>
-                                            </div>
-                                            <div className="aurora-rb-track"><div className="aurora-rb-fill write" style={{ width: `${Math.min(100, (cluster.avg_write_iops / (cluster.total_write_iops || 500)) * 100)}%` }} /></div>
-                                        </div>
-                                    </div>
-
+                            filteredData.length === 0 ? (
+                                <div className="rds-no-results">
+                                    <SearchX size={48} />
+                                    <h3>No Clusters Found</h3>
+                                    <p>Try adjusting your search or switching modes</p>
+                                </div>
+                            ) : (
+                                filteredData.map((cluster, idx) => (
                                     <div
-                                        className="aurora-cluster-footer"
+                                        key={cluster.cluster_name}
+                                        className="aurora-cluster-card"
+                                        style={{ animationDelay: `${0.2 + idx * 0.1}s` }}
                                         onClick={() => navigate(`/analytics/rds/cluster/${cluster.cluster_name}`, {
-                                            state: {
-                                                cluster,
-                                                selectedRange,
-                                                customRange,
-                                                engine: viewMode === 'aurora' ? 'Aurora' : 'DocumentDB'
-                                            }
+                                            state: { cluster, selectedRange, customRange, engine: viewMode === 'docdb' ? 'DocumentDB' : 'Aurora' }
                                         })}
                                     >
-                                        <span>View Daily Breakdown</span>
-                                        <ArrowRight size={16} />
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            currentData.map((db, idx) => (
-                                <div key={db.db_identifier} className="rds-instance-card" style={{ animationDelay: `${0.2 + idx * 0.1}s` }}>
-                                    <div className="rds-instance-status-glow" />
+                                        <div className="aurora-cluster-status-glow" />
 
-                                    <div className="rds-instance-card-top">
-                                        <div className="rds-instance-name-info">
-                                            <div className="rds-instance-status-row">
-                                                <div className={`rds-instance-status-dot ${db.status}`} />
-                                                <span className="rds-instance-name-text">{db.db_identifier}</span>
+                                        <div className="aurora-cluster-card-top">
+                                            <div className="aurora-cluster-name-group">
+                                                <div className="aurora-cluster-status-row">
+                                                    <div className={`aurora-cluster-status-dot ${cluster.status}`} />
+                                                    <span className="aurora-cluster-name-text">{cluster.cluster_name}</span>
+                                                </div>
+                                            </div>
+                                            <div className="aurora-cluster-card-actions">
+                                                {selectedRange === '24h' && cluster.is_aws && (
+                                                    <div className="rds-aws-tag">
+                                                        <Server size={10} strokeWidth={3} />
+                                                        AWS
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className="rds-instance-card-actions-row">
-                                            {selectedRange === '24h' && db.is_aws && (
-                                                <div className="rds-aws-tag">
-                                                    <Server size={10} strokeWidth={3} />
-                                                    AWS
-                                                </div>
-                                            )}
-                                            <button
-                                                className="rds-instance-graph-btn"
+
+                                        <div className="aurora-cluster-subheader">
+                                            <span className="aurora-engine-tag">{viewMode === 'docdb' ? 'DocumentDB' : 'Aurora'}</span>
+                                            <span className="aurora-id-separator">•</span>
+                                            <span className="aurora-instance-count">{cluster.instances_count} Nodes</span>
+                                        </div>
+                                        <div className="rds-summary-specs">
+                                            <div className="rds-summary-tag">
+                                                <Cpu size={12} />
+                                                <span className="rds-spec-value">{cluster.total_cpu || 0}</span>
+                                                <span className="rds-spec-unit">vCPU</span>
+                                            </div>
+                                            <div className="rds-summary-tag">
+                                                <Zap size={12} />
+                                                <span className="rds-spec-value">{cluster.total_memory || 0}</span>
+                                                <span className="rds-spec-unit">GB RAM</span>
+                                            </div>
+                                            <div className="rds-summary-tag">
+                                                <Network size={12} />
+                                                <span className="rds-spec-value">{(cluster.total_connections || 0).toLocaleString()}</span>
+                                                <span className="rds-spec-unit">Max Conn</span>
+                                            </div>
+                                            <div className="rds-summary-tag">
+                                                <Activity size={12} />
+                                                <span className="rds-spec-value">{((cluster?.total_read_iops || 0) + (cluster?.total_write_iops || 0)).toLocaleString()}</span>
+                                                <span className="rds-spec-unit">Prov. IOPS</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="aurora-cluster-stats-row">
+                                            <div className="aurora-cluster-stat-item">
+                                                <div className="aurora-csi-icon"><Clock size={14} /></div>
+                                                <div className="aurora-csi-value">{cluster.active_days_count}d</div>
+                                                <div className="aurora-csi-label">Active</div>
+                                            </div>
+                                            <div className="aurora-cluster-stat-divider" />
+                                            <div
+                                                className="aurora-cluster-stat-item aurora-clickable-calendar"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    fetchInstanceMetrics(db.db_identifier, db);
+                                                    if (viewMode === "docdb") {
+                                                        fetchDocdbClusterActiveDates(
+                                                            cluster.cluster_name,
+                                                            cluster.active_days_count,
+                                                            { cpu: cluster.total_cpu, memory: cluster.total_memory, readIops: cluster.total_read_iops, writeIops: cluster.total_write_iops }
+                                                        );
+                                                    } else {
+                                                        fetchClusterActiveDates(
+                                                            cluster.cluster_name,
+                                                            cluster.active_days_count,
+                                                            { cpu: cluster.total_cpu, memory: cluster.total_memory, readIops: cluster.total_read_iops, writeIops: cluster.total_write_iops }
+                                                        );
+                                                    }
+
                                                 }}
-                                                title="View 30-Day Trend"
+
                                             >
-                                                <BarChart3 size={16} />
-                                            </button>
+                                                <div className="aurora-csi-icon"><Calendar size={14} /></div>
+                                                <div className="aurora-csi-value">View</div>
+                                                <div className="aurora-csi-label">Days Active</div>
+                                            </div>
+                                            <div className="aurora-cluster-stat-divider" />
+                                            <div className="aurora-cluster-stat-item">
+                                                <div className="aurora-csi-icon"><DollarSign size={14} /></div>
+                                                <div className="aurora-csi-value">${(cluster.approx_cost || 0).toFixed(2)}</div>
+                                                <div className="aurora-csi-label">Cost</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="aurora-cluster-resource-bars">
+                                            <div className="aurora-rb-item">
+                                                <div className="aurora-rb-header">
+                                                    <span className="aurora-rb-label"><Cpu size={12} /> CPU</span>
+                                                    <span className="aurora-rb-value">{cluster.avg_cpu_utilization}%</span>
+                                                </div>
+                                                <div className="aurora-rb-track"><div className="aurora-rb-fill cpu" style={{ width: `${Math.min(100, cluster.avg_cpu_utilization)}%` }} /></div>
+                                            </div>
+                                            <div className="aurora-rb-item">
+                                                <div className="aurora-rb-header">
+                                                    <span className="aurora-rb-label"><Zap size={12} /> Memory</span>
+                                                    <span className="aurora-rb-value">{cluster.avg_memory_usage || 0}%</span>
+                                                </div>
+                                                <div className="aurora-rb-track"><div className="aurora-rb-fill mem" style={{ width: `${Math.min(100, cluster.avg_memory_usage || 0)}%` }} /></div>
+                                            </div>
+                                            <div className="aurora-rb-item">
+                                                <div className="aurora-rb-header">
+                                                    <span className="aurora-rb-label"><ArrowRight size={12} /> Read IOPS</span>
+                                                    <span className="aurora-rb-value">{cluster.avg_read_iops}</span>
+                                                </div>
+                                                <div className="aurora-rb-track"><div className="aurora-rb-fill read" style={{ width: `${Math.min(100, (cluster.avg_read_iops / (cluster.total_read_iops || 1000)) * 100)}%` }} /></div>
+                                            </div>
+                                            <div className="aurora-rb-item">
+                                                <div className="aurora-rb-header">
+                                                    <span className="aurora-rb-label"><Zap size={12} /> Write IOPS</span>
+                                                    <span className="aurora-rb-value">{cluster.avg_write_iops}</span>
+                                                </div>
+                                                <div className="aurora-rb-track"><div className="aurora-rb-fill write" style={{ width: `${Math.min(100, (cluster.avg_write_iops / (cluster.total_write_iops || 500)) * 100)}%` }} /></div>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            className="aurora-cluster-footer"
+                                            onClick={() => navigate(`/analytics/rds/cluster/${cluster.cluster_name}`, {
+                                                state: {
+                                                    cluster,
+                                                    selectedRange,
+                                                    customRange,
+                                                    engine: viewMode === 'aurora' ? 'Aurora' : 'DocumentDB'
+                                                }
+                                            })}
+                                        >
+                                            <span>View Daily Breakdown</span>
+                                            <ArrowRight size={16} />
                                         </div>
                                     </div>
+                                )))
+                        ) : (
+                            filteredData.length === 0 ? (
+                                <div className="rds-no-results">
+                                    <SearchX size={48} />
+                                    <h3>No Instances Found</h3>
+                                    <p>Try adjusting your search or switching modes</p>
+                                </div>
+                            ) : (
+                                filteredData.map((db, idx) => (
+                                    <div key={db.db_identifier} className="rds-instance-card" style={{ animationDelay: `${0.2 + idx * 0.1}s` }}>
+                                        <div className="rds-instance-status-glow" />
 
-                                    <div className="rds-instance-id-text">
-                                        <span className="rds-engine-id-part">{db.engine}</span>
-                                        <span className="rds-id-separator">•</span>
-                                        <span className="rds-class-id-part">{db.instance_class}</span>
-                                    </div>
+                                        <div className="rds-instance-card-top">
+                                            <div className="rds-instance-name-info">
+                                                <div className="rds-instance-status-row">
+                                                    <div className={`rds-instance-status-dot ${db.status}`} />
+                                                    <span className="rds-instance-name-text">{db.db_identifier}</span>
+                                                </div>
+                                            </div>
+                                            <div className="rds-instance-card-actions-row">
+                                                {selectedRange === '24h' && db.is_aws && (
+                                                    <div className="rds-aws-tag">
+                                                        <Server size={10} strokeWidth={3} />
+                                                        AWS
+                                                    </div>
+                                                )}
+                                                <button
+                                                    className="rds-instance-graph-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        fetchInstanceMetrics(db.db_identifier, db);
+                                                    }}
+                                                    title="View 30-Day Trend"
+                                                >
+                                                    <BarChart3 size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="rds-instance-id-text">
+                                            <span className="rds-engine-id-part">{db.engine}</span>
+                                            <span className="rds-id-separator">•</span>
+                                            <span className="rds-class-id-part">{db.instance_class}</span>
+                                        </div>
 
                                         <div className="rds-summary-specs">
                                             <div className="rds-summary-tag">
@@ -838,69 +886,69 @@ function RDSAnalytics() {
                                             </div>
                                         </div>
 
-                                    <div className="rds-instance-stats-row">
-                                        <div className="rds-instance-stat-item">
-                                            <div className="rds-isi-icon"><Clock size={14} /></div>
-                                            <div className="rds-isi-value">{db.active_days_count}d</div>
-                                            <div className="rds-isi-label">Active</div>
-                                        </div>
-                                        <div className="rds-instance-stat-divider" />
-                                        <div
-                                            className="rds-instance-stat-item rds-clickable-calendar"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
+                                        <div className="rds-instance-stats-row">
+                                            <div className="rds-instance-stat-item">
+                                                <div className="rds-isi-icon"><Clock size={14} /></div>
+                                                <div className="rds-isi-value">{db.active_days_count}d</div>
+                                                <div className="rds-isi-label">Active</div>
+                                            </div>
+                                            <div className="rds-instance-stat-divider" />
+                                            <div
+                                                className="rds-instance-stat-item rds-clickable-calendar"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
 
-                                                fetchRdsInstanceActiveDates(
-                                                    db.db_identifier,
-                                                    db.active_days_count,
-                                                    { cpu: db.total_cpu, memory: db.total_memory, readIops: db.total_read_iops, writeIops: db.total_write_iops }
-                                                );
-                                            }}
+                                                    fetchRdsInstanceActiveDates(
+                                                        db.db_identifier,
+                                                        db.active_days_count,
+                                                        { cpu: db.total_cpu, memory: db.total_memory, readIops: db.total_read_iops, writeIops: db.total_write_iops }
+                                                    );
+                                                }}
 
-                                        >
-                                            <div className="rds-isi-icon"><Calendar size={14} /></div>
-                                            <div className="rds-isi-value">View</div>
-                                            <div className="rds-isi-label">Days Active</div>
+                                            >
+                                                <div className="rds-isi-icon"><Calendar size={14} /></div>
+                                                <div className="rds-isi-value">View</div>
+                                                <div className="rds-isi-label">Days Active</div>
+                                            </div>
+                                            <div className="rds-instance-stat-divider" />
+                                            <div className="rds-instance-stat-item">
+                                                <div className="rds-isi-icon"><DollarSign size={14} /></div>
+                                                <div className="rds-isi-value">${(db.approx_cost || 0).toFixed(2)}</div>
+                                                <div className="rds-isi-label">Instance Cost</div>
+                                            </div>
                                         </div>
-                                        <div className="rds-instance-stat-divider" />
-                                        <div className="rds-instance-stat-item">
-                                            <div className="rds-isi-icon"><DollarSign size={14} /></div>
-                                            <div className="rds-isi-value">${(db.approx_cost || 0).toFixed(2)}</div>
-                                            <div className="rds-isi-label">Instance Cost</div>
+                                        <div className="rds-instance-resource-bars">
+                                            <div className="rds-resource-bar-item">
+                                                <div className="rds-rb-header">
+                                                    <span className="rds-rb-label"><Cpu size={12} /> CPU</span>
+                                                    <span className="rds-rb-value">{db.avg_cpu_utilization}%</span>
+                                                </div>
+                                                <div className="rds-rb-track"><div className="rds-rb-fill cpu" style={{ width: `${Math.min(100, db.avg_cpu_utilization)}%` }} /></div>
+                                            </div>
+                                            <div className="rds-resource-bar-item">
+                                                <div className="rds-rb-header">
+                                                    <span className="rds-rb-label"><Zap size={12} /> Memory</span>
+                                                    <span className="rds-rb-value">{db.avg_memory_usage || 0}%</span>
+                                                </div>
+                                                <div className="rds-rb-track"><div className="rds-rb-fill mem" style={{ width: `${Math.min(100, db.avg_memory_usage || 0)}%` }} /></div>
+                                            </div>
+                                            <div className="rds-resource-bar-item">
+                                                <div className="rds-rb-header">
+                                                    <span className="rds-rb-label"><ArrowRight size={12} /> Read IOPS</span>
+                                                    <span className="rds-rb-value">{db.avg_read_iops}</span>
+                                                </div>
+                                                <div className="rds-rb-track"><div className="rds-rb-fill read" style={{ width: `${Math.min(100, (db.avg_read_iops / (db.total_read_iops || 1000)) * 100)}%` }} /></div>
+                                            </div>
+                                            <div className="rds-resource-bar-item">
+                                                <div className="rds-rb-header">
+                                                    <span className="rds-rb-label"><Zap size={12} /> Write IOPS</span>
+                                                    <span className="rds-rb-value">{db.avg_write_iops}</span>
+                                                </div>
+                                                <div className="rds-rb-track"><div className="rds-rb-fill write" style={{ width: `${Math.min(100, (db.avg_write_iops / (db.total_write_iops || 500)) * 100)}%` }} /></div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="rds-instance-resource-bars">
-                                        <div className="rds-resource-bar-item">
-                                            <div className="rds-rb-header">
-                                                <span className="rds-rb-label"><Cpu size={12} /> CPU</span>
-                                                <span className="rds-rb-value">{db.avg_cpu_utilization}%</span>
-                                            </div>
-                                            <div className="rds-rb-track"><div className="rds-rb-fill cpu" style={{ width: `${Math.min(100, db.avg_cpu_utilization)}%` }} /></div>
-                                        </div>
-                                        <div className="rds-resource-bar-item">
-                                            <div className="rds-rb-header">
-                                                <span className="rds-rb-label"><Zap size={12} /> Memory</span>
-                                                <span className="rds-rb-value">{db.avg_memory_usage || 0}%</span>
-                                            </div>
-                                            <div className="rds-rb-track"><div className="rds-rb-fill mem" style={{ width: `${Math.min(100, db.avg_memory_usage || 0)}%` }} /></div>
-                                        </div>
-                                        <div className="rds-resource-bar-item">
-                                            <div className="rds-rb-header">
-                                                <span className="rds-rb-label"><ArrowRight size={12} /> Read IOPS</span>
-                                                <span className="rds-rb-value">{db.avg_read_iops}</span>
-                                            </div>
-                                            <div className="rds-rb-track"><div className="rds-rb-fill read" style={{ width: `${Math.min(100, (db.avg_read_iops / (db.total_read_iops || 1000)) * 100)}%` }} /></div>
-                                        </div>
-                                        <div className="rds-resource-bar-item">
-                                            <div className="rds-rb-header">
-                                                <span className="rds-rb-label"><Zap size={12} /> Write IOPS</span>
-                                                <span className="rds-rb-value">{db.avg_write_iops}</span>
-                                            </div>
-                                            <div className="rds-rb-track"><div className="rds-rb-fill write" style={{ width: `${Math.min(100, (db.avg_write_iops / (db.total_write_iops || 500)) * 100)}%` }} /></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
+                                )))
                         )}
                     </div>
                 </div>
