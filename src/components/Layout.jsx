@@ -13,7 +13,8 @@ import {
     User,
     ChevronRight,
     Settings as SettingsIcon,
-    BarChart3
+    BarChart3,
+    Layers
 } from 'lucide-react';
 import '../css/Layout.css';
 import '../css/body-theme.css';
@@ -76,6 +77,7 @@ function Layout() {
         { path: '/ecs', icon: ECSIcon, label: 'ECS Clusters', isCustomIcon: true },
         { path: '/eks', icon: Boxes, label: 'EKS Clusters' },
         { path: '/rds', icon: Database, label: 'RDS Databases' },
+        { path: '/asg', icon: Layers, label: 'Auto Scaling Groups' },
         { path: '/analytics', icon: BarChart3, label: 'Analytics' },
     ];
 

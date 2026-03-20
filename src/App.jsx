@@ -10,7 +10,6 @@ import ECSServices from './components/ecs/ECSServices';
 import ECSServiceUpdates from './components/ecs/ECSServiceUpdates';
 import ECSASG from './components/ecs/ECSASG';
 import EKS from './components/eks/EKS';
-// import EBS from './components/ebs/EBS';
 import RDS from './components/rds/RDS';
 import RDSUpdates from './components/rds/RDSUpdates';
 import Analytics from './components/analytics/Analytics';
@@ -25,6 +24,7 @@ import AuroraClusterDetails from './components/analytics/rds/AuroraClusterDetail
 import Settings from './components/home/Settings';
 import AuthGuard from './components/routes/AuthGuard';
 import useSessionTimeout from './components/hooks/useSessionTimeout';
+import ASG from './components/asg/ASG';
 
 
 function ProtectedApp() {
@@ -52,8 +52,7 @@ function App() {
             <Route path="eks" element={<EKS />} />
             <Route path="rds" element={<RDS />} />
             <Route path="rds/updates" element={<RDSUpdates />} />
-            {/* <Route path="rds/never-start" element={<NeverStartPage />} /> */}
-            {/* <Route path="rds/24x7" element={<TwentyFourSevenPage />} /> */}
+            <Route path="asg" element={<ASG />} />
 
             {/* ANALYTICS */}
             <Route path="analytics" element={<Analytics />} />
