@@ -863,7 +863,7 @@ Not Found: ${result.summary.clusters_not_found.length}`
 
                     <button
                         className="ecs-btn-stack ecs-btn-delta-updates ecs-update-btn"
-                        onClick={() => { handleNavigateToDeltaUpdates }}
+                        onClick={handleNavigateToDeltaUpdates}
                     >
                         <div className="ecs-icon-wrapper">
                             <Activity size={16} />
@@ -972,8 +972,8 @@ Not Found: ${result.summary.clusters_not_found.length}`
                             Manage automated schedules and exceptions
                         </p>
                     </div>
-                    <button 
-                        className="ecs-th-action-btn ecs-settings-btn" 
+                    <button
+                        className="ecs-th-action-btn ecs-settings-btn"
                         onClick={() => tableRef.current?.openSettings()}
                         title="Column Settings"
                     >
