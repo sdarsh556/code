@@ -1834,6 +1834,14 @@ function ECSServices() {
                         }
                     }}
                 />
+
+                {filteredServices.length === 0 && (
+                    <div className="empty-state-modern">
+                        <Container size={80} className="empty-icon-modern" />
+                        <h3>No services found</h3>
+                        <p>Try adjusting your search query</p>
+                    </div>
+                )}
             </div>
 
             {/* Edit Modal */}

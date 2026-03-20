@@ -2353,3 +2353,27 @@ input[type="checkbox"]:disabled:hover {
 .layout-container[data-theme="dark"] .task-count.active {
     background: rgba(59, 130, 246, 0.12);
 }
+/* Empty State */
+.empty-state-modern {
+    padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 3vw, 2rem);
+    text-align: center;
+}
+
+.empty-icon-modern {
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    opacity: 0.3;
+}
+
+.empty-state-modern h3 {
+    font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.75rem 0;
+}
+
+.empty-state-modern p {
+    font-size: clamp(0.875rem, 1.8vw, 1rem);
+    color: var(--text-tertiary);
+    margin: 0;
+}

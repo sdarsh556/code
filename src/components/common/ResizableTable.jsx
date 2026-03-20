@@ -144,7 +144,7 @@ const ResizableTable = forwardRef(({
                 </thead>
 
                 <tbody>
-                    {data && data.length > 0 ? (
+                    {data && data.length > 0 && (
                         data.map((row, rowIndex) => (
                             <tr key={rowIndex}>
                                 {activeColumns.map(col => (
@@ -156,15 +156,6 @@ const ResizableTable = forwardRef(({
                                 ))}
                             </tr>
                         ))
-                    ) : (
-                        <tr>
-                            <td
-                                colSpan={activeColumns.length}
-                                style={{ textAlign: "center" }}
-                            >
-                                No Data Found
-                            </td>
-                        </tr>
                     )}
                 </tbody>
             </table>
