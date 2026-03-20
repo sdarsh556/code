@@ -18,6 +18,7 @@ import '../../css/home/Dashboard.css';
 import axiosClient from '../api/axiosClient';
 import HolidayModal from '../common/HolidayModal';
 import ConfirmActionModal from '../common/ConfirmActionModal';
+import logo from '../../assets/logo.svg';
 
 function Dashboard() {
     const { setBgContext } = useOutletContext();
@@ -263,14 +264,33 @@ function Dashboard() {
 
     return (
         <div className="dashboard-page">
-            <div className="dashboard-hero">
-                <div className="hero-content">
-                    <h1 className="hero-title">
-                        Welcome to <span className="gradient-text">EDITH</span>
-                    </h1>
-                    <p className="hero-subtitle">
+            <div className="dashboard-hero-premium">
+                <div className="hero-hud-metadata">
+                    <div className="hud-line"></div>
+                    <span className="hud-status"><span className="pulse-dot"></span> SYSTEM ONLINE</span>
+                    <div className="hud-line"></div>
+                </div>
+
+                <div className="hero-main-unit">
+                    <div className="hero-branding">
+                        <img src={logo} className="portal-logo-modern" alt="EDITH Portal" />
+                    </div>
+                    <div className="hero-text-content">
+                        <h1 className="hero-title-premium">
+                            Welcome to <span className="title-accent">EDITH</span>
+                        </h1>
+                        <div className="hero-tagline">
+                            <span className="tagline-text">Even Dead, I'm The Hero</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="hero-footer-unit">
+                    <div className="footer-decorator"></div>
+                    <p className="hero-description">
                         Your centralized AWS automation dashboard. Manage all your cloud resources in one place.
                     </p>
+                    <div className="footer-decorator"></div>
                 </div>
             </div>
 
@@ -279,13 +299,13 @@ function Dashboard() {
                     <div key={service.id} className={`service-card card-${service.color}`}>
                         <div className="card-top-bar"></div>
 
-                        <button
+                        {/* <button
                             className="action-graph-btn"
                             onClick={() => navigate(service.analyticsLink)}
                             title="Interactive Performance Analytics"
                         >
                             <TrendingUp size={18} />
-                        </button>
+                        </button> */}
 
                         <div className="icon-box">
                             <service.icon size={24} strokeWidth={2.5} />
