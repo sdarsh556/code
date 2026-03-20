@@ -309,13 +309,12 @@ const ChartFilters = () => (
     </defs>
 );
 
-const RDSStorageRingChart = ({ databases }) => {
+const RDSStoragePieChart = ({ databases }) => {
     const [hoveredData, setHoveredData] = useState(null);
     const size = 260;
-    const padding = 1.35;
+    const padding = 1.25;
     const boxSize = padding * 2;
     const radius = 1;
-    const strokeWidth = 0.35;
 
     const rdsInstances = databases.filter(db => !db.is_aurora && !db.is_docdb && db.storage_used > 0)
         .sort((a, b) => b.storage_used - a.storage_used);
@@ -340,60 +339,89 @@ const RDSStorageRingChart = ({ databases }) => {
                     ))}
                 </defs>
 
-                <circle cx="0" cy="0" r={radius} fill="none" stroke="var(--rds-chart-track)" strokeWidth={strokeWidth} />
+                {effectiveAllocated === 0 ? (
+                    <circle cx="0" cy="0" r={radius} fill="var(--rds-chart-track)" />
+                ) : (
+                    <>
+                        {rdsInstances.map((db, index) => {
+                            const slicePercent = db.storage_used / effectiveAllocated;
+                            if (slicePercent <= 0) return null;
 
-                {effectiveAllocated > 0 && rdsInstances.map((db, index) => {
-                    const slicePercent = db.storage_used / effectiveAllocated;
-                    if (slicePercent <= 0) return null;
+                            const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+                            cumulativePercent += slicePercent;
+                            const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+                            const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
 
-                    const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
-                    cumulativePercent += slicePercent;
-                    const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
-                    const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
+                            const isHovered = hoveredData?.name === db.db_identifier;
+                            const currentRadius = isHovered ? radius * 1.05 : radius;
+                            const gradId = gradients[index].id;
 
-                    const isHovered = hoveredData?.name === db.db_identifier;
-                    const finalStrokeWidth = isHovered ? strokeWidth * 1.3 : strokeWidth;
-                    const gradId = gradients[index].id;
+                            if (slicePercent === 1) {
+                                return (
+                                    <circle
+                                        key={db.id}
+                                        cx="0" cy="0" r={currentRadius}
+                                        fill={`url(#${gradId})`}
+                                        className="rds-chart-segment"
+                                        style={{ filter: isHovered ? 'url(#bloom-glow)' : 'none' }}
+                                        onMouseEnter={() => setHoveredData({ name: db.db_identifier, value: db.storage_used, color: gradients[index].solid })}
+                                        onMouseLeave={() => setHoveredData(null)}
+                                    />
+                                );
+                            }
 
-                    if (slicePercent === 1) {
-                        return (
-                            <circle
-                                key={db.id}
-                                cx="0" cy="0" r={radius}
-                                fill="none"
-                                stroke={`url(#${gradId})`}
-                                strokeWidth={finalStrokeWidth}
-                                className="rds-chart-segment"
-                                style={{ filter: isHovered ? 'url(#bloom-glow)' : 'none' }}
-                                onMouseEnter={() => setHoveredData({ name: db.db_identifier, value: db.storage_used, color: gradients[index].solid })}
-                                onMouseLeave={() => setHoveredData(null)}
-                            />
-                        );
-                    }
+                            const pathData = [
+                                `M ${startX * currentRadius} ${startY * currentRadius}`,
+                                `A ${currentRadius} ${currentRadius} 0 ${largeArcFlag} 1 ${endX * currentRadius} ${endY * currentRadius}`,
+                                `L 0 0`,
+                                `Z`
+                            ].join(' ');
 
-                    const pathData = [
-                        `M ${startX * radius} ${startY * radius}`,
-                        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX * radius} ${endY * radius}`
-                    ].join(' ');
+                            return (
+                                <path
+                                    key={db.id}
+                                    d={pathData}
+                                    fill={`url(#${gradId})`}
+                                    className="rds-chart-segment"
+                                    style={{ filter: isHovered ? 'url(#bloom-glow)' : 'none' }}
+                                    onMouseEnter={() => setHoveredData({ name: db.db_identifier, value: db.storage_used, color: gradients[index].solid })}
+                                    onMouseLeave={() => setHoveredData(null)}
+                                />
+                            );
+                        })}
 
-                    return (
-                        <path
-                            key={db.id}
-                            d={pathData}
-                            fill="none"
-                            stroke={`url(#${gradId})`}
-                            strokeWidth={finalStrokeWidth}
-                            strokeLinecap="round"
-                            className="rds-chart-segment"
-                            style={{ filter: isHovered ? 'url(#bloom-glow)' : 'none' }}
-                            onMouseEnter={() => setHoveredData({ name: db.db_identifier, value: db.storage_used, color: gradients[index].solid })}
-                            onMouseLeave={() => setHoveredData(null)}
-                        />
-                    );
-                })}
+                        {/* Unused Storage Segment */}
+                        {effectiveAllocated > totalUsed && (() => {
+                            const slicePercent = (effectiveAllocated - totalUsed) / effectiveAllocated;
+                            const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+                            cumulativePercent += slicePercent;
+                            const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+                            const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
+                            const isHovered = hoveredData?.name === 'Unused Storage';
+                            const currentRadius = isHovered ? radius * 1.05 : radius;
+
+                            const pathData = [
+                                `M ${startX * currentRadius} ${startY * currentRadius}`,
+                                `A ${currentRadius} ${currentRadius} 0 ${largeArcFlag} 1 ${endX * currentRadius} ${endY * currentRadius}`,
+                                `L 0 0`,
+                                `Z`
+                            ].join(' ');
+
+                            return (
+                                <path
+                                    d={pathData}
+                                    fill="rgba(255, 255, 255, 0.08)"
+                                    className="rds-chart-segment unused-segment"
+                                    onMouseEnter={() => setHoveredData({ name: 'Unused Storage', value: effectiveAllocated - totalUsed, color: '#64748b' })}
+                                    onMouseLeave={() => setHoveredData(null)}
+                                />
+                            );
+                        })()}
+                    </>
+                )}
             </svg>
 
-            <div className="rds-chart-center-info">
+            <div className="rds-pie-center-info">
                 <div className="rds-chart-center-used">{totalUsed.toFixed(1)}GB</div>
                 <div className="rds-chart-center-sub">of {effectiveAllocated.toFixed(1)}GB ALC</div>
                 <div className="rds-chart-center-count">{rdsInstances.length} Instances</div>
@@ -1763,7 +1791,7 @@ export default function RDS() {
                         <span className="rds-stat-title-ec2">RDS Storage</span>
                         <Database size={18} className="rds-stat-icon-ec2 rds-blue" />
                     </div>
-                    <RDSStorageRingChart
+                    <RDSStoragePieChart
                         databases={databases}
                     />
                 </div>
