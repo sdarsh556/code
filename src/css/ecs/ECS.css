@@ -1833,7 +1833,7 @@
    ============================================ */
 .ecs-stats-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 24px;
     margin-bottom: 32px;
 }
@@ -1956,6 +1956,10 @@
     color: #14b8a6;
 }
 
+.ecs-stat-icon-standard.ecs-green {
+    color: #10b981;
+}
+
 .ecs-stat-value {
     font-size: 44px;
     font-weight: 900;
@@ -2006,6 +2010,14 @@
     filter: drop-shadow(0 0 12px rgba(20, 184, 166, 0.3));
 }
 
+.ecs-green-text {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.3));
+}
+
 /* Animations */
 @keyframes ecsFadeInUp {
     from {
@@ -2030,6 +2042,12 @@
 }
 
 /* Responsive Grid */
+@media (max-width: 1400px) {
+    .ecs-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
 @media (max-width: 1200px) {
     .ecs-stats-grid {
         grid-template-columns: repeat(2, 1fr);

@@ -551,6 +551,11 @@ function ECS() {
             0
         );
 
+        const totalRunningServices = clusters.reduce(
+            (sum, c) => sum + (c.runningServices || 0),
+            0
+        );
+
         // Only count schedules from DB
         const activeScheduledCount = clusters.filter(
             (c) => c.isScheduled === true
@@ -559,6 +564,7 @@ function ECS() {
         return {
             totalClustersCount,
             totalServices,
+            totalRunningServices,
             stoppedServices,
             totalRunningTasks: clusters.reduce((sum, c) => sum + (c.runningTasks || 0), 0),
             activeSchedules: activeScheduledCount
@@ -913,6 +919,16 @@ Not Found: ${result.summary.clusters_not_found.length}`
                         </div>
                     </div>
                     <div className="ecs-stat-value ecs-purple-text">{stats.totalServices}</div>
+                </div>
+
+                <div className="ecs-stat-card">
+                    <div className="ecs-stat-header">
+                        <span className="ecs-stat-title">Running Services</span>
+                        <div className="ecs-stat-icon-standard ecs-green">
+                            <Activity size={24} />
+                        </div>
+                    </div>
+                    <div className="ecs-stat-value ecs-green-text">{stats.totalRunningServices}</div>
                 </div>
 
                 <div className="ecs-stat-card">
