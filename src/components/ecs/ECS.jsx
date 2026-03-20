@@ -43,6 +43,7 @@ const DUMMY_CLUSTERS = [
         computeType: 'FARGATE',
         vcpu: '32 vCPU',
         memory: '128 GB',
+        runningTasks: 45,
         isScheduled: true,
         schedule_start: null,
         schedule_end: null
@@ -56,6 +57,7 @@ const DUMMY_CLUSTERS = [
         computeType: 'FARGATE',
         vcpu: '16 vCPU',
         memory: '64 GB',
+        runningTasks: 20,
         isScheduled: false,
         schedule_start: null,
         schedule_end: null
@@ -69,6 +71,7 @@ const DUMMY_CLUSTERS = [
         computeType: 'ASG',
         vcpu: '64 vCPU',
         memory: '256 GB',
+        runningTasks: 80,
         isScheduled: true,
         schedule_start: null,
         schedule_end: null
@@ -184,6 +187,7 @@ function ECS() {
         { key: 'runningServices', label: 'Running Services', widthPercent: 12, minWidth: 120 },
         { key: 'closedServices', label: 'Closed Services', widthPercent: 12, minWidth: 120 },
         { key: 'computeType', label: 'Compute Type', widthPercent: 11, minWidth: 130 },
+        { key: 'runningTasks', label: 'Running Tasks', widthPercent: 12, minWidth: 120 },
         { key: 'vcpu', label: 'vCPU', widthPercent: 9, minWidth: 100 },
         { key: 'memory', label: 'Memory', widthPercent: 9, minWidth: 100 },
         { key: 'schedule', label: 'Schedule', widthPercent: 10, minWidth: 140 },
@@ -210,6 +214,7 @@ function ECS() {
                     running_services_count: c.runningServices,
                     stopped_services_count: c.closedServices,
                     compute_type: c.computeType,
+                    running_tasks_count: c.runningTasks,
                     vcpu_total: c.vcpu,
                     memory_total: c.memory,
                     is_scheduled: c.isScheduled,
@@ -224,6 +229,7 @@ function ECS() {
                 activeServices: c.active_services_count,
                 runningServices: c.running_services_count,
                 closedServices: c.stopped_services_count,
+                runningTasks: c.running_tasks_count || (index === 0 ? 45 : index === 1 ? 20 : 80),
                 computeType: c.compute_type,
                 vcpu: c.vcpu_total || (index === 0 ? '32 vCPU' : index === 1 ? '16 vCPU' : '64 vCPU'),
                 memory: c.memory_total || (index === 0 ? '128 GB' : index === 1 ? '64 GB' : '256 GB'),
@@ -554,6 +560,7 @@ function ECS() {
             totalClustersCount,
             totalServices,
             stoppedServices,
+            totalRunningTasks: clusters.reduce((sum, c) => sum + (c.runningTasks || 0), 0),
             activeSchedules: activeScheduledCount
         };
     }, [clusters]);
@@ -920,6 +927,16 @@ Not Found: ${result.summary.clusters_not_found.length}`
 
                 <div className="ecs-stat-card">
                     <div className="ecs-stat-header">
+                        <span className="ecs-stat-title">Running Tasks</span>
+                        <div className="ecs-stat-icon-standard ecs-teal">
+                            <Zap size={24} />
+                        </div>
+                    </div>
+                    <div className="ecs-stat-value ecs-teal-text">{stats.totalRunningTasks}</div>
+                </div>
+
+                <div className="ecs-stat-card">
+                    <div className="ecs-stat-header">
                         <span className="ecs-stat-title">Active Schedules</span>
                         <div className="ecs-stat-icon-standard ecs-yellow">
                             <Calendar size={24} />
@@ -1045,6 +1062,14 @@ Not Found: ${result.summary.clusters_not_found.length}`
                                             <Cpu size={16} />
                                             {cluster.computeType}
                                         </span>
+                                    );
+
+                                case 'runningTasks':
+                                    return (
+                                        <div className="service-count running-tasks-count">
+                                            <Zap size={16} />
+                                            <span>{cluster.runningTasks}</span>
+                                        </div>
                                     );
 
                                 case 'vcpu':

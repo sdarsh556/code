@@ -49,6 +49,7 @@ const DUMMY_SERVICES = [
         max_value: 4,
         vcpu: '4 vCPU',
         memory: '16 GB',
+        running_tasks_count: 12,
         is_scheduled: true,
         is_enabled: true,
         current_status: 'running'
@@ -63,6 +64,7 @@ const DUMMY_SERVICES = [
         max_value: 2,
         vcpu: '2 vCPU',
         memory: '8 GB',
+        running_tasks_count: 5,
         is_scheduled: false,
         is_enabled: true,
         current_status: 'running'
@@ -77,6 +79,7 @@ const DUMMY_SERVICES = [
         max_value: 5,
         vcpu: '8 vCPU',
         memory: '32 GB',
+        running_tasks_count: 0,
         is_scheduled: true,
         is_enabled: false,
         current_status: 'stopped'
@@ -365,6 +368,7 @@ function ECSServices() {
                     max: service.max_value !== undefined ? service.max_value : service.max,
                     vcpu: service.vcpu || (index === 0 ? '4 vCPU' : index === 1 ? '2 vCPU' : '8 vCPU'),
                     memory: service.memory || (index === 0 ? '16 GB' : index === 1 ? '8 GB' : '32 GB'),
+                    runningTasks: service.running_tasks_count || (index === 0 ? 12 : index === 1 ? 5 : 0),
                     status: service.current_status || service.status,
                     isActive: (service.desired_value !== undefined ? service.desired_value : service.desired) > 0,
                     isScheduled: service.is_scheduled || service.isScheduled,
@@ -387,6 +391,7 @@ function ECSServices() {
                     max: service.max_value !== undefined ? service.max_value : service.max,
                     vcpu: service.vcpu || (index === 0 ? '4 vCPU' : index === 1 ? '2 vCPU' : '8 vCPU'),
                     memory: service.memory || (index === 0 ? '16 GB' : index === 1 ? '8 GB' : '32 GB'),
+                    runningTasks: service.running_tasks_count || (index === 0 ? 12 : index === 1 ? 5 : 0),
                     status: service.current_status || service.status,
                     isActive: (service.desired_value !== undefined ? service.desired_value : service.desired) > 0,
                     isScheduled: service.is_scheduled || service.isScheduled,
@@ -545,6 +550,7 @@ function ECSServices() {
             running,
             stopped,
             total: services.length,
+            totalRunningTasks: services.reduce((sum, s) => sum + (s.runningTasks || 0), 0),
             schedules
         };
     }, [services]);
@@ -1355,6 +1361,7 @@ function ECSServices() {
         { key: 'max', label: 'Max', widthPercent: 6, minWidth: 60 },
         { key: 'vcpu', label: 'vCPU', widthPercent: 8, minWidth: 100 },
         { key: 'memory', label: 'Memory', widthPercent: 8, minWidth: 100 },
+        { key: 'runningTasks', label: 'Running Tasks', widthPercent: 10, minWidth: 120 },
         { key: 'currentStatus', label: 'Current Status', widthPercent: 12, minWidth: 140 },
         { key: 'desiredStatus', label: 'Enabled', widthPercent: 8, minWidth: 120 },
         { key: 'actions', label: 'Actions', widthPercent: 12, minWidth: 200 },
@@ -1611,6 +1618,17 @@ function ECSServices() {
 
                 <div className="svcs-stat-card">
                     <div className="svcs-stat-header">
+                        <span className="svcs-stat-title">Running Tasks</span>
+                        <div className="svcs-stat-icon-wrapper svcs-teal">
+                            <Zap size={22} />
+                        </div>
+                    </div>
+                    <h3 className="svcs-stat-value svcs-teal-text">{stats.totalRunningTasks}</h3>
+                    <div className="svcs-stat-shimmer"></div>
+                </div>
+
+                <div className="svcs-stat-card">
+                    <div className="svcs-stat-header">
                         <span className="svcs-stat-title">Total Schedules</span>
                         <div className="svcs-stat-icon-wrapper svcs-purple">
                             <Calendar size={22} />
@@ -1710,6 +1728,14 @@ function ECSServices() {
                                     <div className="svcs-memory-count">
                                         <Zap size={14} />
                                         <span>{service.memory}</span>
+                                    </div>
+                                );
+
+                            case 'runningTasks':
+                                return (
+                                    <div className="svcs-running-tasks-count">
+                                        <Zap size={14} />
+                                        <span>{service.runningTasks}</span>
                                     </div>
                                 );
 
