@@ -130,7 +130,7 @@ function Analytics() {
                             return (
                                 <div
                                     key={service.id}
-                                    className={`service-card ${service.available ? 'available' : 'unavailable'}`}
+                                    className={`analytics-service-card ${service.available ? 'available' : 'unavailable'}`}
                                     onClick={() => service.available && navigate(`/analytics/${service.id}`)}
                                     style={{
                                         '--accent': service.accentColor,
