@@ -201,7 +201,7 @@ function ComparisonTable({
                 const parts = ['3.25rem']; // Rank
                 columns.forEach((col, i) => {
                     if (col.width) parts.push(col.width);
-                    else if (i === 0) parts.push('1fr'); // Fluid name by default
+                    else if (i === 0) parts.push('minmax(0, 1fr)'); // Fluid name by default
                     else parts.push('8rem');
                 });
                 template = parts.join(' ');

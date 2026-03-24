@@ -1075,7 +1075,7 @@ function RDSAnalytics() {
                         db_identifier: db.cluster_name || db.db_identifier
                     }))}
                     exportFilename={`${viewMode}-analytics.csv`}
-                    gridTemplateColumns="3.25rem 2fr 1.5fr 7rem 7rem 7rem 7rem 7rem 7rem 100px"
+                    gridTemplateColumns="52px minmax(0, 2.5fr) minmax(0, 0.5fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.5fr) minmax(0, 0.75fr) minmax(0, 0.75fr) minmax(0, 1fr)"
                     columns={[
                         {
                             key: 'db_identifier',

@@ -212,7 +212,7 @@ function ClusterDetails() {
                     subtitle="Click any col header to sort"
                     data={dailyData}
                     exportFilename="day-comparison.csv"
-                    gridTemplateColumns="52px 1fr 100px 120px 120px 120px 120px"
+                    gridTemplateColumns="52px minmax(0, 1fr) 100px 120px 120px 120px 120px"
                     onRowClick={handleDateClick}
                     columns={[
                         {

@@ -552,7 +552,7 @@ function AuroraClusterDetails() {
                         id: inst.instance_identifier
                     }))}
                     exportFilename={`${clusterName}-instances.csv`}
-                    gridTemplateColumns="3.25rem 2fr 1.2fr 8.5rem 8.5rem 8.5rem 8.5rem 8.5rem 8.5rem"
+                    gridTemplateColumns="3.25rem minmax(0, 2fr) minmax(0, 1.2fr) 8.5rem 8.5rem 8.5rem 8.5rem 8.5rem 8.5rem"
                     columns={[
                         {
                             key: 'instance_identifier',
