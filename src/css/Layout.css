@@ -145,6 +145,171 @@
     color: var(--text-muted);
 }
 
+/* ============================================
+   ENVIRONMENT SWITCHER
+   ============================================ */
+.env-switcher-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.env-switcher-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.45rem 1rem;
+    background: var(--surface-glass);
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    color: var(--text-primary);
+    font-size: 0.825rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-sm);
+}
+
+.env-switcher-btn:hover {
+    background: var(--surface-glass-hover);
+    border-color: var(--border-medium);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
+}
+
+/* Distinct glowing states */
+.env-switcher-btn.uat {
+    border-color: rgba(139, 92, 246, 0.3);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%);
+}
+
+.env-switcher-btn.uat:hover {
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.5);
+}
+
+.env-switcher-btn.uat .env-icon {
+    color: #8b5cf6;
+}
+
+.env-switcher-btn.pp {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(239, 68, 68, 0.05) 100%);
+}
+
+.env-switcher-btn.pp:hover {
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.5);
+}
+
+.env-switcher-btn.pp .env-icon {
+    color: #f59e0b;
+}
+
+.env-chevron {
+    color: var(--text-tertiary);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.env-chevron.open {
+    transform: rotate(180deg);
+}
+
+.env-dropdown-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+}
+
+@keyframes env-dropdown-in {
+    from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.env-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 220px;
+    background: var(--surface-card);
+    border: 1px solid rgba(139, 92, 246, 0.18);
+    border-radius: 1rem;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(24px);
+    z-index: 120;
+    padding: 0.5rem;
+    animation: env-dropdown-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.env-dropdown-header {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0.5rem 0.75rem 0.25rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.env-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 0.75rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.75rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    position: relative;
+    overflow: hidden;
+}
+
+.env-option:hover {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-primary);
+}
+
+.env-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+    transition: all var(--transition-base);
+}
+
+.env-option.uat .env-status-dot {
+    background: #8b5cf6;
+}
+
+.env-option.uat:hover .env-status-dot, .env-option.uat.active .env-status-dot {
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+}
+
+.env-option.pp .env-status-dot {
+    background: #f59e0b;
+}
+
+.env-option.pp:hover .env-status-dot, .env-option.pp.active .env-status-dot {
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.env-option.active.uat {
+    color: #a78bfa;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, transparent 100%);
+    border-color: rgba(139, 92, 246, 0.15);
+}
+
+.env-option.active.pp {
+    color: #fbbf24;
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, transparent 100%);
+    border-color: rgba(245, 158, 11, 0.15);
+}
+
 /* Header Right */
 .header-right {
     display: flex;

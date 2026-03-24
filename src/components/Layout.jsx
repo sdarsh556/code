@@ -14,7 +14,9 @@ import {
     ChevronRight,
     Settings as SettingsIcon,
     BarChart3,
-    Layers
+    Layers,
+    Globe,
+    ChevronDown
 } from 'lucide-react';
 import '../css/Layout.css';
 import '../css/body-theme.css';
@@ -22,6 +24,7 @@ import DynamicBackground from './background/DynamicBackground';
 import ECSIcon from './common/ECSIcon';
 import { logout } from './utils/auth';
 import publicAxios from './api/publicAxios';
+import { setActiveEnv } from './api/axiosClient';
 
 function Layout() {
     const [bgContext, setBgContext] = useState('default');
@@ -30,6 +33,12 @@ function Layout() {
     const [isDarkTheme, setIsDarkTheme] = useState(() => {
         return localStorage.getItem('theme') === 'dark';
     });
+    
+    // Environment State
+    const [appEnv, setAppEnv] = useState(() => {
+        return sessionStorage.getItem('app_env') || 'uat';
+    });
+    const [isEnvDropdownOpen, setIsEnvDropdownOpen] = useState(false);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -69,6 +78,12 @@ function Layout() {
 
     const toggleTheme = () => {
         setIsDarkTheme(!isDarkTheme);
+    };
+
+    const handleEnvChange = (env) => {
+        setAppEnv(env);
+        setActiveEnv(env); // Updates axiosClient instantly
+        setIsEnvDropdownOpen(false);
     };
 
     const navItems = [
@@ -122,6 +137,41 @@ function Layout() {
                 </div>
 
                 <div className="header-right">
+                    {/* ENVIRONMENT SWITCHER */}
+                    <div className="env-switcher-container">
+                        <button 
+                            className={`env-switcher-btn ${appEnv}`}
+                            onClick={() => setIsEnvDropdownOpen(!isEnvDropdownOpen)}
+                        >
+                            <Globe size={16} className="env-icon" />
+                            <span className="env-label">{appEnv === 'uat' ? 'UAT' : 'Preprod'}</span>
+                            <ChevronDown size={14} className={`env-chevron ${isEnvDropdownOpen ? 'open' : ''}`} />
+                        </button>
+                        
+                        {isEnvDropdownOpen && (
+                            <>
+                                <div className="env-dropdown-overlay" onClick={() => setIsEnvDropdownOpen(false)} />
+                                <div className="env-dropdown-menu">
+                                    <div className="env-dropdown-header">Select Environment</div>
+                                    <button 
+                                        className={`env-option uat ${appEnv === 'uat' ? 'active' : ''}`}
+                                        onClick={() => handleEnvChange('uat')}
+                                    >
+                                        <div className="env-status-dot" />
+                                        <span>UAT</span>
+                                    </button>
+                                    <button 
+                                        className={`env-option pp ${appEnv === 'pp' ? 'active' : ''}`}
+                                        onClick={() => handleEnvChange('pp')}
+                                    >
+                                        <div className="env-status-dot" />
+                                        <span>Preprod</span>
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
                     <button
                         className="icon-btn theme-btn"
                         onClick={toggleTheme}
@@ -202,7 +252,8 @@ function Layout() {
 
                 <main className="main-content">
                     <div className="content-wrapper">
-                        <Outlet context={{ bgContext, setBgContext }} />
+                        {/* Key forces complete remount of all active routes/components on environment change */}
+                        <Outlet key={appEnv} context={{ bgContext, setBgContext }} />
                     </div>
                 </main>
             </div>

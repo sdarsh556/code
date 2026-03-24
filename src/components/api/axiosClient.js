@@ -1,9 +1,19 @@
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL;
+export let activeEnv = sessionStorage.getItem('app_env') || 'uat';
+export const setActiveEnv = (env) => { 
+    activeEnv = env; 
+    sessionStorage.setItem('app_env', env);
+};
+
+const getBaseUrl = () => {
+    return activeEnv === 'pp'
+        ? import.meta.env.VITE_API_BASE_URL_PP
+        : import.meta.env.VITE_API_BASE_URL;
+};
 
 const axiosClient = axios.create({
-    baseURL,
+    baseURL: getBaseUrl(),
     headers: {
         "Content-Type": "application/json",
     },
@@ -23,6 +33,11 @@ const processQueue = (error) => {
     });
     failedQueue = [];
 };
+
+axiosClient.interceptors.request.use((config) => {
+    config.baseURL = getBaseUrl();
+    return config;
+});
 
 axiosClient.interceptors.response.use(
     (response) => response,
@@ -47,7 +62,7 @@ axiosClient.interceptors.response.use(
 
             try {
                 await axios.post(
-                    `${baseURL}/auth/refresh`,   // ✅ CORRECT
+                    `${getBaseUrl()}/auth/refresh`,   // ✅ CORRECT
                     {},
                     { withCredentials: true }
                 );
@@ -60,7 +75,7 @@ axiosClient.interceptors.response.use(
                 processQueue(refreshError);
                 isRefreshing = false;
 
-                window.location.replace(`${baseURL}/auth/saml/login`);
+                window.location.replace(`${getBaseUrl()}/auth/saml/login`);
                 return Promise.reject(refreshError);
             }
         }
