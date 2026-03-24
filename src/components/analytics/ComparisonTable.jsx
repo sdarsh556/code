@@ -214,7 +214,14 @@ function ComparisonTable({
         }
         
         // Convert to rem (1rem = 16px)
-        const remWidths = colWidths.map(w => `${(w / 16).toFixed(3)}rem`).join(' ');
+        const remWidths = colWidths.map((w, index) => {
+            const width = `${(w / 16).toFixed(3)}rem`;
+            // Make the last column flexible to fill any negative empty space when resizing
+            if (index === colWidths.length - 1) {
+                return `minmax(${width}, 1fr)`;
+            }
+            return width;
+        }).join(' ');
         
         return {
             gridTemplateColumns: remWidths,

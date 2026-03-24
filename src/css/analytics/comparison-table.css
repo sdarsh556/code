@@ -142,7 +142,7 @@
     align-items: stretch;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(139, 92, 246, 0.08) 100%);
     border-bottom: 2px solid rgba(139, 92, 246, 0.2);
-    padding: 0 2rem;
+    padding: 0;
     min-height: 56px;
     column-gap: 0; /* Use padding on items instead of gap for better resizing */
     backdrop-filter: blur(20px);
@@ -238,7 +238,7 @@
     display: grid;
     align-items: center;
     min-height: 64px;
-    padding: 0 2rem;
+    padding: 0;
     column-gap: 0;
     border-bottom: 1px solid rgba(139, 92, 246, 0.08);
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease;
