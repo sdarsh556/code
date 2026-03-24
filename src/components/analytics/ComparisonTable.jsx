@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
     ArrowUpDown, ChevronUp, ChevronDown, Download,
-    Cpu, MemoryStick, DollarSign, Server, Zap
+    Cpu, DollarSign, Server, Zap, GripVertical
 } from 'lucide-react';
 import '../../css/analytics/comparison-table.css';
 
@@ -25,10 +25,15 @@ function ComparisonTable({
     onRowClick,
     exportFilename = 'comparison.csv'
 }) {
+    const containerRef = useRef(null);
     const [sortBy, setSortBy] = useState(columns.find(c => c.sortable)?.key || null);
     const [sortDir, setSortDir] = useState('desc');
+    const [colWidths, setColWidths] = useState([]);
+    const [isResizing, setIsResizing] = useState(false);
+    const [hasResized, setHasResized] = useState(false);
 
     const handleSort = (key) => {
+        if (isResizing) return;
         if (sortBy === key) {
             setSortDir(d => d === 'desc' ? 'asc' : 'desc');
         } else {
@@ -53,6 +58,49 @@ function ComparisonTable({
             return 0;
         });
     }, [data, sortBy, sortDir]);
+
+    const handleResize = useCallback((index, e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let currentWidths = colWidths;
+        
+        // If first resize, capture current widths from DOM
+        if (!hasResized || colWidths.length === 0) {
+            const header = containerRef.current.querySelector('.cmp-thead');
+            if (header) {
+                const children = Array.from(header.children).filter(c => 
+                    c.classList.contains('cmp-th-rank') || c.classList.contains('cmp-th-wrapper')
+                );
+                currentWidths = children.map(c => c.offsetWidth);
+                setColWidths(currentWidths);
+                setHasResized(true);
+            } else {
+                return; // Header not found
+            }
+        }
+
+        setIsResizing(true);
+        const startX = e.clientX;
+        const startWidth = currentWidths[index];
+
+        const onMouseMove = (moveEvent) => {
+            const delta = moveEvent.clientX - startX;
+            const newWidths = [...currentWidths];
+            newWidths[index] = Math.max(40, startWidth + delta);
+            setColWidths(newWidths);
+            currentWidths = newWidths; // Update for closure
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            setTimeout(() => setIsResizing(false), 100);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }, [colWidths]);
 
     const handleExport = () => {
         const headers = ['Rank', ...columns.map(c => c.label)];
@@ -144,16 +192,43 @@ function ComparisonTable({
         }
     };
 
-    const gridStyle = {
-        gridTemplateColumns: gridTemplateColumns,
-    };
+    const gridStyle = useMemo(() => {
+        if (!hasResized || colWidths.length === 0) {
+            let template = gridTemplateColumns;
+            
+            // If gridTemplateColumns not provided, build one from column widths
+            if (!template) {
+                const parts = ['3.25rem']; // Rank
+                columns.forEach((col, i) => {
+                    if (col.width) parts.push(col.width);
+                    else if (i === 0) parts.push('1fr'); // Fluid name by default
+                    else parts.push('8rem');
+                });
+                template = parts.join(' ');
+            }
+
+            return {
+                gridTemplateColumns: template,
+                width: '100%'
+            };
+        }
+        
+        // Convert to rem (1rem = 16px)
+        const remWidths = colWidths.map(w => `${(w / 16).toFixed(3)}rem`).join(' ');
+        
+        return {
+            gridTemplateColumns: remWidths,
+            width: 'max-content',
+            minWidth: '100%'
+        };
+    }, [colWidths, gridTemplateColumns, columns, hasResized]);
 
     return (
-        <div className="cmp-section-modern">
+        <div className="cmp-section-modern" ref={containerRef}>
             <div className="cmp-panel-header">
                 <div className="cmp-panel-title">
                     <div className="cmp-panel-icon"><ArrowUpDown size={16} /></div>
-                    <div>
+                    <div className="cmp-title-text-group">
                         <div className="cmp-panel-label">{title}</div>
                         <div className="cmp-panel-sub">{subtitle} · {data.length} items</div>
                     </div>
@@ -164,42 +239,48 @@ function ComparisonTable({
                 </button>
             </div>
 
-            <div className="cmp-table-wrap">
+            <div className="cmp-table-wrap scrollable-table">
                 {/* Table Head */}
-                <div className="cmp-thead" style={gridStyle}>
-                    <div className="cmp-th cmp-th-rank">#</div>
-                    {columns.map((col) => {
+                <div className="cmp-thead sticky-head" style={gridStyle}>
+                    <div className="cmp-th cmp-th-rank">
+                        <span>#</span>
+                        <div className="ct-resizer" onMouseDown={(e) => handleResize(0, e)} />
+                    </div>
+                    {columns.map((col, idx) => {
                         const alignment = col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start';
                         const textAlign = col.align === 'right' ? 'right' : col.align === 'center' ? 'center' : 'left';
 
                         return col.sortable ? (
-                            <button
-                                key={col.key}
-                                className={`cmp-th cmp-th-sortable ${sortBy === col.key ? 'cmp-th-active' : ''}`}
-                                onClick={() => handleSort(col.key)}
-                                style={{
-                                    justifyContent: alignment,
-                                    textAlign: textAlign
-                                }}
-                            >
-                                {col.icon && <col.icon size={12} />}
-                                <span>{col.label}</span>
-                                <span className="cmp-sort-icons">
-                                    <ChevronUp size={11} className={sortBy === col.key && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                    <ChevronDown size={11} className={sortBy === col.key && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
-                                </span>
-                            </button>
+                            <div key={col.key} className="cmp-th-wrapper" style={{ justifyContent: alignment }}>
+                                <button
+                                    className={`cmp-th cmp-th-sortable ${sortBy === col.key ? 'cmp-th-active' : ''}`}
+                                    onClick={() => handleSort(col.key)}
+                                    style={{
+                                        justifyContent: alignment,
+                                        textAlign: textAlign
+                                    }}
+                                >
+                                    {col.icon && <col.icon size={12} />}
+                                    <span className="th-label-text">{col.label}</span>
+                                    <span className="cmp-sort-icons">
+                                        <ChevronUp size={11} className={sortBy === col.key && sortDir === 'asc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                        <ChevronDown size={11} className={sortBy === col.key && sortDir === 'desc' ? 'cmp-sort-on' : 'cmp-sort-off'} />
+                                    </span>
+                                </button>
+                                <div className="ct-resizer" onMouseDown={(e) => handleResize(idx + 1, e)} />
+                            </div>
                         ) : (
-                            <div
-                                key={col.key}
-                                className="cmp-th"
+                            <div key={col.key} className="cmp-th-wrapper"
                                 style={{
                                     justifyContent: alignment,
                                     textAlign: textAlign
                                 }}
                             >
-                                {col.icon && <col.icon size={12} />}
-                                <span>{col.label}</span>
+                                <div className="cmp-th">
+                                    {col.icon && <col.icon size={12} />}
+                                    <span className="th-label-text">{col.label}</span>
+                                </div>
+                                <div className="ct-resizer" onMouseDown={(e) => handleResize(idx + 1, e)} />
                             </div>
                         );
                     })}
@@ -214,9 +295,9 @@ function ComparisonTable({
                             style={{
                                 ...gridStyle,
                                 animationDelay: `${rank * 0.05}s`,
-                                cursor: onRowClick ? 'pointer' : 'default'
+                                cursor: (onRowClick && !isResizing) ? 'pointer' : 'default'
                             }}
-                            onClick={() => onRowClick && onRowClick(item)}
+                            onClick={() => !isResizing && onRowClick && onRowClick(item)}
                         >
                             <div className="cmp-td cmp-td-rank">{getRankIcon(rank)}</div>
                             {columns.map((col) => (

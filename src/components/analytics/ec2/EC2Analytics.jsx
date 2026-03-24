@@ -641,7 +641,7 @@ function EC2Analytics() {
                             id: c.instanceId
                         }))}
                         exportFilename="instance-comparison.csv"
-                        gridTemplateColumns="52px 2fr 1.4fr 1fr 0.9fr 0.7fr 1fr"
+                        gridTemplateColumns="3.25rem 2fr 1.4fr 8.5rem 8.5rem 8.5rem"
                         columns={[
                             {
                                 key: 'instanceName',

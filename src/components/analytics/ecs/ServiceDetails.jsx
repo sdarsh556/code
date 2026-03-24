@@ -240,7 +240,7 @@ function ServiceDetails() {
                         id: s.serviceName
                     }))}
                     exportFilename="service-comparison.csv"
-                    gridTemplateColumns="52px 1fr 120px 120px 120px"
+                    gridTemplateColumns="3.25rem 1fr 8.5rem 8.5rem 8.5rem"
                     columns={[
                         {
                             key: 'serviceName',

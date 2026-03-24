@@ -224,89 +224,56 @@ function RDSAnalytics() {
         try {
             setLoadingSummary(true);
 
-            // Dummy data instead of API call
-            setSummaryData({
-                rds: {
-                    total_instances: 5,
-                    avg_cpu: 45.2,
-                    avg_connections: 120,
-                    avg_read_iops: 500,
-                    avg_write_iops: 300,
-                    total_approx_cost: 1540.50
-                },
-                aurora: {
-                    total_clusters: 2,
-                    total_instances: 6,
-                    avg_cpu: 35.5,
-                    avg_connections: 400,
-                    avg_read_iops: 1200,
-                    avg_write_iops: 800,
-                    total_approx_cost: 3200.75
-                },
-                docdb: {
-                    total_clusters: 1,
-                    total_instances: 2,
-                    avg_cpu: 25.0,
-                    avg_connections: 50,
-                    avg_read_iops: 100,
-                    avg_write_iops: 50,
-                    total_approx_cost: 450.00
-                }
-            });
-            setLoadingSummary(false);
-            return;
+            const { from_date, to_date } = getDateRange();
+
+            const res = await axiosClient.get(
+                `/analytics/rds/summary/${from_date}/${to_date}`
+            );
+
+            if (res.data.success) {
+                setSummaryData(res.data.data);
+            }
         } catch (error) {
             console.error("Failed to fetch RDS summary:", error);
+        } finally {
             setLoadingSummary(false);
         }
     };
 
     const fetchInstances = async () => {
         try {
-            // Dummy data instead of API call
-            setRdsInstances([
-                {
-                    db_identifier: "prod-db-1",
-                    instance_class: "db.t3.large",
-                    engine: "mysql",
-                    status: "available",
-                    is_aws: true,
-                    dates: ["2026-03-17", "2026-03-16"],
-                    avg_cpu_utilization: 65,
-                    avg_memory_usage: 42.5,
-                    avg_read_iops: 600,
-                    avg_write_iops: 400,
-                    total_cpu: 8,
-                    total_memory: 32,
-                    total_read_iops: 2000,
-                    total_write_iops: 1000,
-                    total_connections: 5000,
-                    avg_connections: 320,
-                    active_days_count: 30,
-                    approx_cost: 150.75
-                },
-                {
-                    db_identifier: "staging-db-1",
-                    instance_class: "db.t3.medium",
-                    engine: "postgres",
-                    status: "available",
-                    is_aws: false,
-                    dates: ["2026-03-17"],
-                    avg_cpu_utilization: 25,
-                    avg_memory_usage: 18.2,
-                    avg_read_iops: 100,
-                    avg_write_iops: 80,
-                    total_cpu: 2,
-                    total_memory: 4,
-                    total_read_iops: 1000,
-                    total_write_iops: 500,
-                    total_connections: 1000,
-                    avg_connections: 85,
-                    active_days_count: 15,
-                    approx_cost: 45.20
-                }
-            ]);
-            return;
+            const { from_date, to_date } = getDateRange();
+
+            const res = await axiosClient.get(
+                `/analytics/rds/instances/${from_date}/${to_date}`
+            );
+
+            if (res.data.success) {
+                const instances = res.data.data.instances || [];
+
+                const formatted = instances.map(inst => ({
+                    ...inst,
+                    status: inst.actual_status || "available",
+                    is_aws: inst.turned_on_by_aws_console === true,
+                    dates: inst.active_dates || [],
+
+                    avg_memory_usage: inst.avg_memory_utilization || 0,
+                    avg_cpu_utilization: inst.avg_cpu_utilization || 0,
+                    avg_connections: inst.avg_connections || 0,
+                    avg_read_iops: inst.avg_read_iops || 0,
+                    avg_write_iops: inst.avg_write_iops || 0,
+
+                    total_cpu: inst.vcpu,
+                    total_memory: inst.memory_gb,
+                    total_read_iops: inst.read_iops,
+                    total_write_iops: inst.write_iops,
+                    total_prov_iops: inst.provisioned_iops || 0,
+                    approx_cost: inst.approx_cost || 0
+                }));
+
+
+                setRdsInstances(formatted);
+            }
         } catch (error) {
             console.error("Failed to fetch RDS instances:", error);
         }
@@ -314,31 +281,48 @@ function RDSAnalytics() {
 
     const fetchAuroraClusters = async () => {
         try {
-            // Dummy data instead of API call
-            setAuroraClusters([
-                {
-                    cluster_name: "prod-aurora-cluster",
-                    instances_count: 3,
-                    approx_cost: 1200.5,
-                    active_days_count: 30,
-                    avg_cpu_utilization: 45,
-                    avg_memory_usage: 55.5,
-                    avg_read_iops: 800,
-                    avg_write_iops: 500,
-                    avg_connections: 450,
-                    total_cpu: 16,
-                    total_memory: 64,
-                    total_read_iops: 4000,
-                    total_write_iops: 2000,
-                    total_connections: 10000,
+            const { from_date, to_date } = getDateRange();
+
+            const res = await axiosClient.get(
+                `/analytics/rds/aurora/clusters/${from_date}/${to_date}`
+            );
+
+            if (res.data.success) {
+                const clusters = res.data.data.clusters || [];
+
+                const formatted = clusters.map(cluster => ({
+                    cluster_name: cluster.cluster_identifier,
+                    instances_count: cluster.max_total_instances,
+                    approx_cost: cluster.total_approx_cost,
+                    active_days_count: Number(cluster.active_days),
+
+                    avg_cpu_utilization: cluster.avg_cpu_utilization,
+                    avg_connections: cluster.avg_database_connections,
+                    avg_read_iops: cluster.avg_read_iops,
+                    avg_write_iops: cluster.avg_write_iops,
+                    avg_memory_usage: cluster.avg_memory_utilization || 0,
+
+                    total_cpu: cluster.total_vcpu,
+                    total_memory: cluster.total_memory_gb,
+
+                    // ✅ FIX HERE
+                    total_read_iops: Number(cluster.read_iops) || 0,
+                    total_write_iops: Number(cluster.write_iops) || 0,
+
+                    // ✅ ADD DERIVED FIELD (cleaner UI)
+                    total_iops:
+                        (Number(cluster.read_iops) || 0) +
+                        (Number(cluster.write_iops) || 0),
+
                     status: "available",
                     trend: "stable",
                     engine: "Aurora",
-                    is_aws: true,
-                    dates: ["2026-03-17", "2026-03-16", "2026-03-15"]
-                }
-            ]);
-            return;
+                    is_aws: cluster.turned_on_by_aws_console === true,
+                }));
+
+                setAuroraClusters(formatted);
+            }
+
         } catch (error) {
             console.error("Failed to fetch Aurora clusters:", error);
         }
@@ -346,51 +330,150 @@ function RDSAnalytics() {
 
     const fetchDocdbClusters = async () => {
         try {
-            // Dummy data instead of API call
-            setDocdbClusters([
-                {
-                    cluster_name: "prod-docdb-cluster",
-                    instances_count: 2,
-                    approx_cost: 450.0,
-                    active_days_count: 30,
-                    avg_cpu_utilization: 25,
-                    avg_memory_usage: 32.8,
-                    avg_read_iops: 100,
-                    avg_write_iops: 50,
-                    avg_connections: 80,
-                    total_cpu: 4,
-                    total_memory: 8,
-                    total_read_iops: 1000,
-                    total_write_iops: 500,
-                    total_connections: 2000,
+            const { from_date, to_date } = getDateRange();
+
+            const res = await axiosClient.get(
+                `/analytics/rds/docdb/clusters/${from_date}/${to_date}`
+            );
+
+            if (res.data.success) {
+                const clusters = res.data.data.clusters || [];
+
+                const formatted = clusters.map(cluster => ({
+                    cluster_name: cluster.cluster_identifier,
+                    instances_count: cluster.max_total_instances,
+                    approx_cost: cluster.total_approx_cost,
+                    active_days_count: Number(cluster.active_days),
+
+                    avg_cpu_utilization: cluster.avg_cpu_utilization,
+                    avg_connections: cluster.avg_database_connections,
+                    avg_read_iops: cluster.avg_read_iops,
+                    avg_write_iops: cluster.avg_write_iops,
+                    avg_memory_usage: cluster.avg_memory_utilization || 0,
+
+                    total_cpu: cluster.total_vcpu,
+                    total_memory: cluster.total_memory_gb,
+
+                    // ✅ FIX HERE
+                    total_read_iops: Number(cluster.read_iops) || 0,
+                    total_write_iops: Number(cluster.write_iops) || 0,
+
+                    // ✅ ADD DERIVED FIELD (cleaner UI)
+                    total_iops:
+                        (Number(cluster.read_iops) || 0) +
+                        (Number(cluster.write_iops) || 0),
+
                     status: "available",
                     trend: "stable",
-                    engine: "DocumentDB",
-                    is_aws: true,
-                    dates: ["2026-03-17", "2026-03-16", "2026-03-15"]
-                }
-            ]);
-            return;
+                    engine: "Aurora",
+                    is_aws: cluster.turned_on_by_aws_console === true,
+                }));
+
+                setDocdbClusters(formatted);
+            }
+
         } catch (error) {
             console.error("Failed to fetch DocDB clusters:", error);
         }
     };
 
+    const fetchRdsInstanceActiveDates = (db) => {
+        try {
+            const dateMap = {};
+
+            (db.daily_metrics || []).forEach(day => {
+                const date = day.date;
+
+                dateMap[date] = {
+                    cpu: Number(day.cpu) || 0,
+                    connections: Number(day.connections) || 0,
+                    readIops: Number(day.read_iops) || 0,
+                    writeIops: Number(day.write_iops) || 0,
+                    memory: Number(day.memory_utilization) || 0,
+                    cost: Number(day.approx_cost) || 0,
+                    isAwsConsole: !!day.turned_on_by_aws_console
+                };
+            });
+
+            const dates = Object.keys(dateMap).sort(
+                (a, b) => new Date(b) - new Date(a)
+            );
+
+            setSelectedDaysInfo({
+                identifier: db.db_identifier,
+                count: db.active_days_count,
+                capacity: {
+                    cpu: db.total_cpu,
+                    memory: db.avg_memory_usage,
+                    readIops: db.total_read_iops,
+                    writeIops: db.total_write_iops
+                },
+                rawDates: dates,
+                metricsByDate: dateMap
+            });
+
+        } catch (err) {
+            console.error("Failed to process RDS active dates", err);
+        }
+    };
+
     const fetchClusterActiveDates = async (clusterName, activeDays, capacity = {}) => {
         try {
-            // Dummy data instead of API call
+            const { from_date, to_date } = getDateRange();
+            const type = viewMode === 'aurora' ? 'aurora' : 'docdb';
+
+            const res = await axiosClient.get(
+                `/analytics/rds/${type}/clusters/${clusterName}/metrics/${from_date}/${to_date}`
+            );
+
+            if (!res.data.success) return;
+
+            const instances = res.data.data.instances || [];
+            const dateMap = {};
+
+            instances.forEach(instance => {
+                (instance.daily_metrics || []).forEach(day => {
+                    const date = day.date;
+                    if (!dateMap[date]) {
+                        dateMap[date] = {
+                            cpu: 0, connections: 0, readIops: 0, writeIops: 0, memory: 0, cost: 0, count: 0, awsConsoleCount: 0
+                        };
+                    }
+                    dateMap[date].cpu += Number(day.cpu || day.avg_cpu_utilization) || 0;
+                    dateMap[date].connections += Number(day.connections || day.avg_connections || day.avg_database_connections) || 0;
+                    dateMap[date].readIops += Number(day.read_iops || day.avg_read_iops) || 0;
+                    dateMap[date].writeIops += Number(day.write_iops || day.avg_write_iops) || 0;
+                    dateMap[date].memory += Number(day.memory_utilization || day.avg_memory_utilization) || 0;
+                    dateMap[date].cost += Number(day.approx_cost || 0);
+
+                    if (day.turned_on_by_aws_console) dateMap[date].awsConsoleCount += 1;
+                    dateMap[date].count += 1;
+                });
+            });
+
+            const aggregatedByDate = {};
+            Object.entries(dateMap).forEach(([date, val]) => {
+                aggregatedByDate[date] = {
+                    cpu: +(val.cpu / val.count).toFixed(2),
+                    connections: +(val.connections / val.count).toFixed(2),
+                    readIops: +(val.readIops / val.count).toFixed(2),
+                    writeIops: +(val.writeIops / val.count).toFixed(2),
+                    memory: +(val.memory / val.count).toFixed(2),
+                    cost: +val.cost.toFixed(2),
+                    isAwsConsole: val.awsConsoleCount > 0
+                };
+            });
+
+            const dates = Object.keys(aggregatedByDate).sort((a, b) => new Date(b) - new Date(a));
+
             setSelectedDaysInfo({
                 identifier: clusterName,
                 count: activeDays,
                 capacity,
-                rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
-                metricsByDate: {
-                    "2026-03-17": { cpu: 45, memory: 58, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
-                    "2026-03-16": { cpu: 40, memory: 55, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
-                    "2026-03-15": { cpu: 42, memory: 56, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
-                }
+                rawDates: dates,
+                metricsByDate: aggregatedByDate
             });
-            return;
+
         } catch (err) {
             console.error("Failed to fetch cluster active dates", err);
         }
@@ -398,65 +481,48 @@ function RDSAnalytics() {
 
 
 
-    const fetchInstanceMetrics = async (dbIdentifier, baseInstance) => {
+    const fetchHistory = async (type, identifier, date = null) => {
         try {
-            setLoadingTrend(true);
+            const url = date
+                ? `/analytics/rds/${type}/${identifier}/metrics/history/hourly/${date}`
+                : `/analytics/rds/${type}/${identifier}/metrics/history/daily`;
 
-            // Dummy data instead of API call
-            setSelectedInstanceForTrend({
-                ...baseInstance,
-                metrics: [
-                    { date: "2026-03-15", cpu: 42, memory: 56, connections: 115, readIops: 480, writeIops: 290, cost: 15.2 },
-                    { date: "2026-03-16", cpu: 40, memory: 55, connections: 110, readIops: 450, writeIops: 280, cost: 15.0 },
-                    { date: "2026-03-17", cpu: 45, memory: 58, connections: 120, readIops: 500, writeIops: 300, cost: 15.5 }
-                ]
-            });
-            setLoadingTrend(false);
-            return;
+            const res = await axiosClient.get(url);
+            if (!res.data.success) return [];
+
+            const metrics = (res.data.data.metrics || []).map(m => ({
+                date: m.date || m.timestamp.split(' ')[0],
+                dateStr: m.date || m.timestamp.split(' ')[0],
+                displayDate: m.date ? new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : new Date(m.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                displayHour: m.timestamp ? m.timestamp.split(' ')[1].substring(0, 5) : null,
+                timestamp: m.timestamp,
+                cpu: Number(m.cpu) || 0,
+                connections: Number(m.connections) || 0,
+                readIops: Number(m.read_iops) || 0,
+                writeIops: Number(m.write_iops) || 0,
+                memory: Number(m.memory_utilization) || 0,
+                cost: Number(m.cost || m.approx_cost || 0) || 0,
+                isAwsConsole: m.turned_on_by_aws_console || false
+            }));
+
+            return metrics;
         } catch (err) {
-            console.error("Failed to fetch instance metrics", err);
-            setLoadingTrend(false);
+            console.error(`Failed to fetch history for ${identifier}`, err);
+            return [];
         }
     };
 
-    const fetchDocdbClusterActiveDates = async (clusterName, activeDays, capacity = {}) => {
-        try {
-            // Dummy data instead of API call
-            setSelectedDaysInfo({
-                identifier: clusterName,
-                count: activeDays,
-                capacity,
-                rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
-                metricsByDate: {
-                    "2026-03-17": { cpu: 45, memory: 35, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
-                    "2026-03-16": { cpu: 40, memory: 32, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
-                    "2026-03-15": { cpu: 42, memory: 34, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
-                }
-            });
-            return;
-        } catch (err) {
-            console.error("Failed to fetch DocumentDB cluster active dates", err);
-        }
-    };
+    const handleViewTrend = async (instance) => {
+        setLoadingTrend(true);
+        const type = viewMode === 'rds' ? 'instances' : viewMode === 'aurora' ? 'aurora/instances' : 'docdb/instances';
+        const identifier = instance.db_identifier;
 
-    const fetchRdsInstanceActiveDates = async (dbIdentifier, activeDays, capacity = {}) => {
-        try {
-            // Dummy data instead of API call
-            setSelectedDaysInfo({
-                identifier: dbIdentifier,
-                count: activeDays,
-                capacity,
-                rawDates: ["2026-03-17", "2026-03-16", "2026-03-15"],
-                metricsByDate: {
-                    "2026-03-17": { cpu: 45, memory: 42, connections: 120, readIops: 500, writeIops: 300, cost: 15.5, isAwsConsole: true },
-                    "2026-03-16": { cpu: 40, memory: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0, isAwsConsole: true },
-                    "2026-03-15": { cpu: 42, memory: 41, connections: 115, readIops: 480, writeIops: 290, cost: 15.2, isAwsConsole: true }
-                }
-            });
-            return;
-        } catch (err) {
-            console.error("Failed to fetch RDS instance active dates", err);
-        }
+        const metrics = await fetchHistory(type, identifier);
+        setSelectedInstanceForTrend({
+            ...instance,
+            metrics
+        });
+        setLoadingTrend(false);
     };
 
 
@@ -487,23 +553,12 @@ function RDSAnalytics() {
     }, [selectedRange, customRange, viewMode]);
 
     const stats = useMemo(() => {
-        if (!summaryData) {
-            return {
-                count: 0,
-                avgCpu: 0,
-                avgConn: 0,
-                avgRead: 0,
-                avgWrite: 0,
-                totalCost: 0
-            };
-        }
-
         const data =
             viewMode === "rds"
-                ? summaryData.rds
+                ? summaryData?.rds
                 : viewMode === "aurora"
-                    ? summaryData.aurora
-                    : summaryData.docdb;
+                    ? summaryData?.aurora
+                    : summaryData?.docdb;
 
         if (!data) {
             return {
@@ -512,22 +567,31 @@ function RDSAnalytics() {
                 avgConn: 0,
                 avgRead: 0,
                 avgWrite: 0,
+                avgMemory: 0,
                 totalCost: 0
             };
         }
 
         return {
-            count:
+            count: Number(
                 viewMode === "rds"
-                    ? data.total_instances
-                    : data.total_clusters,
-            avgCpu: data.avg_cpu || 0,
-            avgConn: data.avg_connections || 0,
-            avgRead: data.avg_read_iops || 0,
-            avgWrite: data.avg_write_iops || 0,
-            totalCost: data.total_approx_cost || 0
-        };
+                    ? (data.total_instances || data.instance_count)
+                    : (data.total_clusters || data.cluster_count)
+            ) || 0,
 
+            avgCpu: Number(data.avg_cpu_utilization || data.avg_cpu) || 0,
+            avgConn: Number(data.avg_connections || data.avg_database_connections) || 0,
+            avgRead: Number(data.avg_read_iops) || 0,
+            avgWrite: Number(data.avg_write_iops) || 0,
+            avgMemory: Number(data.avg_memory_utilization || data.avg_memory) || 0,
+
+            // ✅ NEW FIELD
+            avgTotalIops:
+                (Number(data.avg_read_iops) || 0) +
+                (Number(data.avg_write_iops) || 0),
+
+            totalCost: Number(data.total_approx_cost || data.approx_cost) || 0
+        };
     }, [summaryData, viewMode]);
 
 
@@ -543,14 +607,64 @@ function RDSAnalytics() {
         return datePresets.find(p => p.id === selectedRange)?.label || '';
     };
 
-    const metricCards = [
-        { label: (viewMode === 'aurora' || viewMode === 'docdb') ? 'Total Clusters' : 'Active Instances', value: stats.count, icon: Database, color: '#10b981', bg: 'rgba(16,185,129,0.1)', bars: [65, 45, 78, 90, 55] },
-        { label: 'Avg CPU Utilization', value: `${stats.avgCpu}%`, icon: Cpu, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', bars: [32, 28, 45, 65, 55] },
-        { label: 'Avg Connections', value: stats.avgConn, icon: Network, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', bars: [120, 95, 210, 450, 380] },
-        { label: 'Avg Read IOPS', value: stats.avgRead, icon: ArrowRight, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', bars: [450, 380, 820, 1250, 980] },
-        { label: 'Avg Write IOPS', value: stats.avgWrite, icon: Zap, color: '#ec4899', bg: 'rgba(236,72,153,0.1)', bars: [120, 90, 310, 580, 420] },
-        { label: 'Approx Cost', value: `$${(stats.totalCost || 0).toFixed(2)}`, icon: TrendingUp, color: '#06b6d4', bg: 'rgba(6,182,212,0.1)', progress: 72 },
-    ];
+    const metricCards = useMemo(() => [
+        {
+            label: viewMode === 'rds' ? 'Active Instances' : 'Total Clusters',
+            value: stats.count,
+            icon: Database,
+            color: 'var(--rds-emerald)',
+            bg: 'var(--rds-emerald-bg)'
+        },
+        {
+            label: 'Avg CPU Utilization',
+            value: `${stats.avgCpu.toFixed(2)}%`,
+            icon: Cpu,
+            color: 'var(--rds-emerald)',
+            bg: 'var(--rds-emerald-bg)'
+        },
+        {
+            label: 'Avg Connections',
+            value: stats.avgConn.toFixed(0),
+            icon: Network,
+            color: 'var(--rds-aurora-cyan)',
+            bg: 'var(--rds-aurora-cyan-bg)'
+        },
+        {
+            label: 'Avg Total IOPS',
+            value: stats.avgTotalIops,
+            icon: Activity, // or Zap if you prefer consistency
+            color: 'var(--rds-aurora-cyan)',
+            bg: 'var(--rds-aurora-cyan-bg)'
+        },
+        // {
+        //     label: 'Avg Read IOPS',
+        //     value: stats.avgRead.toFixed(0),
+        //     icon: ArrowRight,
+        //     color: 'var(--rds-aurora-cyan)',
+        //     bg: 'var(--rds-aurora-cyan-bg)'
+        // },
+        // {
+        //     label: 'Avg Write IOPS',
+        //     value: stats.avgWrite.toFixed(0),
+        //     icon: Zap,
+        //     color: 'var(--rds-docdb-indigo)',
+        //     bg: 'var(--rds-docdb-indigo-bg)'
+        // },
+        {
+            label: 'Avg Memory Utilization',
+            value: `${stats.avgMemory.toFixed(2)}%`,
+            icon: HardDrive,
+            color: 'var(--rds-docdb-indigo)',
+            bg: 'var(--rds-docdb-indigo-bg)'
+        },
+        {
+            label: 'Total Cost',
+            value: `$${stats.totalCost.toFixed(2)}`,
+            icon: DollarSign,
+            color: 'var(--rds-emerald)',
+            bg: 'var(--rds-emerald-bg)'
+        }
+    ], [stats, viewMode]);
 
     return (
         <div className="rds-analytics-page">
@@ -706,7 +820,7 @@ function RDSAnalytics() {
                                         <div className="aurora-cluster-subheader">
                                             <span className="aurora-engine-tag">{viewMode === 'docdb' ? 'DocumentDB' : 'Aurora'}</span>
                                             <span className="aurora-id-separator">•</span>
-                                            <span className="aurora-instance-count">{cluster.instances_count} Nodes</span>
+                                            <span className="aurora-instance-count">{cluster.instances_count} Instances</span>
                                         </div>
                                         <div className="rds-summary-specs">
                                             <div className="rds-summary-tag">
@@ -721,16 +835,17 @@ function RDSAnalytics() {
                                             </div>
                                             <div className="rds-summary-tag">
                                                 <Network size={12} />
-                                                <span className="rds-spec-value">{(cluster.total_connections || 0).toLocaleString()}</span>
-                                                <span className="rds-spec-unit">Max Conn</span>
+                                                <span className="rds-spec-value">{(cluster.avg_connections || 0).toLocaleString()}</span>
+                                                <span className="rds-spec-unit">Avg Conn</span>
                                             </div>
                                             <div className="rds-summary-tag">
                                                 <Activity size={12} />
-                                                <span className="rds-spec-value">{((cluster?.total_read_iops || 0) + (cluster?.total_write_iops || 0)).toLocaleString()}</span>
-                                                <span className="rds-spec-unit">Prov. IOPS</span>
+                                                <span className="rds-spec-value">{cluster.total_iops.toLocaleString()}</span>
+                                                <span className="rds-spec-unit"> IOPS</span>
                                             </div>
-                                        </div>
 
+
+                                        </div>
                                         <div className="aurora-cluster-stats-row">
                                             <div className="aurora-cluster-stat-item">
                                                 <div className="aurora-csi-icon"><Clock size={14} /></div>
@@ -742,20 +857,17 @@ function RDSAnalytics() {
                                                 className="aurora-cluster-stat-item aurora-clickable-calendar"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (viewMode === "docdb") {
-                                                        fetchDocdbClusterActiveDates(
-                                                            cluster.cluster_name,
-                                                            cluster.active_days_count,
-                                                            { cpu: cluster.total_cpu, memory: cluster.total_memory, readIops: cluster.total_read_iops, writeIops: cluster.total_write_iops }
-                                                        );
-                                                    } else {
-                                                        fetchClusterActiveDates(
-                                                            cluster.cluster_name,
-                                                            cluster.active_days_count,
-                                                            { cpu: cluster.total_cpu, memory: cluster.total_memory, readIops: cluster.total_read_iops, writeIops: cluster.total_write_iops }
-                                                        );
-                                                    }
 
+                                                    fetchClusterActiveDates(
+                                                        cluster.cluster_name,
+                                                        cluster.active_days_count,
+                                                        {
+                                                            cpu: cluster.total_cpu,
+                                                            memory: cluster.avg_memory_usage,
+                                                            readIops: cluster.total_read_iops,
+                                                            writeIops: cluster.total_write_iops
+                                                        }
+                                                    );
                                                 }}
 
                                             >
@@ -769,8 +881,8 @@ function RDSAnalytics() {
                                                 <div className="aurora-csi-value">${(cluster.approx_cost || 0).toFixed(2)}</div>
                                                 <div className="aurora-csi-label">Cost</div>
                                             </div>
-                                        </div>
 
+                                        </div>
                                         <div className="aurora-cluster-resource-bars">
                                             <div className="aurora-rb-item">
                                                 <div className="aurora-rb-header">
@@ -800,7 +912,9 @@ function RDSAnalytics() {
                                                 </div>
                                                 <div className="aurora-rb-track"><div className="aurora-rb-fill write" style={{ width: `${Math.min(100, (cluster.avg_write_iops / (cluster.total_write_iops || 500)) * 100)}%` }} /></div>
                                             </div>
+
                                         </div>
+
 
                                         <div
                                             className="aurora-cluster-footer"
@@ -813,7 +927,7 @@ function RDSAnalytics() {
                                                 }
                                             })}
                                         >
-                                            <span>View Daily Breakdown</span>
+                                            <span>View {viewMode === 'docdb' ? 'DocumentDB' : 'Aurora'} Instances</span>
                                             <ArrowRight size={16} />
                                         </div>
                                     </div>
@@ -848,7 +962,7 @@ function RDSAnalytics() {
                                                     className="rds-instance-graph-btn"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        fetchInstanceMetrics(db.db_identifier, db);
+                                                        handleViewTrend(db);
                                                     }}
                                                     title="View 30-Day Trend"
                                                 >
@@ -876,13 +990,13 @@ function RDSAnalytics() {
                                             </div>
                                             <div className="rds-summary-tag">
                                                 <Network size={12} />
-                                                <span className="rds-spec-value">{(db.total_connections || 0).toLocaleString()}</span>
-                                                <span className="rds-spec-unit">Max Conn</span>
+                                                <span className="rds-spec-value">{(db.avg_connections || 0).toLocaleString()}</span>
+                                                <span className="rds-spec-unit">Avg Conn</span>
                                             </div>
                                             <div className="rds-summary-tag">
                                                 <Activity size={12} />
-                                                <span className="rds-spec-value">{((db.total_read_iops || 0) + (db.total_write_iops || 0)).toLocaleString()}</span>
-                                                <span className="rds-spec-unit">Prov. IOPS</span>
+                                                <span className="rds-spec-value">{db.total_prov_iops || 0}</span>
+                                                <span className="rds-spec-unit"> IOPS</span>
                                             </div>
                                         </div>
 
@@ -898,11 +1012,7 @@ function RDSAnalytics() {
                                                 onClick={(e) => {
                                                     e.stopPropagation();
 
-                                                    fetchRdsInstanceActiveDates(
-                                                        db.db_identifier,
-                                                        db.active_days_count,
-                                                        { cpu: db.total_cpu, memory: db.total_memory, readIops: db.total_read_iops, writeIops: db.total_write_iops }
-                                                    );
+                                                    fetchRdsInstanceActiveDates(db);
                                                 }}
 
                                             >
@@ -965,7 +1075,7 @@ function RDSAnalytics() {
                         db_identifier: db.cluster_name || db.db_identifier
                     }))}
                     exportFilename={`${viewMode}-analytics.csv`}
-                    gridTemplateColumns="52px 1.8fr 1.2fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 100px"
+                    gridTemplateColumns="3.25rem 2fr 1.5fr 7rem 7rem 7rem 7rem 7rem 7rem 100px"
                     columns={[
                         {
                             key: 'db_identifier',
@@ -1046,6 +1156,10 @@ function RDSAnalytics() {
                 isOpen={!!selectedInstanceForTrend}
                 onClose={() => setSelectedInstanceForTrend(null)}
                 instance={selectedInstanceForTrend}
+                onFetchHourly={(date) => {
+                    const type = viewMode === 'rds' ? 'instances' : viewMode === 'aurora' ? 'aurora/instances' : 'docdb/instances';
+                    return fetchHistory(type, selectedInstanceForTrend?.db_identifier, date);
+                }}
             />
 
             <RDSGraphModal
@@ -1053,173 +1167,182 @@ function RDSAnalytics() {
                 onClose={() => setSelectedClusterForTrend(null)}
                 instance={selectedClusterForTrend}
                 excludeMetrics={['cpu', 'connections', 'read', 'write']}
+                onFetchHourly={(date) => {
+                    const type = viewMode === 'aurora' ? 'aurora/clusters' : 'docdb/clusters';
+                    return fetchHistory(type, selectedClusterForTrend?.cluster_name, date);
+                }}
             />
 
-            {showCalendar && (
-                <CalendarPicker onRangeSelect={handleCustomRange} onClose={() => setShowCalendar(false)} />
-            )}
+            {
+                showCalendar && (
+                    <CalendarPicker onRangeSelect={handleCustomRange} onClose={() => setShowCalendar(false)} />
+                )
+            }
 
-            {selectedDaysInfo && (
-                <div className="rds-graph-modal-overlay days-info-overlay" onClick={() => {
-                    setSelectedDaysInfo(null);
-                    setIsFlipped(false);
-                }}>
-                    <div
-                        className={`rds-days-info-modal-inner ${isFlipped ? 'is-flipped' : ''}`}
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {/* Front Side: General Timeline */}
-                        <div className="rds-days-info-modal-front">
-                            <div className="rds-dim-header">
-                                <div className="rds-dim-icon"><Calendar size={24} /></div>
-                                <div>
-                                    <div className="rds-dim-header-title">Active Timeline</div>
-                                    <div className="rds-dim-header-subtitle">{selectedDaysInfo.identifier}</div>
-                                </div>
-                                <button className="rds-dim-modal-close" onClick={() => setSelectedDaysInfo(null)}><X size={20} /></button>
-                            </div>
-                            <div className="rds-dim-hero">
-                                <div className="rds-dim-count-badge">{selectedDaysInfo.count}</div>
-                                <div className="rds-dim-count-label">Days Active</div>
-                            </div>
-
-                            <div className="rds-dim-dates-grid-container">
-                                <div className="rds-dim-dates-grid">
-                                    {selectedDaysInfo.rawDates?.map((dateStr, i) => {
-                                        const date = new Date(dateStr);
-                                        const formatted = date.toLocaleDateString('en-US', {
-                                            month: 'short',
-                                            day: 'numeric',
-                                            year: 'numeric'
-                                        });
-
-                                        return (
-                                            <div
-                                                key={i}
-                                                className="rds-dim-date-chip"
-                                                onClick={() => {
-                                                    const metrics = selectedDaysInfo.metricsByDate?.[dateStr] || {};
-
-                                                    setSelectedDateDetail({
-                                                        date: dateStr,
-                                                        formattedDate: formatted,
-                                                        cpu: metrics.cpu || 0,
-                                                        memory: metrics.memory || 0,
-                                                        connections: metrics.connections || 0,
-                                                        readIops: metrics.readIops || 0,
-                                                        writeIops: metrics.writeIops || 0,
-                                                        cost: metrics.cost || 0,
-                                                        isAwsConsole: metrics.isAwsConsole || false
-                                                    });
-
-                                                    setIsFlipped(true);
-                                                }}
-                                            >
-                                                {formatted}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                            <button className="rds-dim-close-btn" onClick={() => setSelectedDaysInfo(null)}>Got it</button>
-                        </div>
-
-                        {/* Back Side: Date Details */}
-                        <div className="rds-days-info-modal-back">
-                            {selectedDateDetail && (
-                                <>
-                                    <div className="rds-dim-header details-header">
-                                        <button className="rds-dim-back-arrow" onClick={() => setIsFlipped(false)}>
-                                            <ChevronLeft size={20} />
-                                        </button>
-                                        <div className="rds-dim-header-identity">
-                                            <div className="rds-dim-header-title">{selectedDaysInfo.identifier}</div>
-                                            <div className="rds-dim-date-context">{selectedDateDetail.formattedDate}</div>
-                                        </div>
-                                        {selectedDateDetail.isAwsConsole && (
-                                            <div className="rds-aws-tag modal-tag">
-                                                <Server size={10} strokeWidth={3} />
-                                                AWS
-                                            </div>
-                                        )}
+            {
+                selectedDaysInfo && (
+                    <div className="rds-graph-modal-overlay days-info-overlay" onClick={() => {
+                        setSelectedDaysInfo(null);
+                        setIsFlipped(false);
+                    }}>
+                        <div
+                            className={`rds-days-info-modal-inner ${isFlipped ? 'is-flipped' : ''}`}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Front Side: General Timeline */}
+                            <div className="rds-days-info-modal-front">
+                                <div className="rds-dim-header">
+                                    <div className="rds-dim-icon"><Calendar size={24} /></div>
+                                    <div>
+                                        <div className="rds-dim-header-title">Active Timeline</div>
+                                        <div className="rds-dim-header-subtitle">{selectedDaysInfo.identifier}</div>
                                     </div>
+                                    <button className="rds-dim-modal-close" onClick={() => setSelectedDaysInfo(null)}><X size={20} /></button>
+                                </div>
+                                <div className="rds-dim-hero">
+                                    <div className="rds-dim-count-badge">{selectedDaysInfo.count}</div>
+                                    <div className="rds-dim-count-label">Days Active</div>
+                                </div>
 
-                                    <div className="rds-dim-detail-content">
-                                        <div className="rds-dim-detail-grid">
-                                            <div className="rds-dim-detail-card rds-cpu">
-                                                <div className="rds-ddc-glass" />
-                                                <div className="rds-ddc-icon"><Cpu size={20} /></div>
-                                                {selectedDaysInfo?.capacity?.cpu && (
-                                                    <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.cpu} vCPU Total</div>
-                                                )}
-                                                <div className="rds-ddc-val">{selectedDateDetail.cpu}%</div>
-                                                <div className="rds-ddc-lbl">Resource CPU</div>
+                                <div className="rds-dim-dates-grid-container">
+                                    <div className="rds-dim-dates-grid">
+                                        {selectedDaysInfo.rawDates?.map((dateStr, i) => {
+                                            const date = new Date(dateStr);
+                                            const formatted = date.toLocaleDateString('en-US', {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                year: 'numeric'
+                                            });
+
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className="rds-dim-date-chip"
+                                                    onClick={() => {
+                                                        const metrics = selectedDaysInfo.metricsByDate?.[dateStr] || {};
+
+                                                        setSelectedDateDetail({
+                                                            date: dateStr,
+                                                            formattedDate: formatted,
+                                                            cpu: metrics.cpu || 0,
+                                                            memory: metrics.memory || 0,
+                                                            connections: metrics.connections || 0,
+                                                            readIops: metrics.readIops || 0,
+                                                            writeIops: metrics.writeIops || 0,
+                                                            cost: metrics.cost || 0,
+                                                            isAwsConsole: metrics.isAwsConsole || false
+                                                        });
+
+                                                        setIsFlipped(true);
+                                                    }}
+                                                >
+                                                    {formatted}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <button className="rds-dim-close-btn" onClick={() => setSelectedDaysInfo(null)}>Got it</button>
+                            </div>
+
+                            {/* Back Side: Date Details */}
+                            <div className="rds-days-info-modal-back">
+                                {selectedDateDetail && (
+                                    <>
+                                        <div className="rds-dim-header details-header">
+                                            <button className="rds-dim-back-arrow" onClick={() => setIsFlipped(false)}>
+                                                <ChevronLeft size={20} />
+                                            </button>
+                                            <div className="rds-dim-header-identity">
+                                                <div className="rds-dim-header-title">{selectedDaysInfo.identifier}</div>
+                                                <div className="rds-dim-date-context">{selectedDateDetail.formattedDate}</div>
                                             </div>
-                                            <div className="rds-dim-detail-card rds-conn">
-                                                <div className="rds-ddc-glass" />
-                                                <div className="rds-ddc-icon"><Network size={20} /></div>
-                                                <div className="rds-ddc-val">{selectedDateDetail.connections}</div>
-                                                <div className="rds-ddc-lbl">DB Connections</div>
-                                            </div>
-                                            <div className="rds-dim-detail-card rds-read">
-                                                <div className="rds-ddc-glass" />
-                                                <div className="rds-ddc-icon"><ArrowRight size={20} /></div>
-                                                {selectedDaysInfo?.capacity?.readIops && (
-                                                    <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.readIops.toLocaleString()} Prov.</div>
-                                                )}
-                                                <div className="rds-ddc-val">{selectedDateDetail.readIops}</div>
-                                                <div className="rds-ddc-lbl">Read throughput</div>
-                                            </div>
-                                            <div className="rds-dim-detail-card rds-write">
-                                                <div className="rds-ddc-glass" />
-                                                <div className="rds-ddc-icon"><Zap size={20} /></div>
-                                                {selectedDaysInfo?.capacity?.writeIops && (
-                                                    <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.writeIops.toLocaleString()} Prov.</div>
-                                                )}
-                                                <div className="rds-ddc-val">{selectedDateDetail.writeIops}</div>
-                                                <div className="rds-ddc-lbl">Write throughput</div>
-                                            </div>
+                                            {selectedDateDetail.isAwsConsole && (
+                                                <div className="rds-aws-tag modal-tag">
+                                                    <Server size={10} strokeWidth={3} />
+                                                    AWS
+                                                </div>
+                                            )}
                                         </div>
 
-                                        <div className="rds-dim-bottom-row">
-                                            <div className="rds-dim-detail-card rds-memory">
-                                                <div className="rds-ddc-glass" />
-                                                <div className="rds-ddc-icon"><Zap size={20} /></div>
-                                                {selectedDaysInfo?.capacity?.memory && (
-                                                    <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.memory} GB Total</div>
-                                                )}
-                                                <div className="rds-ddc-val">{selectedDateDetail.memory}%</div>
-                                                <div className="rds-ddc-lbl">Resource Memory</div>
+                                        <div className="rds-dim-detail-content">
+                                            <div className="rds-dim-detail-grid">
+                                                <div className="rds-dim-detail-card rds-cpu">
+                                                    <div className="rds-ddc-glass" />
+                                                    <div className="rds-ddc-icon"><Cpu size={20} /></div>
+                                                    {selectedDaysInfo?.capacity?.cpu && (
+                                                        <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.cpu} vCPU Total</div>
+                                                    )}
+                                                    <div className="rds-ddc-val">{selectedDateDetail.cpu}%</div>
+                                                    <div className="rds-ddc-lbl">Resource CPU</div>
+                                                </div>
+                                                <div className="rds-dim-detail-card rds-conn">
+                                                    <div className="rds-ddc-glass" />
+                                                    <div className="rds-ddc-icon"><Network size={20} /></div>
+                                                    <div className="rds-ddc-val">{selectedDateDetail.connections}</div>
+                                                    <div className="rds-ddc-lbl">DB Connections</div>
+                                                </div>
+                                                <div className="rds-dim-detail-card rds-read">
+                                                    <div className="rds-ddc-glass" />
+                                                    <div className="rds-ddc-icon"><ArrowRight size={20} /></div>
+                                                    {selectedDaysInfo?.capacity?.readIops && (
+                                                        <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.readIops.toLocaleString()} Prov.</div>
+                                                    )}
+                                                    <div className="rds-ddc-val">{selectedDateDetail.readIops}</div>
+                                                    <div className="rds-ddc-lbl">Read throughput</div>
+                                                </div>
+                                                <div className="rds-dim-detail-card rds-write">
+                                                    <div className="rds-ddc-glass" />
+                                                    <div className="rds-ddc-icon"><Zap size={20} /></div>
+                                                    {selectedDaysInfo?.capacity?.writeIops && (
+                                                        <div className="rds-ddc-capacity">{selectedDaysInfo.capacity.writeIops.toLocaleString()} Prov.</div>
+                                                    )}
+                                                    <div className="rds-ddc-val">{selectedDateDetail.writeIops}</div>
+                                                    <div className="rds-ddc-lbl">Write throughput</div>
+                                                </div>
                                             </div>
 
-                                            <div className="rds-dim-cost-banner-premium half-width">
-                                                <div className="rds-dcb-inner">
-                                                    <div className="rds-dcb-info">
-                                                        <div className="rds-dcb-lbl">ESTIMATED COST</div>
-                                                        <div className="rds-dcb-val">${selectedDateDetail.cost.toFixed(2)}</div>
-                                                    </div>
-                                                    <div className="rds-dcb-visual">
-                                                        <DollarSign size={24} className="rds-dcb-icon" />
-                                                        <div className="rds-dcb-glow" />
+                                            <div className="rds-dim-bottom-row">
+                                                <div className="rds-dim-detail-card rds-memory">
+                                                    <div className="rds-ddc-glass" />
+                                                    <div className="rds-ddc-icon"><Zap size={20} /></div>
+                                                    {selectedDaysInfo?.capacity?.memory !== undefined && (
+                                                        <div className="rds-ddc-capacity">
+                                                            Avg Utilization: {selectedDaysInfo.capacity.memory}%
+                                                        </div>
+                                                    )}
+                                                    <div className="rds-ddc-val">{selectedDateDetail.memory}%</div>
+                                                    <div className="rds-ddc-lbl">Resource Memory</div>
+                                                </div>
+
+                                                <div className="rds-dim-cost-banner-premium half-width">
+                                                    <div className="rds-dcb-inner">
+                                                        <div className="rds-dcb-info">
+                                                            <div className="rds-dcb-lbl">ESTIMATED COST</div>
+                                                            <div className="rds-dcb-val">${selectedDateDetail.cost.toFixed(2)}</div>
+                                                        </div>
+                                                        <div className="rds-dcb-visual">
+                                                            <DollarSign size={24} className="rds-dcb-icon" />
+                                                            <div className="rds-dcb-glow" />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <button className="rds-dim-close-btn premium" onClick={() => {
-                                        setSelectedDaysInfo(null);
-                                        setIsFlipped(false);
-                                    }}>
-                                        <span>Close Details</span>
-                                        <X size={16} />
-                                    </button>
-                                </>
-                            )}
+                                        <button className="rds-dim-close-btn premium" onClick={() => {
+                                            setSelectedDaysInfo(null);
+                                            setIsFlipped(false);
+                                        }}>
+                                            <span>Close Details</span>
+                                            <X size={16} />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )
+                )
             }
         </div >
     );

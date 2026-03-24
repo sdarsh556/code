@@ -532,7 +532,7 @@ function ECSAnalytics() {
                             id: c.clusterName
                         }))}
                         exportFilename="cluster-comparison.csv"
-                        gridTemplateColumns="52px 1fr 120px 120px 120px 120px"
+                        gridTemplateColumns="52px 1fr 140px 140px 140px 140px"
                         onRowClick={handleClusterClick}
                         columns={[
                             {

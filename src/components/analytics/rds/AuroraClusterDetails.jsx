@@ -22,74 +22,8 @@ function AuroraClusterDetails() {
     const [showGraphModal, setShowGraphModal] = useState(false);
     const [showTimelineModal, setShowTimelineModal] = useState(false);
     const [timelineInstance, setTimelineInstance] = useState(null);
-    const [clusterData, setClusterData] = useState({
-        cluster_info: {
-            cluster_identifier: clusterName || "aurora-prod-cluster",
-            engine: engine || "aurora-mysql",
-            status: "available"
-        },
-        instances: [
-            {
-                instance_identifier: `${clusterName}-instance-1`,
-                instance_class: "db.r5.large",
-                role: "WRITER",
-                status: "available",
-                avg_cpu_utilization: 30.0,
-                avg_database_connections: 48.0,
-                avg_read_iops: 290.0,
-                avg_write_iops: 145.0,
-                total_cpu: 2,
-                total_memory: 16,
-                total_read_iops: 1000,
-                total_write_iops: 500,
-                total_connections: 2000,
-                avg_memory_usage: 65.5,
-                days_active: 30,
-                active_dates: ["2026-03-17", "2026-03-16", "2026-03-15", "2026-03-14", "2026-03-13"]
-            },
-            {
-                instance_identifier: `${clusterName}-instance-2`,
-                instance_class: "db.r5.large",
-                role: "READER",
-                status: "available",
-                avg_cpu_utilization: 25.0,
-                avg_database_connections: 42.0,
-                avg_read_iops: 245.0,
-                avg_write_iops: 5.0,
-                total_cpu: 2,
-                total_memory: 16,
-                total_read_iops: 1000,
-                total_write_iops: 500,
-                total_connections: 2000,
-                avg_memory_usage: 72.2,
-                days_active: 30,
-                active_dates: ["2026-03-17", "2026-03-16", "2026-03-15", "2026-03-14"]
-            },
-            {
-                instance_identifier: `${clusterName}-instance-3`,
-                instance_class: "db.r5.xlarge",
-                role: "READER",
-                status: "available",
-                avg_cpu_utilization: 15.0,
-                avg_database_connections: 12.0,
-                avg_read_iops: 120.0,
-                avg_write_iops: 2.0,
-                total_cpu: 4,
-                total_memory: 32,
-                total_read_iops: 2000,
-                total_write_iops: 1000,
-                total_connections: 5000,
-                avg_memory_usage: 45.5,
-                days_active: 15,
-                active_dates: ["2026-03-17", "2026-03-16", "2026-03-15"]
-            }
-        ],
-        metric_summary: {
-            date_range: { start: "2026-02-15", end: "2026-03-17" },
-            total_days: 30, total_cost: 1500.50, total_instances: 3
-        }
-    });
-    const [loading, setLoading] = useState(false);
+    const [clusterData, setClusterData] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [instanceMetrics, setInstanceMetrics] = useState([]);
 
     useEffect(() => {
@@ -187,96 +121,138 @@ function AuroraClusterDetails() {
 
     const fetchClusterMetrics = async () => {
         try {
-            setClusterData({
-                cluster_info: {
-                    cluster_identifier: clusterName || "aurora-prod-cluster",
-                    engine: engine || "aurora-mysql",
-                    status: "available"
-                },
-                instances: [
-                    {
-                        instance_identifier: `${clusterName}-instance-1`,
-                        instance_class: "db.r5.large",
-                        role: "WRITER",
-                        status: "available",
-                        avg_cpu_utilization: 30.0,
-                        avg_database_connections: 48.0,
-                        avg_read_iops: 290.0,
-                        avg_write_iops: 145.0,
-                        total_cpu: 2,
-                        total_memory: 16,
-                        total_read_iops: 1000,
-                        total_write_iops: 500,
-                        total_connections: 2000,
-                        avg_memory_usage: 65.5,
-                        days_active: 30,
-                        active_dates: ["2026-03-17", "2026-03-16", "2026-03-15", "2026-03-14", "2026-03-13"]
-                    },
-                    {
-                        instance_identifier: `${clusterName}-instance-2`,
-                        instance_class: "db.r5.large",
-                        role: "READER",
-                        status: "available",
-                        avg_cpu_utilization: 25.0,
-                        avg_database_connections: 42.0,
-                        avg_read_iops: 245.0,
-                        avg_write_iops: 5.0,
-                        total_cpu: 2,
-                        total_memory: 16,
-                        total_read_iops: 1000,
-                        total_write_iops: 500,
-                        total_connections: 2000,
-                        avg_memory_usage: 72.2,
-                        days_active: 30,
-                        active_dates: ["2026-03-17", "2026-03-16", "2026-03-15", "2026-03-14"]
-                    },
-                    {
-                        instance_identifier: `${clusterName}-instance-3`,
-                        instance_class: "db.r5.xlarge",
-                        role: "READER",
-                        status: "available",
-                        avg_cpu_utilization: 15.0,
-                        avg_database_connections: 12.0,
-                        avg_read_iops: 120.0,
-                        avg_write_iops: 2.0,
-                        total_cpu: 4,
-                        total_memory: 32,
-                        total_read_iops: 2000,
-                        total_write_iops: 1000,
-                        total_connections: 5000,
-                        avg_memory_usage: 45.5,
-                        days_active: 15,
-                        active_dates: ["2026-03-17", "2026-03-16", "2026-03-15"]
-                    }
-                ],
-                metric_summary: {
-                    date_range: {
-                        start: "2026-02-15",
-                        end: "2026-03-17"
-                    },
-                    total_days: 30,
-                    total_cost: 1500.50,
-                    total_instances: 3
-                }
-            });
-            setLoading(false);
-            return;
+            const { from_date, to_date } = getDateRange();
+            const engineLower = engine.toLowerCase() === 'documentdb' ? 'docdb' : 'aurora';
+
+            const res = await axiosClient.get(
+                `/analytics/rds/${engineLower}/clusters/${clusterName}/metrics/${from_date}/${to_date}`
+            );
+
+            if (res.data.success) {
+                const data = res.data.data;
+
+                const formattedInstances = data.instances.map((inst, index) => {
+                    const dailyMetrics = inst.daily_metrics || [];
+
+                    // ✅ derive AWS console flag
+                    const isAwsConsole = dailyMetrics.some(day =>
+                        day.turned_on_by_aws_console === true ||
+                        day.turned_off_by_aws_console === true
+                    );
+
+                    return {
+                        instance_identifier:
+                            inst.db_identifier || `${clusterName}-instance-${index + 1}`,
+
+                        // identifiers
+                        db_identifier: inst.db_identifier,
+                        instance_class: inst.instance_class,
+
+                        // status & role
+                        role: inst.role?.toUpperCase(),
+                        status: inst.status || "available",
+
+                        // capacity
+                        total_cpu: Number(inst.vcpu) || 0,
+                        total_memory: Number(inst.memory_gb) || 0,
+
+                        // totals
+                        total_read_iops: Number(inst.read_iops) || 0,
+                        total_write_iops: Number(inst.write_iops) || 0,
+                        total_iops:
+                            (Number(inst.read_iops) || 0) +
+                            (Number(inst.write_iops) || 0),
+
+                        // averages
+                        avg_cpu_utilization: Number(inst.avg_cpu_utilization) || 0,
+                        avg_connections: Number(inst.avg_database_connections) || 0,
+                        avg_read_iops: Number(inst.avg_read_iops) || 0,
+                        avg_write_iops: Number(inst.avg_write_iops) || 0,
+                        avg_memory_usage: Number(inst.avg_memory_utilization) || 0,
+
+                        // active days
+                        active_days_count: Number(inst.days_active) || 0,
+
+                        // ✅ derived flag
+                        is_aws: isAwsConsole,
+
+                        // dates (if needed)
+                        active_dates: dailyMetrics.map(d =>
+                            new Date(d.date).toISOString().split("T")[0]
+                        ),
+
+                        // raw metrics (keep if needed)
+                        daily_metrics: dailyMetrics
+                    };
+                });
+
+                // ✅ NEW: Normalize cluster avg metrics
+                const avgMetrics = {
+                    avg_cpu_utilization: Number(data.cluster_avg_metrics?.avg_cpu_utilization) || 0,
+                    avg_connections: Number(data.cluster_avg_metrics?.avg_database_connections) || 0,
+                    avg_read_iops: Number(data.cluster_avg_metrics?.avg_read_iops) || 0,
+                    avg_write_iops: Number(data.cluster_avg_metrics?.avg_write_iops) || 0,
+                    avg_memory_utilization: Number(data.cluster_avg_metrics?.avg_memory_utilization) || 0,
+                    total_cost: Number(data.cluster_avg_metrics?.total_cost) || 0,
+
+                    // ✅ Derived (very useful for UI)
+                    avg_total_iops:
+                        (Number(data.cluster_avg_metrics?.avg_read_iops) || 0) +
+                        (Number(data.cluster_avg_metrics?.avg_write_iops) || 0)
+                };
+
+                setClusterData({
+                    cluster_info: data.cluster_info,
+                    instances: formattedInstances,
+                    metric_summary: data.metric_summary,
+
+                    avg_metrics: avgMetrics
+                });
+            }
+
         } catch (err) {
             console.error("Failed to fetch Aurora cluster metrics", err);
+        } finally {
             setLoading(false);
         }
     };
 
-    const fetchInstanceMetrics = async (instanceIdentifier) => {
+    const fetchInstanceMetrics = async (instanceIdentifier, date = null) => {
         try {
-            // Dummy data instead of API call
-            return [
-                { date: "2026-03-15", cpu: 42, connections: 115, readIops: 480, writeIops: 290, cost: 15.2 },
-                { date: "2026-03-16", cpu: 40, connections: 110, readIops: 450, writeIops: 280, cost: 15.0 },
-                { date: "2026-03-17", cpu: 45, connections: 120, readIops: 500, writeIops: 300, cost: 15.5 }
-            ];
+            const engineLower = engine.toLowerCase() === 'documentdb' ? 'docdb' : 'aurora';
+            const url = date
+                ? `/analytics/rds/${engineLower}/instances/${instanceIdentifier}/metrics/history/hourly/${date}`
+                : `/analytics/rds/${engineLower}/instances/${instanceIdentifier}/metrics/history/daily`;
+
+            const res = await axiosClient.get(url);
+
+            if (res.data.success) {
+                const metrics = (res.data.data.metrics || []).map(m => {
+                    const ts = m.timestamp || m.date;
+                    const datePart = ts ? (ts.includes(' ') ? ts.split(' ')[0] : ts.split('T')[0]) : '';
+                    const timePart = ts?.includes(' ') ? ts.split(' ')[1] : (ts?.includes('T') ? ts.split('T')[1] : null);
+                    
+                    return {
+                        date: datePart,
+                        dateStr: datePart,
+                        displayDate: datePart ? new Date(datePart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A',
+                        displayHour: timePart ? timePart.substring(0, 5) : null,
+                        cpu: Number(m.cpu) || 0,
+                        connections: Number(m.connections) || 0,
+                        readIops: Number(m.read_iops) || 0,
+                        writeIops: Number(m.write_iops) || 0,
+                        memory: Number(m.memory_utilization) || 0,
+                        cost: Number(m.cost || m.approx_cost || 0) || 0
+                    };
+                });
+
+                return metrics;
+            }
+
+            return [];
+
         } catch (err) {
-            console.error("Failed to fetch Aurora instance metrics", err);
+            console.error(`Failed to fetch ${engine} instance metrics`, err);
             return [];
         }
     };
@@ -284,6 +260,20 @@ function AuroraClusterDetails() {
     useEffect(() => {
         fetchClusterMetrics();
     }, [clusterName, selectedRange, customRange]);
+
+    const totalActiveDays = useMemo(() => {
+        if (!clusterData?.instances) return 0;
+
+        const uniqueActiveDays = new Set();
+
+        clusterData.instances.forEach(inst => {
+            inst.active_dates?.forEach(date => {
+                uniqueActiveDays.add(date);
+            });
+        });
+
+        return uniqueActiveDays.size;
+    }, [clusterData]);
 
     if (loading || !clusterData) {
         return (
@@ -328,7 +318,10 @@ function AuroraClusterDetails() {
         const [c1, c2] = getGaugeColor(val, type);
         const radius = 42; // Increased radius for bigger look
         const circumference = 2 * Math.PI * radius;
-        const offset = circumference - (Math.min(val, max) / max) * circumference;
+        const safeVal = Number(val) || 0;
+        const safeMax = Number(max) || 0;
+        const percent = safeMax > 0 ? Math.min(safeVal, safeMax) / safeMax : 0;
+        const offset = circumference - percent * circumference;
 
         return (
             <div className={`aurora-instance-gauge ${type}`}>
@@ -361,7 +354,7 @@ function AuroraClusterDetails() {
                 </svg>
                 <div className="aurora-gauge-info">
                     <div className="aurora-gauge-val" style={{ color: c1 }}>
-                        {val.toFixed(0)}
+                        {safeVal.toFixed(0)}
                         {(type === 'cpu' || type === 'mem') && <span className="aurora-gauge-unit">%</span>}
                     </div>
                     <div className="aurora-gauge-label">
@@ -396,7 +389,7 @@ function AuroraClusterDetails() {
 
                     <div className="aurora-tm-body">
                         <div className="aurora-tm-count-block">
-                            <span className="aurora-tm-big-num">{timelineInstance.days_active}</span>
+                            <span className="aurora-tm-big-num">{timelineInstance.active_days_count}</span>
                             <span className="aurora-tm-label">Days Active</span>
                         </div>
 
@@ -448,7 +441,7 @@ function AuroraClusterDetails() {
                     <div className="cd-summary-pills">
                         <div className="cd-pill">
                             <Clock size={16} />
-                            <span className="cd-pill-value">{clusterData.metric_summary?.total_days}</span>
+                            <span className="cd-pill-value">{totalActiveDays}</span>
                             <span className="cd-pill-label">Days Active</span>
                         </div>
                         <div className="cd-pill">
@@ -458,7 +451,7 @@ function AuroraClusterDetails() {
                         </div>
                         <div className="cd-pill cost-pill">
                             <DollarSign size={16} />
-                            <span className="cd-pill-value">${clusterData.metric_summary?.total_cost?.toFixed(0) || 0}</span>
+                            <span className="cd-pill-value">{clusterData?.avg_metrics?.total_cost?.toFixed(2) || 0}</span>
                             <span className="cd-pill-label">Total Cost</span>
                         </div>
                     </div>
@@ -482,36 +475,40 @@ function AuroraClusterDetails() {
                                 <div className="aurora-ic-name-block">
                                     <div className="aurora-ic-id-row">
                                         <Database size={18} className="aurora-ic-icon" />
-                                        <span className="aurora-ic-id">{instance.instance_identifier}</span>
-                                        <div className={`aurora-ic-status ${instance.status}`}>
+
+                                        <span className="aurora-ic-id">
+                                            {instance?.instance_identifier || "N/A"}
+                                        </span>
+
+                                        <div className={`aurora-ic-status ${(instance?.status || "unknown").toLowerCase()}`}>
                                             <div className="status-dot-pulse" />
-                                            <span>{instance.status}</span>
+                                            <span>{instance?.status || "Unknown"}</span>
                                         </div>
                                     </div>
                                     <div className="aurora-ic-meta">
-                                        <span className="aurora-ic-class">{instance.instance_class}</span>
+                                        <span className="aurora-ic-class">{instance?.instance_class}</span>
                                         <span className="aurora-ic-dot" />
-                                        <span className={`aurora-ic-role ${instance.role.toLowerCase()}`}>{instance.role}</span>
+                                        <span className={`aurora-ic-role ${instance.role.toLowerCase()}`}>{instance?.role}</span>
                                         <div className="aurora-ic-dot" />
                                         <div className="rds-instance-specs aurora-compact">
                                             <div className="rds-spec-tag cpu">
                                                 <Cpu size={14} />
-                                                <span className="rds-spec-value">{instance.total_cpu || 2}</span>
+                                                <span className="rds-spec-value">{instance.total_cpu || 0}</span>
                                                 <span className="rds-spec-unit">vCPU</span>
                                             </div>
                                             <div className="rds-spec-tag mem">
                                                 <Zap size={14} />
-                                                <span className="rds-spec-value">{instance.total_memory || 16}</span>
+                                                <span className="rds-spec-value">{instance.total_memory || 0}</span>
                                                 <span className="rds-spec-unit">GB RAM</span>
                                             </div>
                                             <div className="rds-spec-tag conn">
                                                 <Network size={14} />
-                                                <span className="rds-spec-value">{(instance.total_connections || 2000).toLocaleString()}</span>
+                                                <span className="rds-spec-value">{(instance.avg_connections || 0).toLocaleString()}</span>
                                                 <span className="rds-spec-unit">Max Conn</span>
                                             </div>
                                             <div className="rds-spec-tag iops">
                                                 <Activity size={14} />
-                                                <span className="rds-spec-value">{((instance.total_read_iops || 1000) + (instance.total_write_iops || 500)).toLocaleString()}</span>
+                                                <span className="rds-spec-value">{(instance.total_iops || 0).toLocaleString()}</span>
                                                 <span className="rds-spec-unit">IOPS</span>
                                             </div>
                                         </div>
@@ -521,7 +518,7 @@ function AuroraClusterDetails() {
                                 <div className="aurora-ic-actions-top">
                                     <button className="aurora-ic-btn secondary small" onClick={() => handleViewTimeline(instance)}>
                                         <Calendar size={14} />
-                                        <span>{instance.days_active} Days Active</span>
+                                        <span>{instance.active_days_count} Days Active</span>
                                     </button>
                                     <button className="aurora-ic-btn primary small" onClick={(e) => {
                                         e.stopPropagation();
@@ -536,9 +533,9 @@ function AuroraClusterDetails() {
                             <div className="aurora-ic-main-content">
                                 <div className="aurora-ic-gauges-horizontal">
                                     {renderGauge(instance.avg_cpu_utilization || 0, 100, "CPU Usage", Cpu, 'cpu')}
-                                    {renderGauge(instance.avg_memory_usage || 65.5, 100, "Memory Usage", Zap, 'mem')}
-                                    {renderGauge(instance.avg_read_iops || 0, instance.total_read_iops || 1000, "Read IOPS", ArrowRight, 'read')}
-                                    {renderGauge(instance.avg_write_iops || 0, instance.total_write_iops || 500, "Write IOPS", Zap, 'write')}
+                                    {renderGauge(instance.avg_memory_usage || 0, 100, "Memory Usage", Zap, 'mem')}
+                                    {renderGauge(instance.avg_read_iops || 0, instance.total_read_iops || 0, "Read IOPS", ArrowRight, 'read')}
+                                    {renderGauge(instance.avg_write_iops || 0, instance.total_write_iops || 0, "Write IOPS", Zap, 'write')}
                                 </div>
                             </div>
                             <div className="aurora-ic-card-accent" />
@@ -555,7 +552,7 @@ function AuroraClusterDetails() {
                         id: inst.instance_identifier
                     }))}
                     exportFilename={`${clusterName}-instances.csv`}
-                    gridTemplateColumns="52px 1.5fr 1fr 100px 100px 100px 100px 100px 100px"
+                    gridTemplateColumns="3.25rem 2fr 1.2fr 8.5rem 8.5rem 8.5rem 8.5rem 8.5rem 8.5rem"
                     columns={[
                         {
                             key: 'instance_identifier',
@@ -586,7 +583,7 @@ function AuroraClusterDetails() {
                             align: 'center'
                         },
                         {
-                            key: 'avg_database_connections',
+                            key: 'avg_connections',
                             label: 'Conn',
                             icon: Network,
                             sortable: true,
@@ -607,7 +604,7 @@ function AuroraClusterDetails() {
                             align: 'center'
                         },
                         {
-                            key: 'days_active',
+                            key: 'active_days_count',
                             label: 'Active',
                             icon: Clock,
                             sortable: true,
@@ -622,6 +619,7 @@ function AuroraClusterDetails() {
                     isOpen={showGraphModal}
                     instance={selectedInstance}
                     excludeMetrics={['cost']}
+                    onFetchHourly={(date) => fetchInstanceMetrics(selectedInstance.instance_identifier, date)}
                     onClose={() => {
                         setShowGraphModal(false);
                         setSelectedInstance(null);
