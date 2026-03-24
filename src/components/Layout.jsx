@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -39,6 +39,22 @@ function Layout() {
         return sessionStorage.getItem('app_env') || 'uat';
     });
     const [isEnvDropdownOpen, setIsEnvDropdownOpen] = useState(false);
+    const envDropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (envDropdownRef.current && !envDropdownRef.current.contains(event.target)) {
+                setIsEnvDropdownOpen(false);
+            }
+        };
+
+        if (isEnvDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isEnvDropdownOpen]);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -138,7 +154,7 @@ function Layout() {
 
                 <div className="header-right">
                     {/* ENVIRONMENT SWITCHER */}
-                    <div className="env-switcher-container">
+                    <div className="env-switcher-container" ref={envDropdownRef}>
                         <button 
                             className={`env-switcher-btn ${appEnv}`}
                             onClick={() => setIsEnvDropdownOpen(!isEnvDropdownOpen)}
@@ -149,9 +165,7 @@ function Layout() {
                         </button>
                         
                         {isEnvDropdownOpen && (
-                            <>
-                                <div className="env-dropdown-overlay" onClick={() => setIsEnvDropdownOpen(false)} />
-                                <div className="env-dropdown-menu">
+                            <div className="env-dropdown-menu">
                                     <div className="env-dropdown-header">Select Environment</div>
                                     <button 
                                         className={`env-option uat ${appEnv === 'uat' ? 'active' : ''}`}
@@ -168,7 +182,6 @@ function Layout() {
                                         <span>Preprod</span>
                                     </button>
                                 </div>
-                            </>
                         )}
                     </div>
 
