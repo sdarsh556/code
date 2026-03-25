@@ -107,29 +107,30 @@ function RDSGraphModal({ isOpen, onClose, instance, excludeMetrics = [], onFetch
             return full;
         } else {
             // PADDING TO 30 DAYS
-            if (data30.length === 0) return [];
-
-            // Determine the range (30 days trailing from the latest date in the set)
-            const sorted = [...data30].sort((a, b) => new Date(a.date) - new Date(b.date));
-            const latest = new Date(sorted[sorted.length - 1].date);
+            // Always show 30 days ending today
+            const latest = new Date();
 
             const full = [];
             for (let i = 29; i >= 0; i--) {
                 const d = new Date(latest);
                 d.setDate(d.getDate() - i);
-                const dStr = d.toISOString().split('T')[0];
+                const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
                 const match = data30.find(m => m.date === dStr);
+                const isToday = i === 0;
+
                 if (match) {
-                    full.push({ v: Number(match[displayKey] || 0), raw: match });
+                    full.push({ v: Number(match[displayKey] || 0), raw: { ...match, isToday } });
                 } else {
                     const displayDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                     full.push({
                         v: 0,
                         raw: {
                             date: dStr,
+                            dateStr: dStr,
                             displayDate,
-                            [displayKey]: 0
+                            [displayKey]: 0,
+                            isToday
                         }
                     });
                 }
@@ -158,7 +159,7 @@ function RDSGraphModal({ isOpen, onClose, instance, excludeMetrics = [], onFetch
         if (drillDay || transitioning || !onFetchHourly) return;
 
         setLoadingHourly(true);
-        const data = await onFetchHourly(dayPt.raw.dateStr);
+        const data = await onFetchHourly(dayPt.raw.date || dayPt.raw.dateStr);
         setLoadingHourly(false);
 
         if (!data || data.length === 0) return;
