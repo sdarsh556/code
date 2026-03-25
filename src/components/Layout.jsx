@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
     Server,
@@ -23,7 +23,6 @@ import '../css/body-theme.css';
 import DynamicBackground from './background/DynamicBackground';
 import ECSIcon from './common/ECSIcon';
 import { logout } from './utils/auth';
-import publicAxios from './api/publicAxios';
 import { setActiveEnv } from './api/axiosClient';
 
 function Layout() {
@@ -56,7 +55,6 @@ function Layout() {
         };
     }, [isEnvDropdownOpen]);
 
-    const navigate = useNavigate();
     const location = useLocation();
 
     /* ===============================
@@ -71,21 +69,13 @@ function Layout() {
        FETCH USER FROM BACKEND
     ============================== */
     useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const res = await publicAxios.get('/auth/session');
-                setUser(res.data.user);
-            } catch (err) {
-                window.location.replace(`${BACKEND_BASE}/api/auth/saml/login`);
-            }
-        };
-
-        fetchUser();
-    }, [navigate]);
+        // Backend disconnected, using mock user to avoid login redirects
+        setUser({ name: 'Local Dev', user_id: 'DEV-001' });
+    }, []);
 
 
-    const handleLogout = async () => {
-        await logout();
+    const handleLogout = () => {
+        // Logout logic disabled — no backend
     };
 
     const toggleSidebar = () => {
