@@ -6,6 +6,7 @@ import {
     ArrowRight, HardDrive, Network, ShieldCheck, Gauge, Clock, DollarSign, X, Search
 } from 'lucide-react';
 import '../../../css/analytics/rds/RDSAnalytics.css';
+import '../../../css/analytics/shared/GraphModal.css';
 import '../../../css/analytics/comparison-table.css';
 import ComparisonTable from '../ComparisonTable';
 import RDSGraphModal from './RDSGraphModal';
