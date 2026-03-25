@@ -975,7 +975,7 @@
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
-    margin-top: 1.5rem;
+    margin-top: auto;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     position: relative;
@@ -1078,8 +1078,11 @@
 }
 
 .dim-content {
-    margin-bottom: 2.5rem;
+    flex: 1;
+    margin-bottom: 1.5rem;
     text-align: center;
+    display: flex;
+    flex-direction: column;
 }
 
 .dim-value {
