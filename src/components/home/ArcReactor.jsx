@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../../css/home/ArcReactor.css';
 
-const ArcReactor = ({ cpu = 0, memory = 0 }) => {
+const ArcReactor = ({ cores = 0, usedMemoryGB = '0.00' }) => {
     const [breath, setBreath] = useState(0);
     const [tilt, setTilt] = useState({ x: 0, y: 0 });
     const assemblyRef = useRef(null);
@@ -31,9 +31,6 @@ const ArcReactor = ({ cpu = 0, memory = 0 }) => {
     };
 
     const handleMouseLeave = () => setTilt({ x: 0, y: 0 });
-
-    const cpuVal = Math.min(Math.max(cpu, 0), 100);
-    const memVal = Math.min(Math.max(memory, 0), 100);
 
     // SVG reactor constants
     const S = 210;
@@ -100,12 +97,12 @@ const ArcReactor = ({ cpu = 0, memory = 0 }) => {
                             <feMerge><feMergeNode in="blur" /><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                         </filter>
                         <radialGradient id="panelGrad" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%"  stopColor="#90f8ff" stopOpacity="1"   />
+                            <stop offset="0%" stopColor="#90f8ff" stopOpacity="1" />
                             <stop offset="50%" stopColor="#00d8ff" stopOpacity="0.95" />
                             <stop offset="100%" stopColor="#0088ee" stopOpacity="0.55" />
                         </radialGradient>
                         <radialGradient id="coreGrad">
-                            <stop offset="0%"  stopColor="#ffffff" />
+                            <stop offset="0%" stopColor="#ffffff" />
                             <stop offset="20%" stopColor="#b0f8ff" />
                             <stop offset="55%" stopColor="#00aaff" stopOpacity="0.85" />
                             <stop offset="80%" stopColor="#003888" stopOpacity="0.45" />
@@ -139,7 +136,7 @@ const ArcReactor = ({ cpu = 0, memory = 0 }) => {
 
                     <circle cx={C} cy={C} r={OR - 1} fill="#152840" />
                     <circle cx={C} cy={C} r={IR + 14} fill="url(#coreGrad)" opacity={0.5 + glowI * 0.5} style={{ mixBlendMode: 'screen' }} />
-                    <circle cx={C} cy={C} r={IR + 8}  fill="url(#coreGrad)" opacity={glowI} style={{ mixBlendMode: 'screen' }} />
+                    <circle cx={C} cy={C} r={IR + 8} fill="url(#coreGrad)" opacity={glowI} style={{ mixBlendMode: 'screen' }} />
 
                     {/* Blue panels — CCW */}
                     <g filter="url(#arcGlow)" opacity={panelO} className="arc-rotate-ccw">
@@ -155,11 +152,11 @@ const ArcReactor = ({ cpu = 0, memory = 0 }) => {
                     </g>
 
                     {/* Inner ring */}
-                    <circle cx={C} cy={C} r={IR}     fill="#1a3050" stroke="#2a4468" strokeWidth="7" />
-                    <circle cx={C} cy={C} r={IR - 2}  fill="none"    stroke="#3a6090" strokeWidth="1" />
-                    <circle cx={C} cy={C} r={IR - 6}  fill="#0e2038" />
+                    <circle cx={C} cy={C} r={IR} fill="#1a3050" stroke="#2a4468" strokeWidth="7" />
+                    <circle cx={C} cy={C} r={IR - 2} fill="none" stroke="#3a6090" strokeWidth="1" />
+                    <circle cx={C} cy={C} r={IR - 6} fill="#0e2038" />
                     {/* inner blue ambient fill so the center isn't dead black */}
-                    <circle cx={C} cy={C} r={IR - 7}  fill="rgba(0,100,200,0.2)" />
+                    <circle cx={C} cy={C} r={IR - 7} fill="rgba(0,100,200,0.2)" />
 
                     {/* Triangle */}
                     <path d={triPath} fill={`rgba(0,200,255,${0.28 + breath * 0.38})`} stroke="#00f2ff" strokeWidth="2.5" strokeLinejoin="round" filter="url(#triBloom)" />
@@ -172,7 +169,7 @@ const ArcReactor = ({ cpu = 0, memory = 0 }) => {
                     <circle cx={C} cy={C} r={2.5} fill="#fff" />
 
                     {/* Sheen rings */}
-                    <circle cx={C} cy={C} r={OR + 2} fill="none" stroke="#1e3050"             strokeWidth="1.5" />
+                    <circle cx={C} cy={C} r={OR + 2} fill="none" stroke="#1e3050" strokeWidth="1.5" />
                     <circle cx={C} cy={C} r={OR + 5} fill="none" stroke="rgba(0,200,255,0.06)" strokeWidth="1.5" />
                     <circle cx={C} cy={C} r={OR + 9} fill="none" stroke="rgba(0,160,255,0.03)" strokeWidth="2" />
                 </svg>
@@ -313,16 +310,17 @@ const ArcReactor = ({ cpu = 0, memory = 0 }) => {
             {/* ── HUD COLUMN ── */}
             <div className="arc-hud-column">
                 <div className="arc-hud-box mem-box">
-                    <span className="hud-tag">SYSTEM_MEM</span>
-                    <span className="hud-val purple">{Math.round(memVal)}%</span>
+                    <span className="hud-tag">USED_MEM</span>
+                    <span className="hud-val purple">{usedMemoryGB} GB</span>
                     <EKG color="#d946ef" />
                 </div>
                 <div className="arc-hud-box cpu-box">
-                    <span className="hud-tag">SYSTEM_CPU</span>
-                    <span className="hud-val cyan">{Math.round(cpuVal)}%</span>
+                    <span className="hud-tag">CPU_CORES</span>
+                    <span className="hud-val cyan">{cores}</span>
                     <EKG color="#00f2ff" />
                 </div>
             </div>
+
         </div>
     );
 };

@@ -48,7 +48,10 @@ function Dashboard() {
     });
     const [systemMetrics, setSystemMetrics] = useState({
         cpu: 0,
-        memory: 0
+        memory: 0,
+        cores: 0,
+        usedMemoryGB: '0.00',
+        totalMemoryGB: '0.00'
     });
 
     useEffect(() => {
@@ -169,18 +172,17 @@ function Dashboard() {
         try {
             const response = await axiosClient.get('/system/metrics');
             if (response.data && response.data.success) {
+                const data = response.data.data;
                 setSystemMetrics({
-                    cpu: response.data.data.cpu,
-                    memory: response.data.data.memory
+                    cpu: data.cpu.currentLoad,
+                    memory: data.memory.usedPercent,
+                    cores: data.cpu.cores,
+                    usedMemoryGB: (data.memory.used / (1024 * 1024 * 1024)).toFixed(2),
+                    totalMemoryGB: (data.memory.total / (1024 * 1024 * 1024)).toFixed(2)
                 });
             }
         } catch (err) {
-            // Fallback to slight fluctuations for demo purposes if backend is not yet ready
-            setSystemMetrics(prev => ({
-                cpu: Math.min(Math.max(prev.cpu + (Math.random() * 10 - 5), 5), 65),
-                memory: Math.min(Math.max(prev.memory + (Math.random() * 6 - 3), 10), 80)
-            }));
-            console.warn('System metrics fetch failed, using mock data fallback.');
+            console.error('System metrics fetch failed:', err);
         }
     };
 
@@ -315,7 +317,7 @@ function Dashboard() {
                     </div>
 
                     <div className="hero-utilization-monitor">
-                        <ArcReactor cpu={systemMetrics.cpu} memory={systemMetrics.memory} />
+                        <ArcReactor cores={systemMetrics.cores} usedMemoryGB={systemMetrics.usedMemoryGB} />
                     </div>
                 </div>
 
