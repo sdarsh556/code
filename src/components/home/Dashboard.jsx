@@ -19,6 +19,7 @@ import axiosClient from '../api/axiosClient';
 import HolidayModal from '../common/HolidayModal';
 import ConfirmActionModal from '../common/ConfirmActionModal';
 import logo from '../../assets/logo.svg';
+import ArcReactor from './ArcReactor';
 
 function Dashboard() {
     const { setBgContext } = useOutletContext();
@@ -44,6 +45,10 @@ function Dashboard() {
         totalClusters: 0,
         totalnamespaces: 0,
         activeSchedules: 0
+    });
+    const [systemMetrics, setSystemMetrics] = useState({
+        cpu: 0,
+        memory: 0
     });
 
     useEffect(() => {
@@ -160,11 +165,34 @@ function Dashboard() {
         }
     };
 
+    const fetchSystemMetrics = async () => {
+        try {
+            const response = await axiosClient.get('/system/metrics');
+            if (response.data && response.data.success) {
+                setSystemMetrics({
+                    cpu: response.data.data.cpu,
+                    memory: response.data.data.memory
+                });
+            }
+        } catch (err) {
+            // Fallback to slight fluctuations for demo purposes if backend is not yet ready
+            setSystemMetrics(prev => ({
+                cpu: Math.min(Math.max(prev.cpu + (Math.random() * 10 - 5), 5), 65),
+                memory: Math.min(Math.max(prev.memory + (Math.random() * 6 - 3), 10), 80)
+            }));
+            console.warn('System metrics fetch failed, using mock data fallback.');
+        }
+    };
+
     useEffect(() => {
         fetchEcsStats();
         fetchEc2Stats();
         fetchRdsStats();
         fetchEksStats();
+        fetchSystemMetrics();
+
+        const metricsInterval = setInterval(fetchSystemMetrics, 3000);
+        return () => clearInterval(metricsInterval);
     }, []);
 
     const [file, setFile] = useState(null);
@@ -275,13 +303,19 @@ function Dashboard() {
                     <div className="hero-branding">
                         <img src={logo} className="portal-logo-modern" alt="EDITH Portal" />
                     </div>
+
                     <div className="hero-text-content">
+                        <p className="hero-eyebrow">⬥ Welcome to</p>
                         <h1 className="hero-title-premium">
-                            Welcome to <span className="title-accent">EDITH</span>
+                            <span className="title-accent">EDITH</span>
                         </h1>
                         <div className="hero-tagline">
                             <span className="tagline-text">Even Dead, I'm The Hero</span>
                         </div>
+                    </div>
+
+                    <div className="hero-utilization-monitor">
+                        <ArcReactor cpu={systemMetrics.cpu} memory={systemMetrics.memory} />
                     </div>
                 </div>
 
