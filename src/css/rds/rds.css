@@ -43,7 +43,8 @@
     --rds-radius-lg: 16px;
     --rds-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    --rds-chart-track: rgba(15, 23, 42, 0.08); /* Dark track for light mode */
+    --rds-chart-track: rgba(15, 23, 42, 0.08);
+    /* Dark track for light mode */
     --rds-chart-glow: rgba(0, 0, 0, 0.1);
     --rds-chart-glow-opacity: 0.15;
 }
@@ -76,7 +77,8 @@
     --rds-warning-text: #fbbf24;
     --rds-warning-border: rgba(245, 158, 11, 0.3);
 
-    --rds-chart-track: rgba(255, 255, 255, 0.05); /* Light track for dark mode */
+    --rds-chart-track: rgba(255, 255, 255, 0.05);
+    /* Light track for dark mode */
     --rds-chart-glow: #ffffff;
     --rds-chart-glow-opacity: 0.4;
 }
@@ -389,8 +391,8 @@
     border: 1px solid rgba(129, 140, 248, 0.3);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
     border-radius: 50%;
-    width: 125px;
-    height: 125px;
+    width: 145px;
+    height: 145px;
     transition: all 0.3s ease;
 }
 
@@ -401,14 +403,14 @@
 
 .rds-chart-center-used,
 .rds-chart-center-total {
-    font-size: 20px;
+    font-size: 19px;
     font-weight: 800;
     color: var(--rds-text-primary);
     line-height: 1.1;
 }
 
 .rds-chart-center-sub {
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.7);
     letter-spacing: 0.08em;
@@ -416,12 +418,17 @@
     font-weight: 700;
 }
 
+.rds-alloc {
+    font-size: 13px;
+    color: #e2e8f0;
+}
+
 .rds-chart-center-count {
     font-size: 11px;
     color: #fff;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(4px);
-    padding: 3px 10px;
+    padding: 3px 15px;
     border-radius: 12px;
     margin-top: 8px;
     font-weight: 800;
@@ -446,7 +453,8 @@
     text-shadow: none;
 }
 
-.layout-container[data-theme="light"] .rds-chart-center-sub {
+.layout-container[data-theme="light"] .rds-chart-center-sub,
+.layout-container[data-theme="light"] .rds-alloc {
     color: #64748b;
 }
 
@@ -752,7 +760,7 @@
     transform: scale(0.96);
 }
 
-/* Premium Action Buttons (Delta Style Base) */
+/* Premium Action Buttons (Delta Style) */
 .rds-btn-delta-updates {
     display: flex;
     align-items: center;
