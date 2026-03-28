@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Database, Server, HardDrive, Play, Square, RotateCw, RefreshCw, Upload, DownloadCloud,
     Search, Plus, Minus, Settings, Shield, Clock, Sun, Moon, Pencil, FileUp, Activity, X, ArrowUpDown,
-    ChevronUp, ChevronDown
+    ChevronUp, ChevronDown, Cpu, Zap
 } from 'lucide-react';
 import '../../css/rds/rds.css';
 import axiosClient from '../api/axiosClient'; // Uncomment when ready
@@ -94,8 +94,8 @@ const DUMMY_DATABASES = [
         storage_allocated: null,
         storage_used: 540.85,
         status: 'available',
-        vcpu: null,
-        memory: null,
+        vcpu: 4,
+        memory: 32,
         is_24_7: true,
         never_start: false,
         daily_exception: false,
@@ -115,8 +115,8 @@ const DUMMY_DATABASES = [
         storage_allocated: null,
         storage_used: 120.42,
         status: 'available',
-        vcpu: null,
-        memory: null,
+        vcpu: 2,
+        memory: 4,
         is_24_7: false,
         never_start: false,
         daily_exception: true,
@@ -135,8 +135,8 @@ const DUMMY_DATABASES = [
         storage_allocated: null,
         storage_used: 45.22,
         status: 'stopped',
-        vcpu: null,
-        memory: null,
+        vcpu: 2,
+        memory: 4,
         is_24_7: false,
         never_start: true,
         daily_exception: false,
@@ -155,8 +155,8 @@ const DUMMY_DATABASES = [
         storage_allocated: null,
         storage_used: 28.91,
         status: 'available',
-        vcpu: null,
-        memory: null,
+        vcpu: 2,
+        memory: 2,
         is_24_7: false,
         never_start: false,
         daily_exception: false,
@@ -175,8 +175,8 @@ const DUMMY_DATABASES = [
         storage_allocated: null,
         storage_used: 850.42,
         status: 'available',
-        vcpu: null,
-        memory: null,
+        vcpu: 4,
+        memory: 32,
         is_24_7: true,
         never_start: false,
         daily_exception: false,
@@ -196,8 +196,8 @@ const DUMMY_DATABASES = [
         storage_allocated: null,
         storage_used: 120.53,
         status: 'available',
-        vcpu: null,
-        memory: null,
+        vcpu: 2,
+        memory: 4,
         is_24_7: false,
         never_start: false,
         daily_exception: true,
@@ -216,8 +216,8 @@ const DUMMY_DATABASES = [
         storage_allocated: null,
         storage_used: 45.22,
         status: 'stopped',
-        vcpu: null,
-        memory: null,
+        vcpu: 2,
+        memory: 4,
         is_24_7: false,
         never_start: true,
         daily_exception: false,
@@ -680,6 +680,8 @@ export default function RDS() {
     const [databases, setDatabases] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [lastSyncedAt, setLastSyncedAt] = useState(null);
+    const [cronSettings, setCronSettings] = useState({ stop_time: "9:15 PM", start_time: "8:45 AM" });
     const [dashboardStats, setDashboardStats] = useState(null);
     const [statsLoading, setStatsLoading] = useState(true);
     const [statsError, setStatsError] = useState(null);
@@ -704,6 +706,8 @@ export default function RDS() {
         { key: 'class', label: 'Class' },
         { key: 'storage', label: 'Storage' },
         { key: 'status', label: 'Status' },
+        { key: 'vcpu', label: 'vCPU' },
+        { key: 'memory', label: 'Memory' },
         { key: 'actions', label: 'Actions', mandatory: true },
         { key: 'policies', label: 'Scheduling Policies', mandatory: true },
         { key: 'schedule', label: 'Schedule', mandatory: true },
@@ -717,6 +721,8 @@ export default function RDS() {
         class: true,
         storage: true,
         status: true,
+        vcpu: true,
+        memory: true,
         actions: true,
         policies: true,
         schedule: true,
@@ -724,9 +730,9 @@ export default function RDS() {
     });
 
     const smartPresets = {
-        full: { label: 'Full View', cols: ['identifier', 'role', 'engine', 'class', 'storage', 'status', 'actions', 'policies', 'schedule', 'edit'] },
-        operational: { label: 'Operational', cols: ['identifier', 'role', 'status', 'actions', 'policies'] },
-        sizing: { label: 'Sizing', cols: ['identifier', 'engine', 'class', 'storage'] },
+        full: { label: 'Full View', cols: ['identifier', 'role', 'engine', 'class', 'storage', 'status', 'vcpu', 'memory', 'actions', 'policies', 'schedule', 'edit'] },
+        operational: { label: 'Operational', cols: ['identifier', 'role', 'status', 'vcpu', 'memory', 'actions', 'policies'] },
+        sizing: { label: 'Sizing', cols: ['identifier', 'engine', 'class', 'storage', 'vcpu', 'memory'] },
         minimal: { label: 'Minimal', cols: ['identifier', 'status', 'actions'] }
     };
 
@@ -751,6 +757,8 @@ export default function RDS() {
         class: 150,
         storage: 200,
         status: 130,
+        vcpu: 90,
+        memory: 110,
         actions: 140,
         policies: 180,
         schedule: 120,
@@ -866,8 +874,8 @@ export default function RDS() {
                     storage_allocated: null,
                     storage_used: parseFloat(item.used_storage_gb) || 0,
                     status: item.status,
-                    vcpu: null,
-                    memory: null,
+                    vcpu: item.total_vcpu ?? null,
+                    memory: item.total_memory_gb ? parseFloat(item.total_memory_gb) : null,
 
                     // Protection Mapping
                     is_24_7: item.protection_type === "always_running",
@@ -932,15 +940,44 @@ export default function RDS() {
             // const response = await axiosClient.get("/rds/instances");
 
             // if (response.data.success) {
-            //     const transformed = transformBackendData(response.data.data);
+            //     const rawData = response.data.data;
+            //     const transformed = transformBackendData(rawData);
             //     setDatabases(transformed);
+            //     
+            //     // 🔄 Find the global latest sync time
+            //     let maxDateObj = new Date(0);
+            //     rawData.forEach(item => {
+            //         if (item.last_synced_at) {
+            //             const d = new Date(item.last_synced_at);
+            //             if (d > maxDateObj) maxDateObj = d;
+            //         }
+            //         if (item.instances && Array.isArray(item.instances)) {
+            //             item.instances.forEach(inst => {
+            //                 if (inst.last_synced_at) {
+            //                     const d = new Date(inst.last_synced_at);
+            //                     if (d > maxDateObj) maxDateObj = d;
+            //                 }
+            //             });
+            //         }
+            //     });
+            //     
+            //     if (maxDateObj.getTime() > 0) {
+            //         setLastSyncedAt(maxDateObj.toISOString());
+            //     }
             // } else {
             //     throw new Error("Failed to fetch instances");
             // }
             
             // Dummy implementation
             setTimeout(() => {
-                setDatabases(DUMMY_DATABASES);
+                const data = DUMMY_DATABASES;
+                setDatabases(data);
+
+                // Find global latest sync date (simulated for dummy)
+                // In production, this would be computed from response.data.data
+                const latestSync = "2026-03-28T09:46:22.426Z"; 
+                setLastSyncedAt(latestSync);
+
                 setLoading(false);
             }, 500);
 
@@ -979,9 +1016,27 @@ export default function RDS() {
         }
     };
 
+    const fetchCronSettings = async () => {
+        try {
+            // const response = await axiosClient.get("/rds/cron-settings");
+            // if (response.data.success && response.data.data) {
+            //     setCronSettings(response.data.data);
+            // }
+            
+            // Simulation
+            setTimeout(() => {
+                // setCronSettings({ stop_time: "9:15 PM", start_time: "8:45 AM" });
+            }, 500);
+        } catch (err) {
+            console.error("Error fetching cron settings:", err);
+            // Fallback is already the initial state
+        }
+    };
+
     useEffect(() => {
         fetchInstances();
         fetchDashboardStats();
+        fetchCronSettings();
 
         const modifying = JSON.parse(localStorage.getItem("rds_modifying") || "[]");
 
@@ -1705,6 +1760,21 @@ export default function RDS() {
         return ['starting', 'stopping', 'rebooting', 'modifying'].includes(s);
     };
 
+    const formatIST = (isoString) => {
+        if (!isoString) return '--';
+        const date = new Date(isoString);
+        return new Intl.DateTimeFormat('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        }).format(date);
+    };
+
     return (
         <div className="rds-page">
             {/* Page Header */}
@@ -1716,6 +1786,12 @@ export default function RDS() {
                         </div>
                         <div className="header-text">
                             <h1 className="page-title-modern">RDS Cluster Dashboard</h1>
+                            {lastSyncedAt && (
+                                <div className="header-sync-info-modern">
+                                    <Clock size={12} className="sync-info-icon" />
+                                    <span>Last Synced At: <span className="sync-info-val">{formatIST(lastSyncedAt)}</span></span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -1740,7 +1816,18 @@ export default function RDS() {
                     </div>
                     <div>
                         <p className="rds-action-title">Quick Operations</p>
-                        <p className="rds-action-subtitle">Manage cluster state and exception policies</p>
+                        {/* <p className="rds-action-subtitle">Manage cluster state and exception policies</p> */}
+                        <div className="rds-cron-timings">
+                            <div className="rds-cron-tag rds-stop-tag">
+                                <Clock size={12} className="rds-cron-icon" />
+                                <span>Stop: <span className="rds-cron-val">{cronSettings.stop_time}</span></span>
+                            </div>
+                            <div className="rds-cron-sep" />
+                            <div className="rds-cron-tag rds-start-tag">
+                                <Clock size={12} className="rds-cron-icon" />
+                                <span>Start: <span className="rds-cron-val">{cronSettings.start_time}</span></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div className="rds-action-buttons">
@@ -2040,6 +2127,38 @@ export default function RDS() {
                                             </div>
                                         </th>
                                     )}
+                                    {visibleColumns.vcpu && (
+                                        <th style={{ width: columnWidths.vcpu }} className={`rds-th-sortable ${sortBy === 'vcpu' ? 'rds-th-active' : ''}`}>
+                                            <div className="rds-resizer-wrapper">
+                                                <button className="rds-th-sort-btn" onClick={() => handleSort('vcpu')}>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        vCPU
+                                                        <div className="rds-sort-indicator-stacked">
+                                                            <ChevronUp size={11} className={`rds-sort-icon-up ${sortBy === 'vcpu' && sortDir === 'asc' ? 'rds-sort-icon-active' : ''}`} />
+                                                            <ChevronDown size={11} className={`rds-sort-icon-down ${sortBy === 'vcpu' && sortDir === 'desc' ? 'rds-sort-icon-active' : ''}`} />
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                                <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'vcpu')}></div>
+                                            </div>
+                                        </th>
+                                    )}
+                                    {visibleColumns.memory && (
+                                        <th style={{ width: columnWidths.memory }} className={`rds-th-sortable ${sortBy === 'memory' ? 'rds-th-active' : ''}`}>
+                                            <div className="rds-resizer-wrapper">
+                                                <button className="rds-th-sort-btn" onClick={() => handleSort('memory')}>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        Memory
+                                                        <div className="rds-sort-indicator-stacked">
+                                                            <ChevronUp size={11} className={`rds-sort-icon-up ${sortBy === 'memory' && sortDir === 'asc' ? 'rds-sort-icon-active' : ''}`} />
+                                                            <ChevronDown size={11} className={`rds-sort-icon-down ${sortBy === 'memory' && sortDir === 'desc' ? 'rds-sort-icon-active' : ''}`} />
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                                <div className="rds-resizer-handle" onMouseDown={(e) => handleResizeMouseDown(e, 'memory')}></div>
+                                            </div>
+                                        </th>
+                                    )}
                                     {visibleColumns.actions && (
                                         <th style={{ width: columnWidths.actions }}>
                                             <div className="rds-resizer-wrapper">
@@ -2146,9 +2265,26 @@ export default function RDS() {
                                                     </span>
                                                 </td>
                                             )}
+                                            {visibleColumns.vcpu && (
+                                                <td>
+                                                    <div className="rds-resource-pill rds-vcpu-pill">
+                                                        <Cpu size={12} className="rds-resource-pill-icon" />
+                                                        <span className="rds-resource-pill-value">{db.vcpu != null ? db.vcpu : '—'}</span>
+                                                    </div>
+                                                </td>
+                                            )}
+                                            {visibleColumns.memory && (
+                                                <td>
+                                                    <div className="rds-resource-pill rds-memory-pill">
+                                                        <Zap size={12} className="rds-resource-pill-icon" />
+                                                        <span className="rds-resource-pill-value">{db.memory != null ? `${db.memory} GB` : '—'}</span>
+                                                    </div>
+                                                </td>
+                                            )}
                                             {visibleColumns.actions && (
                                                 <td>
                                                     <div className="rds-row-actions">
+                                                        {/* Start button — all resource types */}
                                                         <button
                                                             className="rds-icon-btn rds-play"
                                                             title="Start"
@@ -2164,6 +2300,8 @@ export default function RDS() {
                                                                 : <Play size={16} />
                                                             }
                                                         </button>
+
+                                                        {/* Stop button — all resource types */}
                                                         <button
                                                             className="rds-icon-btn rds-stop"
                                                             title="Stop"
@@ -2179,21 +2317,25 @@ export default function RDS() {
                                                                 : <Square size={16} />
                                                             }
                                                         </button>
-                                                        <button
-                                                            className="rds-icon-btn rds-reboot"
-                                                            title="Reboot"
-                                                            disabled={
-                                                                isOperationInProgress(db.status) ||
-                                                                ['stopped'].includes(db.status.toLowerCase()) ||
-                                                                rowActionLoading[db.id]
-                                                            }
-                                                            onClick={() => handleRowActionWithConfirm(db, 'REBOOT')}
-                                                        >
-                                                            {rowActionLoading[db.id] === 'REBOOT'
-                                                                ? <RefreshCw size={16} className="rds-spinning" />
-                                                                : <RotateCw size={16} />
-                                                            }
-                                                        </button>
+
+                                                        {/* Reboot button — RDS instances only */}
+                                                        {(!db.is_aurora && !db.is_docdb) && (
+                                                            <button
+                                                                className="rds-icon-btn rds-reboot"
+                                                                title="Reboot"
+                                                                disabled={
+                                                                    isOperationInProgress(db.status) ||
+                                                                    ['stopped'].includes(db.status.toLowerCase()) ||
+                                                                    rowActionLoading[db.id]
+                                                                }
+                                                                onClick={() => handleRowActionWithConfirm(db, 'REBOOT')}
+                                                            >
+                                                                {rowActionLoading[db.id] === 'REBOOT'
+                                                                    ? <RefreshCw size={16} className="rds-spinning" />
+                                                                    : <RotateCw size={16} />
+                                                                }
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             )}
@@ -2296,9 +2438,52 @@ export default function RDS() {
                                                         </span>
                                                     </td>
                                                 )}
-                                                <td colSpan={(visibleColumns.actions ? 1 : 0) + (visibleColumns.policies ? 1 : 0) + (visibleColumns.schedule ? 1 : 0)} className="rds-sub-actions-info">
-                                                    <span className="rds-text-muted">Managed via cluster</span>
-                                                </td>
+                                                {visibleColumns.vcpu && (
+                                                    <td>
+                                                        <div className="rds-resource-pill rds-vcpu-pill">
+                                                            <Cpu size={12} className="rds-resource-pill-icon" />
+                                                            <span className="rds-resource-pill-value">{inst.vcpu != null ? inst.vcpu : '—'}</span>
+                                                        </div>
+                                                    </td>
+                                                )}
+                                                {visibleColumns.memory && (
+                                                    <td>
+                                                        <div className="rds-resource-pill rds-memory-pill">
+                                                            <Zap size={12} className="rds-resource-pill-icon" />
+                                                            <span className="rds-resource-pill-value">{inst.memory != null ? `${inst.memory} GB` : '—'}</span>
+                                                        </div>
+                                                    </td>
+                                                )}
+                                                {visibleColumns.actions && (
+                                                    <td>
+                                                        <div className="rds-row-actions">
+                                                            <span className="rds-action-spacer" />
+                                                            <span className="rds-action-spacer" />
+                                                            <button
+                                                                className="rds-icon-btn rds-reboot"
+                                                                title="Reboot Instance"
+                                                                disabled={
+                                                                    ['stopped'].includes(inst.status?.toLowerCase()) ||
+                                                                    rowActionLoading[inst.id]
+                                                                }
+                                                                onClick={() => handleRowActionWithConfirm(
+                                                                    { ...inst, id: inst.id },
+                                                                    'REBOOT'
+                                                                )}
+                                                            >
+                                                                {rowActionLoading[inst.id] === 'REBOOT'
+                                                                    ? <RefreshCw size={16} className="rds-spinning" />
+                                                                    : <RotateCw size={16} />
+                                                                }
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                )}
+                                                {(visibleColumns.policies || visibleColumns.schedule) && (
+                                                    <td colSpan={(visibleColumns.policies ? 1 : 0) + (visibleColumns.schedule ? 1 : 0)} className="rds-sub-actions-info" style={{ textAlign: 'center' }}>
+                                                        <span className="rds-text-muted">Managed via cluster</span>
+                                                    </td>
+                                                )}
 
                                                 <td>
                                                     <button
