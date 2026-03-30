@@ -3,7 +3,8 @@ import { useLocation, useNavigate, useParams, useOutletContext } from 'react-rou
 import {
     ArrowLeft, Calendar, Cpu, Activity, BarChart3, Zap,
     CheckCircle, AlertCircle, ChevronRight, MemoryStick,
-    ArrowUpDown, ChevronUp, ChevronDown, Download
+    ArrowUpDown, ChevronUp, ChevronDown, Download,
+    Search, X, SearchX
 } from 'lucide-react';
 import CPUGraphModal from './CPUGraphModal';
 import ComparisonTable from '../ComparisonTable';
@@ -27,13 +28,22 @@ function ServiceDetails() {
     const [showGraphModal, setShowGraphModal] = useState(false);
 
     const servicesData = [
-        { serviceName: 'api-gateway-service', taskCount: 8, cpu: 62.4, memory: 74.2, status: 'healthy' },
-        { serviceName: 'auth-service', taskCount: 4, cpu: 45.8, memory: 58.6, status: 'healthy' },
-        { serviceName: 'payment-processor', taskCount: 6, cpu: 71.3, memory: 82.1, status: 'warning' },
-        { serviceName: 'notification-service', taskCount: 3, cpu: 38.2, memory: 51.4, status: 'healthy' },
-        { serviceName: 'data-sync-service', taskCount: 5, cpu: 55.9, memory: 67.8, status: 'healthy' },
-        { serviceName: 'analytics-worker', taskCount: 2, cpu: 28.7, memory: 42.3, status: 'healthy' },
+        { serviceName: 'api-gateway-service', vcpu: '2 vCPU', memoryGB: '4GB', taskCount: 8, cpu: 62.4, memory: 74.2, status: 'healthy' },
+        { serviceName: 'auth-service', vcpu: '1 vCPU', memoryGB: '2GB', taskCount: 4, cpu: 45.8, memory: 58.6, status: 'healthy' },
+        { serviceName: 'payment-processor', vcpu: '2 vCPU', memoryGB: '4GB', taskCount: 6, cpu: 71.3, memory: 82.1, status: 'warning' },
+        { serviceName: 'notification-service', vcpu: '1 vCPU', memoryGB: '2GB', taskCount: 3, cpu: 38.2, memory: 51.4, status: 'healthy' },
+        { serviceName: 'data-sync-service', vcpu: '2 vCPU', memoryGB: '4GB', taskCount: 5, cpu: 55.9, memory: 67.8, status: 'healthy' },
+        { serviceName: 'analytics-worker', vcpu: '4 vCPU', memoryGB: '8GB', taskCount: 2, cpu: 28.7, memory: 42.3, status: 'healthy' },
     ];
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchFocused, setSearchFocused] = useState(false);
+
+    const filteredServices = useMemo(() => {
+        if (!searchQuery.trim()) return servicesData;
+        const q = searchQuery.toLowerCase();
+        return servicesData.filter(m => m.serviceName.toLowerCase().includes(q));
+    }, [searchQuery, servicesData]);
 
     const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
@@ -45,15 +55,15 @@ function ServiceDetails() {
     };
 
     const getCpuColor = (val) => {
-        if (val > 70) return ['#ef4444', '#f87171'];
-        if (val > 50) return ['#f59e0b', '#fbbf24'];
+        if (val > 70) return ['#ec4899', '#f97316'];
+        if (val > 40) return ['#f59e0b', '#fbbf24'];
         return ['#3b82f6', '#8b5cf6'];
     };
 
     const getMemColor = (val) => {
-        if (val > 75) return ['#ef4444', '#f87171'];
-        if (val > 60) return ['#f59e0b', '#fbbf24'];
-        return ['#ec4899', '#f97316'];
+        if (val > 70) return ['#ec4899', '#f97316'];
+        if (val > 40) return ['#f59e0b', '#fbbf24'];
+        return ['#3b82f6', '#8b5cf6'];
     };
 
     const getBarColor = (val, type) => {
@@ -118,118 +128,164 @@ function ServiceDetails() {
                     </div>
                 </div>
 
-                {/* Section Label */}
-                <div className="sd-section-label">
-                    <Activity size={15} />
-                    <span>Active Services — click "View 30-Day Trend" for historical data</span>
-                </div>
+                {/* Section Header */}
+                <div className="sd-section-header-row">
+                    <div className="sd-section-label">
+                        <Activity size={15} />
+                        <span>Active Services — click "View 30-Day Trend" for historical data</span>
+                    </div>
 
-                {/* Services Grid */}
-                <div className="sd-services-grid">
-                    {servicesData.map((service, index) => {
-                        const [cpuC1, cpuC2] = getCpuColor(service.cpu);
-                        const [memC1, memC2] = getMemColor(service.memory);
-                        const cpuDash = service.cpu * 2.827;
-                        const memDash = service.memory * 2.827;
-
-                        return (
-                            <div
-                                key={service.serviceName}
-                                className={`sd-service-card ${service.status}`}
-                                style={{ animationDelay: `${index * 0.08}s` }}
+                    <div className={`sd-search-wrapper ${searchFocused ? 'focused' : ''} ${searchQuery ? 'has-query' : ''}`}>
+                        <Search size={18} className="search-icon" />
+                        <input
+                            type="text"
+                            placeholder="Search active services..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onFocus={() => setSearchFocused(true)}
+                            onBlur={() => setSearchFocused(false)}
+                            className="sd-search-input"
+                        />
+                        {searchQuery && (
+                            <button 
+                                className="search-clear-btn" 
+                                onClick={() => setSearchQuery('')}
+                                title="Clear search"
                             >
-                                {/* Top accent */}
-                                <div className={`sd-card-accent ${service.status}`} />
-
-                                {/* Header */}
-                                <div className="sd-card-header">
-                                    <div className="sd-service-name-wrap">
-                                        <ECSIcon size={18} className="sd-service-icon" color="inherit" />
-                                        <span className="sd-service-name">{service.serviceName}</span>
-                                    </div>
-                                    <div className={`sd-status-badge ${service.status}`}>
-                                        {service.status === 'healthy'
-                                            ? <CheckCircle size={14} />
-                                            : <AlertCircle size={14} />
-                                        }
-                                        <span>{service.status}</span>
-                                    </div>
-                                </div>
-
-                                {/* Task Count */}
-                                <div className="sd-task-count">
-                                    <Zap size={14} />
-                                    <span>{service.taskCount} tasks running</span>
-                                </div>
-
-                                {/* Gauge Row */}
-                                <div className="sd-gauges">
-                                    {/* CPU Gauge */}
-                                    <div className="sd-gauge-wrap">
-                                        <svg className="sd-gauge-svg" viewBox="0 0 100 100">
-                                            <defs>
-                                                <linearGradient id={`cpu-g-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                                                    <stop offset="0%" stopColor={cpuC1} />
-                                                    <stop offset="100%" stopColor={cpuC2} />
-                                                </linearGradient>
-                                            </defs>
-                                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(148,163,184,0.1)" strokeWidth="10" />
-                                            <circle
-                                                cx="50" cy="50" r="45"
-                                                fill="none"
-                                                stroke={`url(#cpu-g-${index})`}
-                                                strokeWidth="10"
-                                                strokeDasharray={`${cpuDash}, 282.7`}
-                                                strokeLinecap="round"
-                                                transform="rotate(-90 50 50)"
-                                            />
-                                        </svg>
-                                        <div className="sd-gauge-text">
-                                            <div className="sd-gauge-val" style={{ color: cpuC1 }}>{service.cpu}%</div>
-                                            <div className="sd-gauge-lbl">CPU</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Memory Gauge */}
-                                    <div className="sd-gauge-wrap">
-                                        <svg className="sd-gauge-svg" viewBox="0 0 100 100">
-                                            <defs>
-                                                <linearGradient id={`mem-g-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                                                    <stop offset="0%" stopColor={memC1} />
-                                                    <stop offset="100%" stopColor={memC2} />
-                                                </linearGradient>
-                                            </defs>
-                                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(148,163,184,0.1)" strokeWidth="10" />
-                                            <circle
-                                                cx="50" cy="50" r="45"
-                                                fill="none"
-                                                stroke={`url(#mem-g-${index})`}
-                                                strokeWidth="10"
-                                                strokeDasharray={`${memDash}, 282.7`}
-                                                strokeLinecap="round"
-                                                transform="rotate(-90 50 50)"
-                                            />
-                                        </svg>
-                                        <div className="sd-gauge-text">
-                                            <div className="sd-gauge-val" style={{ color: memC1 }}>{service.memory}%</div>
-                                            <div className="sd-gauge-lbl">Memory</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Graph Button */}
-                                <button
-                                    className="sd-graph-btn"
-                                    onClick={() => handleViewGraph(service)}
-                                >
-                                    <BarChart3 size={16} />
-                                    <span>View 30-Day Trend</span>
-                                    <ChevronRight size={14} />
-                                </button>
-                            </div>
-                        );
-                    })}
+                                <X size={14} strokeWidth={2.5} />
+                            </button>
+                        )}
+                    </div>
                 </div>
+
+                {filteredServices.length === 0 ? (
+                    <div className="sd-empty-state">
+                        <div className="sd-empty-icon-wrap">
+                            <SearchX size={32} />
+                        </div>
+                        <h3>No services found</h3>
+                        <p>We couldn't find any active services matching "{searchQuery}"</p>
+                        <button className="sd-empty-clear-btn" onClick={() => setSearchQuery('')}>
+                            Clear Search
+                        </button>
+                    </div>
+                ) : (
+                    <div className="sd-services-grid">
+                        {filteredServices.map((service, index) => {
+                            const [cpuC1, cpuC2] = getCpuColor(service.cpu);
+                            const [memC1, memC2] = getMemColor(service.memory);
+                            const cpuDash = service.cpu * 2.827;
+                            const memDash = service.memory * 2.827;
+
+                            return (
+                                <div
+                                    key={service.serviceName}
+                                    className={`sd-service-card ${service.status}`}
+                                    style={{ animationDelay: `${index * 0.08}s` }}
+                                >
+                                    {/* Top accent */}
+                                    <div className={`sd-card-accent ${service.status}`} />
+
+                                    {/* Header */}
+                                    <div className="sd-card-header">
+                                        <div className="sd-service-name-wrap">
+                                            <ECSIcon size={18} className="sd-service-icon" color="inherit" />
+                                            <span className="sd-service-name">{service.serviceName}</span>
+                                        </div>
+                                        <div className={`sd-status-badge ${service.status}`}>
+                                            {service.status === 'healthy'
+                                                ? <CheckCircle size={14} />
+                                                : <AlertCircle size={14} />
+                                            }
+                                            <span>{service.status}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Specification Tags */}
+                                    <div className="sd-spec-tags">
+                                        <div className="sd-spec-tag vcpu">
+                                            <Cpu size={14} />
+                                            <span>{service.vcpu}</span>
+                                        </div>
+                                        <div className="sd-spec-tag mem">
+                                            <MemoryStick size={14} />
+                                            <span>{service.memoryGB}</span>
+                                        </div>
+                                        <div className="sd-spec-tag tasks">
+                                            <Activity size={14} />
+                                            <span>{service.taskCount} Tasks</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Gauge Row */}
+                                    <div className="sd-gauges">
+                                        {/* CPU Gauge */}
+                                        <div className="sd-gauge-wrap">
+                                            <svg className="sd-gauge-svg" viewBox="0 0 100 100">
+                                                <defs>
+                                                    <linearGradient id={`cpu-g-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                                        <stop offset="0%" stopColor={cpuC1} />
+                                                        <stop offset="100%" stopColor={cpuC2} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(148,163,184,0.1)" strokeWidth="10" />
+                                                <circle
+                                                    cx="50" cy="50" r="45"
+                                                    fill="none"
+                                                    stroke={`url(#cpu-g-${index})`}
+                                                    strokeWidth="10"
+                                                    strokeDasharray={`${cpuDash}, 282.7`}
+                                                    strokeLinecap="round"
+                                                    transform="rotate(-90 50 50)"
+                                                />
+                                            </svg>
+                                            <div className="sd-gauge-text">
+                                                <div className="sd-gauge-val" style={{ color: cpuC1 }}>{service.cpu}%</div>
+                                                <div className="sd-gauge-lbl">CPU</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Memory Gauge */}
+                                        <div className="sd-gauge-wrap">
+                                            <svg className="sd-gauge-svg" viewBox="0 0 100 100">
+                                                <defs>
+                                                    <linearGradient id={`mem-g-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                                        <stop offset="0%" stopColor={memC1} />
+                                                        <stop offset="100%" stopColor={memC2} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(148,163,184,0.1)" strokeWidth="10" />
+                                                <circle
+                                                    cx="50" cy="50" r="45"
+                                                    fill="none"
+                                                    stroke={`url(#mem-g-${index})`}
+                                                    strokeWidth="10"
+                                                    strokeDasharray={`${memDash}, 282.7`}
+                                                    strokeLinecap="round"
+                                                    transform="rotate(-90 50 50)"
+                                                />
+                                            </svg>
+                                            <div className="sd-gauge-text">
+                                                <div className="sd-gauge-val" style={{ color: memC1 }}>{service.memory}%</div>
+                                                <div className="sd-gauge-lbl">Memory</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Graph Button */}
+                                    <button
+                                        className="sd-graph-btn"
+                                        onClick={() => handleViewGraph(service)}
+                                    >
+                                        <BarChart3 size={16} />
+                                        <span>View 30-Day Trend</span>
+                                        <ChevronRight size={14} />
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* ── Service Comparison Table ── */}
                 <ComparisonTable

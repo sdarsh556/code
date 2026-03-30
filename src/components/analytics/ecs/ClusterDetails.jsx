@@ -24,13 +24,13 @@ function ClusterDetails() {
     }, [setBgContext]);
 
     const dailyData = [
-        { date: '2026-02-16', day: 'Sunday', servicesActive: 18, avgCpu: 52.3, avgMemory: 68.4, approxCost: 187.50, trend: 'up' },
-        { date: '2026-02-15', day: 'Saturday', servicesActive: 16, avgCpu: 48.1, avgMemory: 64.2, approxCost: 165.80, trend: 'down' },
-        { date: '2026-02-14', day: 'Friday', servicesActive: 24, avgCpu: 61.7, avgMemory: 75.3, approxCost: 245.20, trend: 'up' },
-        { date: '2026-02-13', day: 'Thursday', servicesActive: 22, avgCpu: 58.9, avgMemory: 71.8, approxCost: 228.40, trend: 'stable' },
-        { date: '2026-02-12', day: 'Wednesday', servicesActive: 21, avgCpu: 55.4, avgMemory: 69.1, approxCost: 215.60, trend: 'up' },
-        { date: '2026-02-11', day: 'Tuesday', servicesActive: 19, avgCpu: 51.2, avgMemory: 66.5, approxCost: 195.30, trend: 'down' },
-        { date: '2026-02-10', day: 'Monday', servicesActive: 20, avgCpu: 54.8, avgMemory: 68.9, approxCost: 205.70, trend: 'up' },
+        { date: '2026-02-16', day: 'Sunday', servicesActive: 18, avgCpu: 52.3, avgMemory: 68.4, approxCost: 187.50, trend: 'up', vcpu: '64', memoryGB: '128GB', tasksRunning: 42 },
+        { date: '2026-02-15', day: 'Saturday', servicesActive: 16, avgCpu: 48.1, avgMemory: 64.2, approxCost: 165.80, trend: 'down', vcpu: '48', memoryGB: '96GB', tasksRunning: 38 },
+        { date: '2026-02-14', day: 'Friday', servicesActive: 24, avgCpu: 61.7, avgMemory: 75.3, approxCost: 245.20, trend: 'up', vcpu: '128', memoryGB: '256GB', tasksRunning: 76 },
+        { date: '2026-02-13', day: 'Thursday', servicesActive: 22, avgCpu: 58.9, avgMemory: 71.8, approxCost: 228.40, trend: 'stable', vcpu: '96', memoryGB: '192GB', tasksRunning: 64 },
+        { date: '2026-02-12', day: 'Wednesday', servicesActive: 21, avgCpu: 55.4, avgMemory: 69.1, approxCost: 215.60, trend: 'up', vcpu: '80', memoryGB: '160GB', tasksRunning: 58 },
+        { date: '2026-02-11', day: 'Tuesday', servicesActive: 19, avgCpu: 51.2, avgMemory: 66.5, approxCost: 195.30, trend: 'down', vcpu: '64', memoryGB: '128GB', tasksRunning: 45 },
+        { date: '2026-02-10', day: 'Monday', servicesActive: 20, avgCpu: 54.8, avgMemory: 68.9, approxCost: 205.70, trend: 'up', vcpu: '64', memoryGB: '128GB', tasksRunning: 48 },
     ];
 
     const maxCpu = Math.max(...dailyData.map(d => d.avgCpu));
@@ -156,6 +156,21 @@ function ClusterDetails() {
                                 </div>
                             </div>
 
+                            <div className="cd-spec-tags">
+                                <div className="cd-spec-tag vcpu-tag">
+                                    <Cpu size={12} />
+                                    <span>{day.vcpu} vCPUs</span>
+                                </div>
+                                <div className="cd-spec-tag mem-tag">
+                                    <MemoryStick size={12} />
+                                    <span>{day.memoryGB}</span>
+                                </div>
+                                <div className="cd-spec-tag tasks-tag">
+                                    <Activity size={12} />
+                                    <span>{day.tasksRunning} Tasks</span>
+                                </div>
+                            </div>
+
                             <div className="cd-metrics-row">
                                 <div className="cd-metric">
                                     <div className="cd-metric-icon services-icon"><Server size={13} /></div>
@@ -212,7 +227,7 @@ function ClusterDetails() {
                     subtitle="Click any col header to sort"
                     data={dailyData}
                     exportFilename="day-comparison.csv"
-                    gridTemplateColumns="52px minmax(0, 1fr) 100px 120px 120px 120px 120px"
+                    gridTemplateColumns="100px minmax(0, 1fr) 80px 80px 80px 80px 80px 80px 80px"
                     onRowClick={handleDateClick}
                     columns={[
                         {
@@ -228,8 +243,32 @@ function ClusterDetails() {
                             align: 'right'
                         },
                         {
+                            key: 'vcpu',
+                            label: 'vCPU',
+                            icon: Cpu,
+                            sortable: true,
+                            align: 'right',
+                            type: 'badge-svc'
+                        },
+                        {
+                            key: 'memoryGB',
+                            label: 'RAM',
+                            icon: MemoryStick,
+                            sortable: true,
+                            align: 'right',
+                            type: 'badge-svc'
+                        },
+                        {
+                            key: 'tasksRunning',
+                            label: 'Tasks',
+                            icon: Activity,
+                            sortable: true,
+                            align: 'right',
+                            type: 'badge-svc'
+                        },
+                        {
                             key: 'avgCpu',
-                            label: 'CPU',
+                            label: 'CPU %',
                             icon: Cpu,
                             sortable: true,
                             align: 'right',
@@ -238,7 +277,7 @@ function ClusterDetails() {
                         },
                         {
                             key: 'avgMemory',
-                            label: 'Memory',
+                            label: 'Mem %',
                             icon: MemoryStick,
                             sortable: true,
                             align: 'right',

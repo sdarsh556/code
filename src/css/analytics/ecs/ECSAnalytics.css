@@ -386,12 +386,165 @@
 }
 
 .panel-header-new {
+    padding: 1.75rem 2.5rem;
+    border-bottom: 1px solid var(--border-light);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.04) 0%, transparent 100%);
+}
+
+.panel-header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 2rem 2.5rem;
-    border-bottom: 1px solid var(--border-light);
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.04) 0%, transparent 100%);
+    width: 100%;
+}
+
+.panel-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.panel-subtitle {
+    margin: 0 !important;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+
+.panel-header-top-row {
+    display: none;
+}
+
+/* ── Next-Level Neon-Glass Search ── */
+@keyframes neonBreath {
+    0%, 100% { box-shadow: 0 0 8px rgba(139, 92, 246, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.1); }
+    50% { box-shadow: 0 0 18px rgba(139, 92, 246, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2); }
+}
+
+.panel-search-wrapper {
+    position: relative;
+    width: 320px;
+    height: 48px;
+    background: var(--surface-glass);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(24px) saturate(160%);
+    flex-shrink: 0;
+    box-shadow: 
+        inset 0 1px 1.5px rgba(255, 255, 255, 0.08),
+        var(--shadow-sm);
+    overflow: hidden;
+}
+
+.panel-search-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.2;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+}
+
+.panel-search-wrapper:hover {
+    background: var(--surface-glass-hover);
+    transform: translateY(-1.5px);
+    box-shadow: 
+        inset 0 1px 1px rgba(255, 255, 255, 0.15),
+        var(--shadow-md);
+}
+
+.panel-search-wrapper:hover::before {
+    opacity: 0.5;
+}
+
+.panel-search-wrapper.focused {
+    background: var(--surface-card);
+    border-color: #8b5cf6;
+    animation: neonBreath 3s infinite ease-in-out;
+}
+
+.panel-search-wrapper.focused::before {
+    opacity: 1;
+}
+
+.panel-search-wrapper .search-icon {
+    position: absolute;
+    left: 1.125rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.panel-search-wrapper.focused .search-icon {
+    color: #8b5cf6;
+    transform: translateY(-50%) translateZ(0) scale(1.1);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.4));
+}
+
+.panel-search-input {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0 1rem 0 3.125rem;
+    font-size: 0.925rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transform: translateY(-0.5px);
+    display: block;
+    letter-spacing: 0.01em;
+}
+
+.panel-search-input::placeholder {
+    color: var(--text-muted);
+    font-weight: 500;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+}
+
+.panel-search-wrapper.focused .panel-search-input::placeholder {
+    transform: translateX(4px);
+    opacity: 0.4;
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: rgba(139, 92, 246, 0.1);
+    border: none;
+    border-radius: 6px;
+    color: #8b5cf6;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 2;
+}
+
+.search-clear-btn:hover {
+    background: #8b5cf6;
+    color: white;
+    transform: rotate(90deg);
 }
 
 .panel-title-group {

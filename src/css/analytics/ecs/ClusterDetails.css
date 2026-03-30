@@ -351,21 +351,96 @@
 .cd-day-card {
     position: relative;
     padding: 1.5rem;
-    background: var(--surface-card);
+    background: var(--surface-glass);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-2xl);
     cursor: pointer;
     overflow: hidden;
     animation: cd-card-in 0.6s cubic-bezier(0.4, 0, 0.2, 1) backwards;
-    transition: all var(--transition-slow);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: var(--backdrop-blur);
+    box-shadow: var(--shadow-lg);
 }
 
-.cd-day-card:hover {
-    transform: translateY(-6px);
-    box-shadow: var(--shadow-xl), 0 0 0 1px rgba(139, 92, 246, 0.3);
-    border-color: rgba(139, 92, 246, 0.4);
+/* Theme-specific card overrides */
+.layout-container[data-theme="dark"] .cd-day-card {
+    background: rgba(15, 23, 42, 0.65);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.5);
 }
+
+/* Subtle Glowing Light Effect (Mindblowing factor) */
+.cd-day-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+        circle at 50% 50%,
+        var(--accent-secondary) 0%,
+        transparent 70%
+    );
+    opacity: 0.03;
+    animation: pulse-glow 8s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.layout-container[data-theme="dark"] .cd-day-card::before {
+    opacity: 0.1;
+    background: radial-gradient(
+        circle at 50% 50%,
+        var(--accent-primary) 0%,
+        transparent 70%
+    );
+}
+
+@keyframes pulse-glow {
+    from { opacity: 0.03; transform: scale(1); }
+    to { opacity: 0.08; transform: scale(1.15); }
+}
+
+.layout-container[data-theme="dark"] .cd-day-card:hover {
+    box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(139, 92, 246, 0.5),
+        inset 0 0 25px rgba(139, 92, 246, 0.1);
+}
+
+
+
+.cd-day-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: var(--shadow-2xl);
+    border-color: var(--accent-secondary);
+}
+
+.cd-day-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top left, var(--accent-secondary), transparent 65%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.layout-container[data-theme="dark"] .cd-day-card::after {
+    background: radial-gradient(circle at top left, var(--accent-primary), transparent 65%);
+}
+
+.cd-day-card:hover::after {
+    opacity: 0.05;
+}
+
+.layout-container[data-theme="dark"] .cd-day-card:hover::after {
+    opacity: 0.12;
+}
+
+
 
 /* Left accent bar */
 .cd-day-accent {
@@ -456,15 +531,131 @@
     color: var(--text-muted);
 }
 
+/* Spec Tags */
+.cd-spec-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding-left: 0.5rem;
+}
+
+.cd-spec-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    background: rgba(255, 255, 255, 0.4);
+    border: none;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    backdrop-filter: blur(8px);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.01em;
+}
+
+/* Holographic Shine */
+.cd-spec-tag::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(
+        90deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.4), 
+        transparent
+    );
+    transform: skewX(-25deg);
+    transition: transform 0.6s ease;
+    z-index: 1;
+}
+
+.cd-spec-tag:hover::before {
+    left: 150%;
+    transition: 0.7s;
+}
+
+.cd-spec-tag svg {
+    opacity: 0.9;
+    z-index: 2;
+}
+
+.cd-spec-tag span {
+    position: relative;
+    z-index: 2;
+}
+
+.vcpu-tag {
+    background: rgba(99, 102, 241, 0.08);
+    color: #6366f1;
+    box-shadow: 0 0 15px -3px rgba(99, 102, 241, 0.1);
+}
+
+.vcpu-tag:hover {
+    background: rgba(99, 102, 241, 0.12);
+    box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.25);
+    transform: translateY(-2px) scale(1.05);
+}
+
+.mem-tag {
+    background: rgba(244, 63, 94, 0.08);
+    color: #f43f5e;
+    box-shadow: 0 0 15px -3px rgba(244, 63, 94, 0.1);
+}
+
+.mem-tag:hover {
+    background: rgba(244, 63, 94, 0.12);
+    box-shadow: 0 10px 20px -5px rgba(244, 63, 94, 0.25);
+    transform: translateY(-2px) scale(1.05);
+}
+
+.tasks-tag {
+    background: rgba(16, 185, 129, 0.08);
+    color: #10b981;
+    box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.1);
+}
+
+.tasks-tag:hover {
+    background: rgba(16, 185, 129, 0.12);
+    box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.25);
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* Dark theme tag refinements */
+.layout-container[data-theme="dark"] .cd-spec-tag {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+}
+
+.layout-container[data-theme="dark"] .vcpu-tag { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; }
+.layout-container[data-theme="dark"] .mem-tag { background: rgba(244, 63, 94, 0.15); color: #fda4af; }
+.layout-container[data-theme="dark"] .tasks-tag { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+
 /* Metrics Row */
 .cd-metrics-row {
     display: flex;
     align-items: center;
-    padding: var(--spacing-md);
+    padding: 1rem;
     background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
     border-radius: var(--radius-xl);
     margin-bottom: 1.25rem;
     gap: 0;
+    position: relative;
+    z-index: 2;
+    backdrop-filter: var(--backdrop-blur);
+}
+
+.layout-container[data-theme="dark"] .cd-metrics-row {
+    background: rgba(0, 0, 0, 0.25);
+    border-color: rgba(255, 255, 255, 0.05);
 }
 
 .cd-metric {
@@ -575,9 +766,16 @@
     padding-top: var(--spacing-md);
     border-top: 1px solid var(--border-light);
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--accent-secondary);
     transition: all var(--transition-base);
+    position: relative;
+    z-index: 2;
+}
+
+.layout-container[data-theme="dark"] .cd-day-footer {
+    color: #A78BFA;
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 .cd-day-footer svg {

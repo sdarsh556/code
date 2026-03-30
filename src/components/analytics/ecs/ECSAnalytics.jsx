@@ -4,7 +4,7 @@ import {
     Container, Clock, DollarSign, Activity, Cpu, TrendingUp, Zap,
     ArrowRight, ChevronLeft, ChevronRight, Calendar, MemoryStick, Server,
     SearchX, RefreshCw, ArrowUpDown, TrendingDown, Minus,
-    ChevronUp, ChevronDown, Download
+    ChevronUp, ChevronDown, Download, Search, X
 } from 'lucide-react';
 import '../../../css/analytics/ecs/ECSAnalytics.css';
 import '../../../css/analytics/comparison-table.css';
@@ -139,6 +139,8 @@ function ECSAnalytics() {
     const [customRange, setCustomRange] = useState(null);
     const [clusterSortBy, setClusterSortBy] = useState('cpu');
     const [clusterSortDir, setClusterSortDir] = useState('desc');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchFocused, setSearchFocused] = useState(false);
 
     const handleClusterSort = (col) => {
         if (clusterSortBy === col) setClusterSortDir(d => d === 'desc' ? 'asc' : 'desc');
@@ -203,6 +205,14 @@ function ECSAnalytics() {
     const maxClusterMem = Math.max(...(clusterData.length ? clusterData.map(c => c.avgMemory) : [1]));
     const maxClusterCost = Math.max(...(clusterData.length ? clusterData.map(c => c.approxCost) : [1]));
     const maxClusterSvc = Math.max(...(clusterData.length ? clusterData.map(c => c.totalServices) : [1]));
+
+    const filteredClusters = useMemo(() => {
+        if (!searchQuery.trim()) return sortedClusters;
+        const q = searchQuery.toLowerCase().trim();
+        return sortedClusters.filter(c =>
+            c.clusterName.toLowerCase().includes(q)
+        );
+    }, [sortedClusters, searchQuery]);
 
     const getClusterBarClass = (val, max) => {
         const pct = (val / max) * 100;
@@ -417,37 +427,70 @@ function ECSAnalytics() {
                 {/* ── Clusters Panel ── */}
                 <div className="clusters-panel-new">
                     <div className="panel-header-new">
-                        <div className="panel-title-group">
-                            <Zap size={20} className="panel-title-icon" />
-                            <h2>Cluster Performance</h2>
-                            <span className="panel-period-badge">{getActiveLabel()}</span>
+                        <div className="panel-header-content">
+                            <div className="panel-header-left">
+                                <div className="panel-title-group">
+                                    <Zap size={20} className="panel-title-icon" />
+                                    <h2>Cluster Performance</h2>
+                                    <span className="panel-period-badge">{getActiveLabel()}</span>
+                                </div>
+                                <div className="panel-subtitle">Performance breakdown for your active ECS clusters</div>
+                            </div>
+
+                            <div className={`panel-search-wrapper ${searchFocused ? 'focused' : ''} ${searchQuery ? 'has-query' : ''}`}>
+                                <Search size={18} className="search-icon" />
+                                <input
+                                    type="text"
+                                    placeholder="Search clusters..."
+                                    value={searchQuery}
+                                    onFocus={() => setSearchFocused(true)}
+                                    onBlur={() => setSearchFocused(false)}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="panel-search-input"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        className="search-clear-btn"
+                                        onClick={() => setSearchQuery('')}
+                                        title="Clear search"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                        <div className="panel-subtitle">Click a cluster to view daily breakdown</div>
                     </div>
 
                     <div className="clusters-grid">
-                        {clusterData.length === 0 ? (
+                        {filteredClusters.length === 0 ? (
                             /* ── Empty State ── */
                             <div className="clusters-empty-state">
                                 <div className="empty-icon-wrap">
-                                    <ECSIcon size={18} className="sd-service-icon" color="inherit" />
+                                    {searchQuery ? <SearchX size={20} className="sd-service-icon" color="inherit" /> : <ECSIcon size={18} className="sd-service-icon" color="inherit" />}
                                     <div className="empty-icon-ring" />
                                 </div>
-                                <h3 className="empty-title">No clusters found</h3>
+                                <h3 className="empty-title">{searchQuery ? 'No search results' : 'No clusters found'}</h3>
                                 <p className="empty-desc">
-                                    No ECS clusters were active during the selected time range.<br />
-                                    Try expanding the date range or selecting a different period.
+                                    {searchQuery
+                                        ? `We couldn't find any clusters matching "${searchQuery}".`
+                                        : 'No ECS clusters were active during the selected time range.'
+                                    }
+                                    <br />
+                                    Try expanding the date range or {searchQuery ? 'clearing your search' : 'selecting a different period'}.
                                 </p>
                                 <button
                                     className="empty-reset-btn"
-                                    onClick={() => { setSelectedRange('7d'); setCustomRange(null); }}
+                                    onClick={() => {
+                                        if (searchQuery) setSearchQuery('');
+                                        else { setSelectedRange('7d'); setCustomRange(null); }
+                                    }}
                                 >
                                     <RefreshCw size={15} />
-                                    Reset to Last 7 Days
+                                    {searchQuery ? 'Clear Search Filter' : 'Reset to Last 7 Days'}
                                 </button>
                             </div>
                         ) : (
-                            clusterData.map((cluster, index) => (
+                            filteredClusters.map((cluster, index) => (
                                 <div
                                     key={cluster.clusterName}
                                     className={`cluster-card ${cluster.status}`}
@@ -527,7 +570,7 @@ function ECSAnalytics() {
                     <ComparisonTable
                         title="Cluster Comparison"
                         subtitle="Click any column header to sort"
-                        data={clusterData.map(c => ({
+                        data={filteredClusters.map(c => ({
                             ...c,
                             id: c.clusterName
                         }))}
