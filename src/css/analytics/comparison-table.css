@@ -463,6 +463,46 @@
     color: #9333ea;
 }
 
+.cmp-vcpu-badge,
+.cmp-memgb-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    min-width: 54px;
+    letter-spacing: 0.01em;
+}
+
+.cmp-vcpu-badge {
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.28);
+    color: #6366f1;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+}
+
+.cmp-memgb-badge {
+    background: rgba(244, 63, 94, 0.1);
+    border: 1px solid rgba(244, 63, 94, 0.25);
+    color: #f43f5e;
+    box-shadow: 0 2px 8px rgba(244, 63, 94, 0.08);
+}
+
+/* Dark theme adjustments for spec badges */
+[data-theme="dark"] .cmp-vcpu-badge {
+    background: rgba(99, 102, 241, 0.18);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+}
+
+[data-theme="dark"] .cmp-memgb-badge {
+    background: rgba(244, 63, 94, 0.18);
+    border-color: rgba(244, 63, 94, 0.35);
+    color: #fda4af;
+}
+
 .rank-num {
     font-size: 0.75rem;
     font-weight: 700;

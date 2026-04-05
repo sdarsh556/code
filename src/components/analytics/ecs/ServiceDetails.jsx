@@ -107,7 +107,7 @@ function ServiceDetails() {
                 <div className="sd-header">
                     <div className="sd-header-left">
                         <div className="sd-header-icon">
-                            <ECSIcon size={40} color="inherit" />
+                            <ECSIcon size={44} />
                         </div>
                         <div>
                             <h1 className="sd-title">{formatDate(dayData?.date)}</h1>
@@ -296,7 +296,7 @@ function ServiceDetails() {
                         id: s.serviceName
                     }))}
                     exportFilename="service-comparison.csv"
-                    gridTemplateColumns="3.25rem minmax(0, 1fr) 8.5rem 8.5rem 8.5rem"
+                    gridTemplateColumns="3.25rem minmax(0, 1fr) 7rem 7rem 8rem 8rem 7.5rem"
                     columns={[
                         {
                             key: 'serviceName',
@@ -305,8 +305,24 @@ function ServiceDetails() {
                             sortable: true
                         },
                         {
+                            key: 'vcpu',
+                            label: 'vCPU',
+                            icon: Cpu,
+                            sortable: false,
+                            align: 'center',
+                            type: 'badge-vcpu'
+                        },
+                        {
+                            key: 'memoryGB',
+                            label: 'Memory',
+                            icon: MemoryStick,
+                            sortable: false,
+                            align: 'center',
+                            type: 'badge-memory-gb'
+                        },
+                        {
                             key: 'cpu',
-                            label: 'CPU',
+                            label: 'CPU %',
                             icon: Cpu,
                             sortable: true,
                             align: 'right',
@@ -315,7 +331,7 @@ function ServiceDetails() {
                         },
                         {
                             key: 'memory',
-                            label: 'Memory',
+                            label: 'Mem %',
                             icon: MemoryStick,
                             sortable: true,
                             align: 'right',

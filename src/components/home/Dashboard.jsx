@@ -10,7 +10,8 @@ import {
     DollarSign,
     Zap,
     Shield,
-    AlertCircle
+    AlertCircle,
+    Layers
 } from 'lucide-react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -44,6 +45,11 @@ function Dashboard() {
     const [eksStats, setEksStats] = useState({
         totalClusters: 0,
         totalnamespaces: 0,
+        activeSchedules: 0
+    });
+    const [asgStats, setAsgStats] = useState({
+        totalGroups: 0,
+        activeGroups: 0,
         activeSchedules: 0
     });
     const [systemMetrics, setSystemMetrics] = useState({
@@ -168,6 +174,20 @@ function Dashboard() {
         }
     };
 
+    const fetchAsgStats = async () => {
+        try {
+            const response = await axiosClient.get('/asg/groups');
+            const result = response.data;
+            const groups = Array.isArray(result) ? result : (result.data || []);
+            const totalGroups = groups.length;
+            const activeGroups = groups.filter(g => g.is_active !== false).length;
+            const activeSchedules = groups.filter(g => g.is_scheduled).length;
+            setAsgStats({ totalGroups, activeGroups, activeSchedules });
+        } catch (err) {
+            console.error('Dashboard ASG stats error:', err);
+        }
+    };
+
     const fetchSystemMetrics = async () => {
         try {
             const response = await axiosClient.get('/system/metrics');
@@ -191,6 +211,7 @@ function Dashboard() {
         fetchEc2Stats();
         fetchRdsStats();
         fetchEksStats();
+        fetchAsgStats();
         fetchSystemMetrics();
 
         const metricsInterval = setInterval(fetchSystemMetrics, 3000);
@@ -247,7 +268,7 @@ function Dashboard() {
             category: 'CONTAINER ANALYTICS',
             description: 'Cluster & service cost breakdown.',
             icon: Container,
-            color: 'purple',
+            color: 'cyan',
             manageLink: '/ecs',
             analyticsLink: '/analytics/ecs',
             isLive: false,
@@ -256,7 +277,7 @@ function Dashboard() {
                 { label: 'Active Services', value: ecsStats.totalActiveServices },
                 { label: 'Active Schedules', value: ecsStats.scheduledCount }
             ],
-            gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)'
+            gradient: 'linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%)'
         },
         {
             id: 'eks',
@@ -289,6 +310,22 @@ function Dashboard() {
                 { label: 'Active Schedules', value: rdsStats.activeSchedules }
             ],
             gradient: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'
+        },
+        {
+            id: 'asg',
+            title: 'Auto Scaling Groups',
+            category: 'SCALING ANALYTICS',
+            description: 'Scaling policies & group management.',
+            icon: Layers,
+            color: 'orange',
+            manageLink: '/asg',
+            analyticsLink: '/asg',
+            stats: [
+                { label: 'Total Groups', value: asgStats.totalGroups },
+                { label: 'Active Groups', value: asgStats.activeGroups },
+                { label: 'Active Schedules', value: asgStats.activeSchedules }
+            ],
+            gradient: 'linear-gradient(135deg, #f97316 0%, #fb923c 100%)'
         }
     ];
 
@@ -331,17 +368,14 @@ function Dashboard() {
             </div>
 
             <div className="service-analytics-grid">
-                {resourceCards.map((service) => (
-                    <div key={service.id} className={`service-card card-${service.color}`}>
+                {resourceCards.map((service, index) => (
+                    <div
+                        key={service.id}
+                        className={`service-card card-${service.color}${index >= 3 ? ' card-bottom-row' : ''}`}
+                    >
                         <div className="card-top-bar"></div>
 
-                        {/* <button
-                            className="action-graph-btn"
-                            onClick={() => navigate(service.analyticsLink)}
-                            title="Interactive Performance Analytics"
-                        >
-                            <TrendingUp size={18} />
-                        </button> */}
+                        <div className="card-glow-orb"></div>
 
                         <div className="icon-box">
                             <service.icon size={24} strokeWidth={2.5} />
@@ -360,8 +394,6 @@ function Dashboard() {
                                 ))}
                             </div>
                         </div>
-
-                        {/* <div className="card-divider"></div> */}
 
                         <div className="dashboard-card-footer">
                             <button

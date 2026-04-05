@@ -1,6 +1,6 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
-import { BarChart3, Server, Container, Boxes, Database, TrendingUp, Zap, Activity, ArrowRight, Sparkles } from 'lucide-react';
+import { BarChart3, Server, Container, Boxes, Database, TrendingUp, Zap, Activity, ArrowRight, Sparkles, Layers } from 'lucide-react';
 import '../../css/analytics/Analytics.css';
 
 function Analytics() {
@@ -8,6 +8,7 @@ function Analytics() {
     const canvasRef = useRef(null);
 
     const services = [
+        // ── Row 1 ──────────────────────────────────────────────────────────
         {
             id: 'ec2',
             name: 'EC2 Analytics',
@@ -15,11 +16,10 @@ function Analytics() {
             description: 'Instance performance, utilization trends & cost optimization insights',
             icon: Server,
             available: true,
-            accentColor: '#3b82f6',
-            glowColor: 'rgba(59, 130, 246, 0.4)',
-            gradient: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 50%, #06b6d4 100%)',
-            bgGradient: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(6,182,212,0.05) 100%)',
-            // stat: 'LIVE',
+            accentColor: '#8b5cf6',
+            glowColor: 'rgba(139, 92, 246, 0.4)',
+            gradient: 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 50%, #ec4899 100%)',
+            bgGradient: 'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(236,72,153,0.06) 100%)',
             statLabel: 'Active'
         },
         {
@@ -29,26 +29,11 @@ function Analytics() {
             description: 'Container insights, cluster performance & service cost breakdown',
             icon: Container,
             available: true,
-            accentColor: '#8b5cf6',
-            glowColor: 'rgba(139, 92, 246, 0.5)',
-            gradient: 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 50%, #ec4899 100%)',
-            bgGradient: 'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(236,72,153,0.06) 100%)',
-            // stat: 'LIVE',
+            accentColor: '#06b6d4',
+            glowColor: 'rgba(6, 182, 212, 0.4)',
+            gradient: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 50%, #67e8f9 100%)',
+            bgGradient: 'linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(103,232,249,0.05) 100%)',
             statLabel: 'Active'
-        },
-        {
-            id: 'eks',
-            name: 'EKS Analytics',
-            subtitle: 'Kubernetes Analytics',
-            description: 'Kubernetes cluster health, pod metrics & workload analytics',
-            icon: Boxes,
-            available: false,
-            accentColor: '#ec4899',
-            glowColor: 'rgba(236, 72, 153, 0.4)',
-            gradient: 'linear-gradient(135deg, #be185d 0%, #ec4899 50%, #f97316 100%)',
-            bgGradient: 'linear-gradient(135deg, rgba(236,72,153,0.08) 0%, rgba(249,115,22,0.05) 100%)',
-            // stat: '—',
-            statLabel: 'Coming Soon'
         },
         {
             id: 'rds',
@@ -60,11 +45,38 @@ function Analytics() {
             accentColor: '#10b981',
             glowColor: 'rgba(16, 185, 129, 0.4)',
             gradient: 'linear-gradient(135deg, #065f46 0%, #10b981 50%, #34d399 100%)',
-            bgGradient: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(52,211,153,0.05) 100%)',
-            // stat: '—',
+            bgGradient: 'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(52,211,153,0.05) 100%)',
             statLabel: 'Active'
-        }
+        },
+        // ── Row 2 ──────────────────────────────────────────────────────────
+        {
+            id: 'eks',
+            name: 'EKS Analytics',
+            subtitle: 'Kubernetes Analytics',
+            description: 'Kubernetes cluster health, pod metrics & workload analytics',
+            icon: Boxes,
+            available: false,
+            accentColor: '#ec4899',
+            glowColor: 'rgba(236, 72, 153, 0.4)',
+            gradient: 'linear-gradient(135deg, #be185d 0%, #ec4899 50%, #f97316 100%)',
+            bgGradient: 'linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(249,115,22,0.05) 100%)',
+            statLabel: 'Coming Soon'
+        },
+        {
+            id: 'asg',
+            name: 'ASG Analytics',
+            subtitle: 'Scaling Analytics',
+            description: 'Auto-scaling policies, group capacity trends & scheduling insights',
+            icon: Layers,
+            available: false,
+            accentColor: '#f97316',
+            glowColor: 'rgba(249, 115, 22, 0.4)',
+            gradient: 'linear-gradient(135deg, #c2410c 0%, #f97316 50%, #fbbf24 100%)',
+            bgGradient: 'linear-gradient(135deg, rgba(249,115,22,0.12) 0%, rgba(251,191,36,0.05) 100%)',
+            statLabel: 'Coming Soon'
+        },
     ];
+
 
     // const overviewStats = [
     //     { label: 'Total Services Tracked', value: '156', icon: Activity, color: '#8b5cf6', change: '+12%' },

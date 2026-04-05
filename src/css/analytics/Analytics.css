@@ -377,8 +377,10 @@
 /* ---- Services Grid ---- */
 .services-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 1fr;
     gap: 1.75rem;
+    align-items: stretch;
 }
 
 /* ---- Service Card ---- */
@@ -391,22 +393,42 @@
     transition: all var(--transition-slow);
     animation: card-rise 0.7s cubic-bezier(0.4, 0, 0.2, 1) backwards;
     backdrop-filter: none !important;
-    /* Force remove blur */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
 }
 
 .layout-container[data-theme="dark"] .analytics-service-card {
-    background: #1e293b !important;
-    /* Force opaque background for dark mode */
     background: var(--card-gradient), #1e293b !important;
 }
+
+.analytics-service-card:nth-child(1) { animation-delay: 0.05s; }
+.analytics-service-card:nth-child(2) { animation-delay: 0.12s; }
+.analytics-service-card:nth-child(3) { animation-delay: 0.19s; }
+.analytics-service-card:nth-child(4) { animation-delay: 0.26s; }
+.analytics-service-card:nth-child(5) { animation-delay: 0.33s; }
+.analytics-service-card:nth-child(6) { animation-delay: 0.40s; }
 
 .analytics-service-card.available {
     cursor: pointer;
 }
 
+/* Coming soon cards: premium lock treatment — NOT faded/disabled-looking */
 .analytics-service-card.unavailable {
-    opacity: 0.65;
     cursor: default;
+}
+
+.analytics-service-card.unavailable::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    /* subtle frosted overlay to signal "not yet" without looking broken */
+    background: rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(1px);
+    pointer-events: none;
+    z-index: 6;
+    border-radius: inherit;
 }
 
 /* Glow on hover */
@@ -485,10 +507,11 @@
 /* Card Body */
 .card-body {
     padding: 1.5rem 1.75rem;
+    flex: 1;
 }
 
 .card-name {
-    font-size: 2.25rem;
+    font-size: 1.9rem;
     font-weight: 900;
     color: var(--text-primary);
     letter-spacing: -0.03em;
@@ -536,9 +559,33 @@
     transform: translateX(6px);
 }
 
+/* ---- "Coming Soon" lock badge ---- */
 .soon-footer {
     color: var(--text-muted);
     justify-content: center;
+    position: relative;
+    z-index: 7; /* sits above the frosted overlay */
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    font-weight: 800;
+    gap: 0.5rem;
+}
+
+/* Animated lock dot on coming-soon cards */
+.soon-footer::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    opacity: 0.6;
+    animation: pulse-glow-muted 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow-muted {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50%       { opacity: 0.9; transform: scale(1.4); }
 }
 
 /* Shine effect */
@@ -558,17 +605,19 @@
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
     .services-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .overview-strip {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        grid-auto-rows: auto;
     }
 }
 
 @media (max-width: 768px) {
+    .services-grid {
+        grid-template-columns: 1fr;
+        grid-auto-rows: auto;
+    }
+
     .analytics-content {
         padding: 2rem 1.25rem;
     }

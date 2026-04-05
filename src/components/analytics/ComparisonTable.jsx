@@ -173,6 +173,18 @@ function ComparisonTable({
                         <span>{val}</span>
                     </div>
                 );
+            case 'badge-vcpu':
+                return (
+                    <div className="cmp-vcpu-badge">
+                        <span>{val}</span>
+                    </div>
+                );
+            case 'badge-memory-gb':
+                return (
+                    <div className="cmp-memgb-badge">
+                        <span>{val}</span>
+                    </div>
+                );
             case 'date': {
                 const dateObj = new Date(val);
                 const formattedDate = dateObj.toLocaleDateString('en-US', {

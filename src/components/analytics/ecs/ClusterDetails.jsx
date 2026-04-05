@@ -77,7 +77,7 @@ function ClusterDetails() {
                 <div className="cd-header">
                     <div className="cd-header-left">
                         <div className="cd-header-icon">
-                            <ECSIcon size={40} color="inherit" />
+                            <ECSIcon size={44} />
                         </div>
                         <div>
                             <h1 className="cd-title">{clusterName}</h1>
@@ -227,7 +227,7 @@ function ClusterDetails() {
                     subtitle="Click any col header to sort"
                     data={dailyData}
                     exportFilename="day-comparison.csv"
-                    gridTemplateColumns="100px minmax(0, 1fr) 80px 80px 80px 80px 80px 80px 80px"
+                    gridTemplateColumns="3.25rem minmax(0,1fr) 6rem 6.5rem 7rem 6.5rem 6.5rem 6.5rem 6rem 6.5rem"
                     onRowClick={handleDateClick}
                     columns={[
                         {
@@ -240,23 +240,23 @@ function ClusterDetails() {
                             key: 'day',
                             label: 'Day',
                             type: 'day',
-                            align: 'right'
+                            align: 'center'
                         },
                         {
                             key: 'vcpu',
                             label: 'vCPU',
                             icon: Cpu,
                             sortable: true,
-                            align: 'right',
-                            type: 'badge-svc'
+                            align: 'center',
+                            type: 'badge-vcpu'
                         },
                         {
                             key: 'memoryGB',
                             label: 'RAM',
                             icon: MemoryStick,
-                            sortable: true,
-                            align: 'right',
-                            type: 'badge-svc'
+                            sortable: false,
+                            align: 'center',
+                            type: 'badge-memory-gb'
                         },
                         {
                             key: 'tasksRunning',
@@ -264,7 +264,7 @@ function ClusterDetails() {
                             icon: Activity,
                             sortable: true,
                             align: 'right',
-                            type: 'badge-svc'
+                            type: 'badge-task'
                         },
                         {
                             key: 'avgCpu',
