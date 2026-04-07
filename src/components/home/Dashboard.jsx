@@ -99,8 +99,10 @@ function Dashboard() {
                 axiosClient.get('/ec2/custom-schedules')
             ]);
 
-            const instances = instancesRes.data || [];
-            const schedules = schedulesRes.data || [];
+            const rawInstances = instancesRes.data;
+            const instances = Array.isArray(rawInstances) ? rawInstances : (rawInstances?.data ?? rawInstances?.instances ?? []);
+            const rawSchedules = schedulesRes.data;
+            const schedules = Array.isArray(rawSchedules) ? rawSchedules : (rawSchedules?.data ?? rawSchedules?.schedules ?? []);
             const totalInstances = instances.length;
             const runningInstances = instances.filter(
                 (i) => i.state === 'running'
