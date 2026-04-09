@@ -689,3 +689,129 @@
     stroke: #10b981;
     filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8));
 }
+
+/* ============================================================
+   DARK THEME OVERRIDES
+   ============================================================ */
+
+.layout-container[data-theme="dark"] .schedule-modal-overlay {
+    background: rgba(2, 6, 17, 0.85);
+}
+
+.layout-container[data-theme="dark"] .schedule-modal-content {
+    background: linear-gradient(165deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+.layout-container[data-theme="dark"] .schedule-modal-header {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.layout-container[data-theme="dark"] .schedule-modal-title {
+    color: #f1f5f9;
+}
+
+.layout-container[data-theme="dark"] .close-modal-btn {
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+}
+
+.layout-container[data-theme="dark"] .close-modal-btn:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+}
+
+.layout-container[data-theme="dark"] .calendar-view {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.layout-container[data-theme="dark"] .calendar-month-title {
+    color: #f1f5f9;
+}
+
+.layout-container[data-theme="dark"] .calendar-nav-btn {
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+}
+
+.layout-container[data-theme="dark"] .calendar-nav-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+}
+
+.layout-container[data-theme="dark"] .calendar-day-label {
+    color: #475569;
+}
+
+.layout-container[data-theme="dark"] .calendar-day {
+    color: #cbd5e1;
+}
+
+.layout-container[data-theme="dark"] .calendar-day:hover:not(.disabled) {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.layout-container[data-theme="dark"] .calendar-day.disabled {
+    color: #334155;
+}
+
+.layout-container[data-theme="dark"] .calendar-day.in-range {
+    background: rgba(255, 153, 0, 0.15);
+    color: #ffb84d;
+}
+
+.layout-container[data-theme="dark"] .time-range-panel {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.layout-container[data-theme="dark"] .time-field label {
+    color: #475569;
+}
+
+.layout-container[data-theme="dark"] .time-field input[type="time"] {
+    background: rgba(15, 23, 42, 0.4);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+}
+
+.layout-container[data-theme="dark"] .time-field input[type="time"]:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.layout-container[data-theme="dark"] .schedule-modal-footer {
+    background: rgba(0, 0, 0, 0.2);
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.layout-container[data-theme="dark"] .btn-schedule-remove {
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+
+.layout-container[data-theme="dark"] .btn-schedule-remove:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.layout-container[data-theme="dark"] .btn-schedule-save {
+    background: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.layout-container[data-theme="dark"] .btn-schedule-save:hover {
+    background: #2563eb;
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.layout-container[data-theme="dark"] .calendar-day.today::after {
+    background: #FF9900;
+}
+
+.layout-container[data-theme="dark"] .calendar-day.today.selected-start::after,
+.layout-container[data-theme="dark"] .calendar-day.today.selected-end::after {
+    background: white;
+}

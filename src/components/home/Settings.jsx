@@ -69,7 +69,7 @@ const Settings = () => {
     return (
         <div className="settings-container">
             {/* Page Header */}
-            <div className="page-header-modern">
+            <div className="page-header-modern-set">
                 <div className="header-content">
                     <div className="header-left-section">
                         <div className="header-icon-modern">

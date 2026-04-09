@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Settings, X } from "lucide-react";
+import { Settings, X, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import "../../css/common/ResizableTable.css";
 
 const ResizableTable = forwardRef(({
@@ -14,6 +14,7 @@ const ResizableTable = forwardRef(({
     const tableRef = useRef(null);
 
     const [colWidths, setColWidths] = useState({});
+    const [sortConfig, setSortConfig] = useState(null); // { key, direction: 'asc' | 'desc' }
 
     // Column Visibility State
     const [visibleColumns, setVisibleColumns] = useState(() => {
@@ -33,6 +34,71 @@ const ResizableTable = forwardRef(({
             setShowSettings(true);
         }
     }));
+
+    // =========================================
+    // SORTING LOGIC
+    // =========================================
+    const parseValue = (val) => {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') {
+            // "32 vCPU", "128 GB", "500 MB" -> extract number
+            const matched = val.match(/^(\d+(\.\d+)?)/);
+            if (matched) return parseFloat(matched[1]);
+            return val.toLowerCase();
+        }
+        return val;
+    };
+
+    const sortedData = useMemo(() => {
+        if (!sortConfig) return data;
+
+        const sortableItems = [...data];
+        sortableItems.sort((a, b) => {
+            const aVal = parseValue(a[sortConfig.key]);
+            const bVal = parseValue(b[sortConfig.key]);
+
+            if (aVal < bVal) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (aVal > bVal) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+        return sortableItems;
+    }, [data, sortConfig]);
+
+    const requestSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        } else if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
+            setSortConfig(null);
+            return;
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIcon = (col) => {
+        if (!col.sortable) return null;
+        const isActive = sortConfig?.key === col.key;
+        const isAsc = isActive && sortConfig.direction === 'asc';
+        const isDesc = isActive && sortConfig.direction === 'desc';
+
+        return (
+            <div className="th-sort-arrows">
+                <ChevronUp 
+                    size={11} 
+                    className={`th-sort-arrow ${isAsc ? 'active' : 'idle'}`}
+                    style={{ marginBottom: '-4px' }}
+                />
+                <ChevronDown 
+                    size={11} 
+                    className={`th-sort-arrow ${isDesc ? 'active' : 'idle'}`}
+                />
+            </div>
+        );
+    };
 
     // Filter visible columns
     const activeColumns = columns.filter(col => visibleColumns[col.key]);
@@ -66,7 +132,6 @@ const ResizableTable = forwardRef(({
     // =========================================
     const handleMouseDown = (e, columnKey, minWidth = 80) => {
         const th = e.currentTarget;
-
         const startX = e.clientX;
         const startWidth = colWidths[columnKey];
 
@@ -75,7 +140,6 @@ const ResizableTable = forwardRef(({
                 minWidth,
                 startWidth + (event.clientX - startX)
             );
-
             setColWidths(prev => ({
                 ...prev,
                 [columnKey]: newWidth
@@ -122,21 +186,26 @@ const ResizableTable = forwardRef(({
                 <thead>
                     <tr>
                         {activeColumns.map((col, index) => (
-                            <th key={col.key}>
+                            <th 
+                                key={col.key}
+                                onClick={() => col.sortable && requestSort(col.key)}
+                                className={col.sortable ? 'sortable-header' : ''}
+                            >
                                 <div className="th-content">
-                                    {col.label}
+                                    <div className="th-label-group">
+                                        <span className="th-main-label">{col.label}</span>
+                                        {getSortIcon(col)}
+                                    </div>
+                                    {col.subLabel && <span className="th-sub-label">{col.subLabel}</span>}
                                 </div>
 
                                 {/* Resize Handle */}
                                 <div
                                     className="resize-handle"
-                                    onMouseDown={(e) =>
-                                        handleMouseDown(
-                                            e,
-                                            col.key,
-                                            col.minWidth
-                                        )
-                                    }
+                                    onMouseDown={(e) => {
+                                        e.stopPropagation(); // Prevent sort click when resizing
+                                        handleMouseDown(e, col.key, col.minWidth);
+                                    }}
                                 />
                             </th>
                         ))}
@@ -144,8 +213,8 @@ const ResizableTable = forwardRef(({
                 </thead>
 
                 <tbody>
-                    {data && data.length > 0 && (
-                        data.map((row, rowIndex) => (
+                    {sortedData && sortedData.length > 0 && (
+                        sortedData.map((row, rowIndex) => (
                             <tr key={rowIndex}>
                                 {activeColumns.map(col => (
                                     <td key={col.key}>

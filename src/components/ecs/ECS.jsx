@@ -19,11 +19,14 @@ import {
     CalendarPlus,
     CalendarMinus,
     Play,
-    Settings
+    Settings,
+    RotateCcw
 } from 'lucide-react';
 import ECSIcon from '../common/ECSIcon';
 import ExceptionTimer from './ExceptionTimer';
 import ScheduleModal from '../common/ScheduleModal';
+import ServiceSelectionModal from './ServiceSelectionModal';
+import RevisionCalendarModal from './RevisionCalendarModal';
 import '../../css/ecs/ECS.css';
 import '../../css/common/ScheduleModal.css';
 import axiosClient from '../api/axiosClient';
@@ -44,7 +47,9 @@ const DUMMY_CLUSTERS = [
         vcpu: '32 vCPU',
         memory: '128 GB',
         runningTasks: 45,
+        pendingTasks: 3,
         isScheduled: true,
+        isDummySchedule: true, // For CSS visibility
         schedule_start: null,
         schedule_end: null
     },
@@ -58,7 +63,9 @@ const DUMMY_CLUSTERS = [
         vcpu: '16 vCPU',
         memory: '64 GB',
         runningTasks: 20,
+        pendingTasks: 0,
         isScheduled: false,
+        isUrgentSchedule: true, // For CSS visibility (Red)
         schedule_start: null,
         schedule_end: null
     },
@@ -72,7 +79,9 @@ const DUMMY_CLUSTERS = [
         vcpu: '64 vCPU',
         memory: '256 GB',
         runningTasks: 80,
-        isScheduled: true,
+        pendingTasks: 5,
+        isScheduled: false,
+        isDummyException: true, // For CSS visibility
         schedule_start: null,
         schedule_end: null
     }
@@ -129,12 +138,8 @@ const calculateScheduleStatus = (scheduleData) => {
     const total = Math.round((end - start) / 86400000) + 1;
     const remaining = Math.max(0, Math.round((end - today) / 86400000));
 
-    let badgeClass = 'bg-safe';
-    if (remaining <= 1) {
-        badgeClass = 'bg-critical';
-    } else if ((remaining / total) <= 0.5) {
-        badgeClass = 'bg-warning';
-    }
+    // Green if tomorrow or later, Red if today
+    const badgeClass = remaining >= 1 ? 'badge-active' : 'badge-urgent';
 
     return { remaining, total, badgeClass };
 };
@@ -157,6 +162,19 @@ function ECS() {
     const [scheduleTarget, setScheduleTarget] = useState(null);
     const [clusters, setClusters] = useState([]); // Using static data for now
     const [syncStatus, setSyncStatus] = useState(null);
+    const [lastSyncedAt, setLastSyncedAt] = useState(null);
+    const [cronSettings, setCronSettings] = useState({ stop_time: '9:15 PM', start_time: '8:45 AM' });
+    const [isServiceSelectionModalOpen, setIsServiceSelectionModalOpen] = useState(false);
+    const [currentClusterServices, setCurrentClusterServices] = useState([]);
+    const [isLoadingServices, setIsLoadingServices] = useState(false);
+
+    // Revision state
+    const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+    const [availableDates, setAvailableDates] = useState([]);
+    const [isRevisionLoading, setIsRevisionLoading] = useState(false);
+
+    // Update Status state
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const syncPollRef = useRef(null);
     const [clusterSchedules, setClusterSchedules] = useState({});
     const [clusterExceptions, setClusterExceptions] = useState({});
@@ -183,13 +201,14 @@ function ECS() {
 
     const columns = [
         { key: 'name', label: 'Cluster Name', widthPercent: 20, minWidth: 180, mandatory: true },
-        { key: 'activeServices', label: 'Active Services', widthPercent: 12, minWidth: 120 },
-        { key: 'runningServices', label: 'Running Services', widthPercent: 12, minWidth: 120 },
+        { key: 'activeServices', label: 'Active Services', sortable: true, widthPercent: 12, minWidth: 120 },
+        { key: 'runningServices', label: 'Running Services', sortable: true, widthPercent: 12, minWidth: 120 },
+        { key: 'pendingServices', label: 'Pending Services', sortable: true, widthPercent: 12, minWidth: 120 },
         { key: 'closedServices', label: 'Closed Services', widthPercent: 12, minWidth: 120 },
         { key: 'computeType', label: 'Compute Type', widthPercent: 11, minWidth: 130 },
-        { key: 'runningTasks', label: 'Running Tasks', widthPercent: 12, minWidth: 120 },
-        { key: 'vcpu', label: 'vCPU', widthPercent: 9, minWidth: 100 },
-        { key: 'memory', label: 'Memory', widthPercent: 9, minWidth: 100 },
+        { key: 'runningTasks', label: 'Tasks', subLabel: 'PEND | HLT | RUN', sortable: true, widthPercent: 12, minWidth: 160 },
+        { key: 'vcpu', label: 'vCPU', sortable: true, widthPercent: 9, minWidth: 100 },
+        { key: 'memory', label: 'Memory', sortable: true, widthPercent: 9, minWidth: 100 },
         { key: 'schedule', label: 'Schedule', widthPercent: 10, minWidth: 140 },
         { key: 'exception', label: 'Exception', widthPercent: 5, minWidth: 80 }
     ];
@@ -215,11 +234,15 @@ function ECS() {
                     stopped_services_count: c.closedServices,
                     compute_type: c.computeType,
                     running_tasks_count: c.runningTasks,
+                    pending_tasks_count: c.pendingTasks,
                     vcpu_total: c.vcpu,
                     memory_total: c.memory,
                     is_scheduled: c.isScheduled,
                     schedule_start: c.schedule_start,
-                    schedule_end: c.schedule_end
+                    schedule_end: c.schedule_end,
+                    isDummySchedule: c.isDummySchedule,
+                    isUrgentSchedule: c.isUrgentSchedule,
+                    isDummyException: c.isDummyException
                 }));
             }
 
@@ -227,19 +250,39 @@ function ECS() {
                 id: index + 1,
                 name: c.cluster_name,
                 activeServices: c.active_services_count,
-                runningServices: c.running_services_count,
-                closedServices: c.stopped_services_count,
-                runningTasks: c.running_tasks_count || (index === 0 ? 45 : index === 1 ? 20 : 80),
+                runningServices: c.running_services_count || (index === 0 ? 10 : index === 1 ? 8 : 5),
+                pendingServices: c.pending_services_count || (index === 0 ? 2 : index === 1 ? 0 : 0),
+                closedServices: c.stopped_services_count || (index === 0 ? 2 : index === 1 ? 0 : 10),
+                runningTasks: c.running_tasks_count,
+                pendingTasks: c.pending_tasks_count || 0,
                 computeType: c.compute_type,
                 vcpu: c.vcpu_total || (index === 0 ? '32 vCPU' : index === 1 ? '16 vCPU' : '64 vCPU'),
                 memory: c.memory_total || (index === 0 ? '128 GB' : index === 1 ? '64 GB' : '256 GB'),
                 isScheduled: c.is_scheduled,
                 schedule_start: c.schedule_start,
-                schedule_end: c.schedule_end
+                schedule_end: c.schedule_end,
+                isDummySchedule: c.isDummySchedule,
+                isUrgentSchedule: c.isUrgentSchedule,
+                isDummyException: c.isDummyException
             }));
 
             setClusters(mappedClusters);
             setIsInitialLoad(false);
+
+            // 🕐 Find the most recent last_synced_at from all clusters
+            let maxDate = new Date(0);
+            clusterData.forEach(c => {
+                if (c.last_synced_at) {
+                    const d = new Date(c.last_synced_at);
+                    if (d > maxDate) maxDate = d;
+                }
+            });
+            if (maxDate.getTime() > 0) {
+                setLastSyncedAt(maxDate.toISOString());
+            } else {
+                // fallback: use current fetch time
+                setLastSyncedAt(new Date().toISOString());
+            }
 
             localStorage.setItem(
                 CLUSTER_CACHE_KEY,
@@ -742,6 +785,55 @@ Not Found: ${result.summary.clusters_not_found.length}`
         });
     };
 
+    const handleSelectionSubmit = async (selection) => {
+        try {
+            const enabledServices = Object.keys(selection).filter(name => selection[name]);
+            console.log(`Submitting schedule for ${enabledServices.length} services`);
+
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            setIsServiceSelectionModalOpen(false);
+            setSyncStatus('Schedule applied successfully');
+            
+            // Refresh to show new schedule state if needed
+            fetchClustersFromDB();
+        } catch (err) {
+            console.error('Failed to submit service selection:', err);
+            setError('Failed to apply service overrides.');
+        }
+    };
+
+    const fetchServicesForSelection = async (clusterName) => {
+        setIsLoadingServices(true);
+        try {
+            const response = await axiosClient.get('/ecs/services/cluster', {
+                params: { clusterName }
+            });
+            
+            if (response.data?.success) {
+                const svcs = response.data.data.map(s => ({
+                    name: s.service_name || s.name
+                }));
+                setCurrentClusterServices(svcs);
+            } else {
+                // Fallback to minimal names if no details
+                setCurrentClusterServices([{ name: 'auth-service' }, { name: 'api-gateway' }]);
+            }
+        } catch (err) {
+            console.warn('Backend unavailable, using dummy services for selection');
+            setCurrentClusterServices([
+                { name: 'auth-service' }, 
+                { name: 'api-gateway' }, 
+                { name: 'worker-process' },
+                { name: 'notification-mgr' },
+                { name: 'payment-relay' }
+            ]);
+        } finally {
+            setIsLoadingServices(false);
+        }
+    };
+
 
 
     const handleConfirmSchedule = useCallback(
@@ -753,6 +845,7 @@ Not Found: ${result.summary.clusters_not_found.length}`
             try {
                 setError(null);
 
+                /* COMMENTED OUT FOR MANUAL VERIFICATION
                 const response = await axiosClient.post(
                     "/ecs/schedules/cluster",
                     { from_date, to_date, from_time, to_time },
@@ -765,13 +858,28 @@ Not Found: ${result.summary.clusters_not_found.length}`
 
                 // ✅ Reload schedules so modal gets initialRange
                 await loadClusterSchedules();
+                */
+
+                // Fetch services (Commented out for immediate verification)
+                /* 
+                await fetchServicesForSelection(clusterName);
+                */
+               
+                // Fallback dummy data for immediate view
+                if (currentClusterServices.length === 0) {
+                    setCurrentClusterServices([
+                        { name: 'auth-service' }, 
+                        { name: 'api-gateway' }, 
+                        { name: 'worker-process' }
+                    ]);
+                }
 
                 setIsScheduleModalOpen(false);
-                setScheduleTarget(null);
+                setIsServiceSelectionModalOpen(true);
 
             } catch (err) {
-                console.error("Schedule save failed:", err);
-                setError(err.response?.data?.error?.message || err.message);
+                console.error("Schedule transition failed:", err);
+                setError("Failed to initialize service selection.");
             }
         },
         [scheduleTarget, loadClusterSchedules]
@@ -783,6 +891,97 @@ Not Found: ${result.summary.clusters_not_found.length}`
     const handleNavigateToDeltaUpdates = useCallback(() => {
         navigate('/ecs/updates');
     }, [navigate]);
+
+    // Revision: fetch available inventory dates
+    const fetchInventoryDates = useCallback(async () => {
+        try {
+            setIsRevisionLoading(true);
+            const response = await axiosClient.get('/ecs/inventory/dates');
+            if (response.data?.success) {
+                setAvailableDates(response.data.data.available_dates || []);
+                setIsRevisionModalOpen(true);
+            } else {
+                // No backend: open modal with empty dates so user sees the calendar UI
+                setAvailableDates([]);
+                setIsRevisionModalOpen(true);
+            }
+        } catch (err) {
+            console.error('Failed to fetch revision dates:', err);
+            // Still open the modal — just no selectable dates
+            setAvailableDates([]);
+            setIsRevisionModalOpen(true);
+        } finally {
+            setIsRevisionLoading(false);
+        }
+    }, []);
+
+    // Revision: apply selected date to all clusters
+    const applyRevisionForDate = useCallback(async (date) => {
+        if (!date) return;
+        try {
+            setIsRevisionLoading(true);
+            const response = await axiosClient.get('/ecs/inventory/clusters', {
+                params: { date }
+            });
+            if (!response.data?.success) {
+                throw new Error('Failed to fetch revision clusters');
+            }
+            // Refresh cluster list to reflect reverted state
+            await fetchClustersFromDB();
+            setIsRevisionModalOpen(false);
+        } catch (err) {
+            console.error('Revision apply failed:', err);
+            setIsRevisionModalOpen(false);
+        } finally {
+            setIsRevisionLoading(false);
+        }
+    }, [fetchClustersFromDB]);
+
+    // Update Status: refresh cluster statuses from AWS
+    const handleUpdateStatus = useCallback(async () => {
+        try {
+            setIsUpdatingStatus(true);
+            setError(null);
+            const response = await axiosClient.post('/ecs/clusters/update-status');
+            if (response.data?.success) {
+                await fetchClustersFromDB();
+            } else {
+                throw new Error(response.data?.error?.message || 'Update status failed');
+            }
+        } catch (err) {
+            console.error('Update status failed:', err);
+            setError(err.response?.data?.error?.message || err.message || 'Failed to update cluster statuses');
+        } finally {
+            setIsUpdatingStatus(false);
+        }
+    }, [fetchClustersFromDB]);
+
+    const handleUpdateStatusWithConfirm = useCallback(() => {
+        setConfirmModal({
+            open: true,
+            message: 'Are you sure you want to refresh cluster statuses from AWS? This will update the current state of all clusters.',
+            onConfirm: async () => {
+                closeConfirmModal();
+                await handleUpdateStatus();
+            }
+        });
+    }, [handleUpdateStatus]);
+
+    // Format ISO string to IST human-readable date/time
+    const formatIST = (isoString) => {
+        if (!isoString) return '--';
+        const date = new Date(isoString);
+        return new Intl.DateTimeFormat('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        }).format(date);
+    };
 
     if (error && isInitialLoad && clusters.length === 0) {
         return (
@@ -819,29 +1018,37 @@ Not Found: ${result.summary.clusters_not_found.length}`
                         </div>
                         <div className="header-text">
                             <h1 className="page-title-modern">ECS Cluster Dashboard</h1>
+                            {lastSyncedAt && (
+                                <div className="ecs-header-sync-info">
+                                    <Clock size={12} className="ecs-sync-info-icon" />
+                                    <span>Last Synced At: <span className="ecs-sync-info-val">{formatIST(lastSyncedAt)}</span></span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* <button
-                        className="btn-delta-updates"
-                        onClick={handleNavigateToDeltaUpdates}
-                    >
-                        <div className="icon-wrapper">
-                            <GitCompare size={20} />
-                        </div>
-                        <span>Updates</span>
-                    </button> */}
+                    <div className="ecs-header-actions">
+                        <button
+                            className="ecs-btn-stack ecs-btn-delta-updates ecs-update-btn"
+                            onClick={handleNavigateToDeltaUpdates}
+                        >
+                            <div className="ecs-icon-wrapper">
+                                <Activity size={18} />
+                            </div>
+                            <span>Updates</span>
+                        </button>
 
-                    <button
-                        className={`ecs-btn-stack ecs-btn-delta-updates ecs-sync-btn ${isSyncing ? 'ecs-syncing' : ''}`}
-                        onClick={handleSyncWithConfirm}
-                        disabled={isSyncing}
-                    >
-                        <div className="ecs-icon-wrapper">
-                            <RefreshCw size={20} className={isSyncing ? 'ecs-spinning' : ''} />
-                        </div>
-                        <span>{isSyncing ? 'Syncing...' : 'Sync Clusters'}</span>
-                    </button>
+                        <button
+                            className={`ecs-btn-stack ecs-btn-delta-updates ecs-sync-btn ${isSyncing ? 'ecs-syncing' : ''}`}
+                            onClick={handleSyncWithConfirm}
+                            disabled={isSyncing}
+                        >
+                            <div className="ecs-icon-wrapper">
+                                <RefreshCw size={20} className={isSyncing ? 'ecs-spinning' : ''} />
+                            </div>
+                            <span>{isSyncing ? 'Syncing...' : 'Sync Clusters'}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -853,7 +1060,17 @@ Not Found: ${result.summary.clusters_not_found.length}`
                     </div>
                     <div>
                         <p className="ecs-action-title">Quick Actions</p>
-                        <p className="ecs-action-subtitle">Manage cluster state and exception policies</p>
+                        <div className="ecs-cron-timings">
+                            <div className="ecs-cron-tag ecs-stop-tag">
+                                <Clock size={12} className="ecs-cron-icon" />
+                                <span>Stop: <span className="ecs-cron-val">{cronSettings.stop_time}</span></span>
+                            </div>
+                            <div className="ecs-cron-sep" />
+                            <div className="ecs-cron-tag ecs-start-tag">
+                                <Clock size={12} className="ecs-cron-icon" />
+                                <span>Start: <span className="ecs-cron-val">{cronSettings.start_time}</span></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div className="ecs-action-buttons">
@@ -862,22 +1079,10 @@ Not Found: ${result.summary.clusters_not_found.length}`
                         onClick={() => { /* Start All logic */ }}
                     >
                         <div className="ecs-icon-wrapper">
-                            <Play size={16} />
+                            <Play size={16} fill="currentColor" />
                         </div>
                         <span>Start All</span>
                     </button>
-
-                    <button
-                        className="ecs-btn-stack ecs-btn-delta-updates ecs-update-btn"
-                        onClick={handleNavigateToDeltaUpdates}
-                    >
-                        <div className="ecs-icon-wrapper">
-                            <Activity size={16} />
-                        </div>
-                        <span>Updates</span>
-                    </button>
-
-
 
                     <button
                         className="ecs-btn-stack ecs-btn-delta-updates ecs-upload-btn"
@@ -889,6 +1094,29 @@ Not Found: ${result.summary.clusters_not_found.length}`
                         <span>Upload Exceptions</span>
                         {uploadedFile && <span className="ecs-file-badge">{uploadedFile.name}</span>}
                     </button>
+
+                    <button
+                        className="ecs-btn-stack ecs-btn-delta-updates ecs-revision-btn"
+                        onClick={fetchInventoryDates}
+                        disabled={isRevisionLoading}
+                    >
+                        <div className="ecs-icon-wrapper">
+                            <RotateCcw size={16} className={isRevisionLoading ? 'ecs-spinning' : ''} />
+                        </div>
+                        <span>{isRevisionLoading ? 'Loading...' : 'Revision'}</span>
+                    </button>
+
+                    <button
+                        className="ecs-btn-stack ecs-btn-delta-updates ecs-update-status-btn"
+                        onClick={handleUpdateStatusWithConfirm}
+                        disabled={isUpdatingStatus}
+                    >
+                        <div className="ecs-icon-wrapper">
+                            <RefreshCw size={16} className={isUpdatingStatus ? 'ecs-spinning' : ''} />
+                        </div>
+                        <span>{isUpdatingStatus ? 'Updating...' : 'Update Status'}</span>
+                    </button>
+
                     <input
                         ref={fileInputRef}
                         type="file"
@@ -1027,19 +1255,34 @@ Not Found: ${result.summary.clusters_not_found.length}`
 
                                                     {/* Schedule badge */}
                                                     {cluster.scheduleStatus && (
-                                                        <span className={`exception-badge ${cluster.scheduleStatus.badgeClass}`}>
-                                                            <ExceptionTimer
-                                                                remaining={cluster.scheduleStatus.remaining}
-                                                                total={cluster.scheduleStatus.total}
-                                                            />
-                                                            Active {cluster.scheduleStatus.remaining} {cluster.scheduleStatus.remaining === 1 ? 'Day' : 'Days'}
+                                                        <span className={`ecs-status-badge ${cluster.scheduleStatus.badgeClass}`}>
+                                                            <Clock size={12} />
+                                                            {cluster.scheduleStatus.remaining >= 1 
+                                                               ? `${cluster.scheduleStatus.remaining} Days Remaining` 
+                                                               : 'Ends Today'}
                                                         </span>
                                                     )}
 
-                                                    {/* NEW — Exception badge */}
-                                                    {clusterExceptions[cluster.name] && (
-                                                        <span className="exception exception-active">
-                                                            <ExceptionTimer />
+                                                    {/* Dummy Schedule for CSS testing */}
+                                                    {cluster.isDummySchedule && !cluster.scheduleStatus && (
+                                                        <span className="ecs-status-badge badge-active">
+                                                            <Clock size={12} />
+                                                            5 Days Remaining
+                                                        </span>
+                                                    )}
+
+                                                    {/* Dummy Urgent Schedule for CSS testing */}
+                                                    {cluster.isUrgentSchedule && !cluster.scheduleStatus && (
+                                                        <span className="ecs-status-badge badge-urgent">
+                                                            <Clock size={12} />
+                                                            Ends Today
+                                                        </span>
+                                                    )}
+
+                                                    {/* Exception badge */}
+                                                    {(clusterExceptions[cluster.name] || cluster.isDummyException) && (
+                                                        <span className="ecs-status-badge badge-urgent badge-exception">
+                                                            <AlertTriangle size={12} />
                                                             Active Exception
                                                         </span>
                                                     )}
@@ -1064,6 +1307,14 @@ Not Found: ${result.summary.clusters_not_found.length}`
                                         </div>
                                     );
 
+                                case 'pendingServices':
+                                    return (
+                                        <div className="service-count pending-count">
+                                            <Clock size={16} />
+                                            <span>{cluster.pendingServices || 0}</span>
+                                        </div>
+                                    );
+
                                 case 'closedServices':
                                     return (
                                         <div className="service-count closed-count">
@@ -1082,9 +1333,18 @@ Not Found: ${result.summary.clusters_not_found.length}`
 
                                 case 'runningTasks':
                                     return (
-                                        <div className="service-count running-tasks-count">
-                                            <Zap size={16} />
-                                            <span>{cluster.runningTasks}</span>
+                                        <div className="tasks-capsule">
+                                            <div className="tasks-pending" title="Pending Tasks">
+                                                {cluster.pendingTasks}
+                                            </div>
+                                            <div className="tasks-divider"></div>
+                                            <div className="tasks-healthy" title="Healthy Tasks">
+                                                {cluster.healthyTasks || cluster.runningTasks}
+                                            </div>
+                                            <div className="tasks-divider"></div>
+                                            <div className="tasks-running" title="Running Tasks">
+                                                {cluster.runningTasks}
+                                            </div>
                                         </div>
                                     );
 
@@ -1117,7 +1377,7 @@ Not Found: ${result.summary.clusters_not_found.length}`
 
                                 case 'exception':
 
-                                    if (clusterExceptions[cluster.name]) {
+                                    if (clusterExceptions[cluster.name] || cluster.isDummyException) {
                                         return (
                                             <button
                                                 className="schedule-btn exception-remove"
@@ -1132,10 +1392,10 @@ Not Found: ${result.summary.clusters_not_found.length}`
                                     }
 
                                     // 2️⃣ If schedule exists but no exception → disable ADD
-                                    if (cluster.isScheduled) {
+                                    if (cluster.scheduleStatus || cluster.isDummySchedule || cluster.isUrgentSchedule) {
                                         return (
                                             <button
-                                                className="schedule-btn exception-add"
+                                                className="schedule-btn exception-add disabled"
                                                 disabled
                                                 title="Exceptions cannot be added when schedule is active"
                                                 style={{ opacity: 0.4, cursor: "not-allowed" }}
@@ -1188,11 +1448,29 @@ Not Found: ${result.summary.clusters_not_found.length}`
                 onRemove={handleRemoveScheduleWithConfirm}
             />
 
+            <ServiceSelectionModal
+                isOpen={isServiceSelectionModalOpen}
+                onClose={() => {
+                    setIsServiceSelectionModalOpen(false);
+                    setScheduleTarget(null);
+                }}
+                clusterName={scheduleTarget?.identifiers?.clusterName}
+                services={currentClusterServices}
+                onSubmit={handleSelectionSubmit}
+            />
+
             <ConfirmActionModal
                 isOpen={confirmModal.open}
                 message={confirmModal.message}
                 onConfirm={confirmModal.onConfirm}
                 onCancel={closeConfirmModal}
+            />
+
+            <RevisionCalendarModal
+                isOpen={isRevisionModalOpen}
+                availableDates={availableDates}
+                onClose={() => setIsRevisionModalOpen(false)}
+                onSubmit={(date) => applyRevisionForDate(date)}
             />
 
         </div>

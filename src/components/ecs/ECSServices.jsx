@@ -23,9 +23,16 @@ import {
     RotateCcw,
     Settings,
     StopCircle,
-    Cpu
+    Cpu,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
+    Target,
+    Clock
 } from 'lucide-react';
 import ScheduleModal from '../common/ScheduleModal';
+import ServiceSelectionModal from './ServiceSelectionModal';
+// import ConfirmationModal from '../common/ConfirmationModal';
 import ExceptionTimer from './ExceptionTimer';
 import '../../css/ecs/ECSServices.css';
 import axiosClient from '../api/axiosClient';
@@ -34,7 +41,7 @@ import ECSIcon from '../common/ECSIcon';
 import BulkServiceActionModal from './BulkServiceActionModal';
 import 'react-resizable/css/styles.css'; // required CSS
 import ResizableTable from '../common/ResizableTable';
-// import RevisionCalendarModal from './RevisionCalendarModal';
+import RevisionCalendarModal from './RevisionCalendarModal';
 
 const SCHEDULE_CACHE_KEY = 'lombard_ecs_schedules';
 
@@ -50,6 +57,7 @@ const DUMMY_SERVICES = [
         vcpu: '4 vCPU',
         memory: '16 GB',
         running_tasks_count: 12,
+        pending_tasks_count: 2,
         is_scheduled: true,
         is_enabled: true,
         current_status: 'running'
@@ -65,6 +73,7 @@ const DUMMY_SERVICES = [
         vcpu: '2 vCPU',
         memory: '8 GB',
         running_tasks_count: 5,
+        pending_tasks_count: 0,
         is_scheduled: false,
         is_enabled: true,
         current_status: 'running'
@@ -80,9 +89,86 @@ const DUMMY_SERVICES = [
         vcpu: '8 vCPU',
         memory: '32 GB',
         running_tasks_count: 0,
+        pending_tasks_count: 0,
         is_scheduled: true,
         is_enabled: false,
         current_status: 'stopped'
+    },
+    {
+        service_arn: 'arn:aws:ecs:us-east-1:123456789012:service/payment-processor',
+        service_name: 'payment-processor',
+        cluster_arn: 'arn:aws:ecs:us-east-1:123456789012:cluster/production',
+        cluster_name: 'production',
+        min_value: 2,
+        desired_value: 2,
+        max_value: 4,
+        vcpu: '2 vCPU',
+        memory: '8 GB',
+        running_tasks_count: 3,
+        pending_tasks_count: 0,
+        is_scheduled: true,
+        is_enabled: true,
+        current_status: 'running'
+    },
+    {
+        service_name: 'notification-svc',
+        cluster_name: 'production',
+        min_value: 1,
+        max_value: 3,
+        vcpu: '1 vCPU',
+        memory: '4 GB',
+        running_tasks_count: 2,
+        current_status: 'running'
+    },
+    {
+        service_name: 'log-aggregator',
+        cluster_name: 'production',
+        min_value: 1,
+        max_value: 5,
+        vcpu: '2 vCPU',
+        memory: '8 GB',
+        running_tasks_count: 1,
+        current_status: 'running'
+    },
+    {
+        service_name: 'search-index-sync',
+        cluster_name: 'production',
+        min_value: 0,
+        max_value: 2,
+        vcpu: '4 vCPU',
+        memory: '16 GB',
+        running_tasks_count: 0,
+        current_status: 'stopped'
+    },
+    {
+        service_name: 'image-optimizer',
+        cluster_name: 'production',
+        min_value: 2,
+        max_value: 10,
+        vcpu: '4 vCPU',
+        memory: '16 GB',
+        running_tasks_count: 4,
+        current_status: 'running'
+    },
+    {
+        service_name: 'report-generator',
+        cluster_name: 'production',
+        min_value: 0,
+        max_value: 1,
+        vcpu: '2 vCPU',
+        memory: '4 GB',
+        running_tasks_count: 0,
+        current_status: 'stopped'
+    },
+    {
+        service_name: 'cache-warmer',
+        cluster_name: 'production',
+        min_value: 1,
+        max_value: 1,
+        vcpu: '1 vCPU',
+        memory: '2 GB',
+        running_tasks_count: 1,
+        current_status: 'running'
     }
 ];
 
@@ -140,6 +226,7 @@ function ECSServices() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [modalTab, setModalTab] = useState('configure');
     const [selectedService, setSelectedService] = useState(null);
     const [editForm, setEditForm] = useState({
         min: "0",
@@ -158,6 +245,9 @@ function ECSServices() {
     const [isStoppingAll, setIsStoppingAll] = useState(false);
     const [operationResult, setOperationResult] = useState(null);
     const [serviceHistory, setServiceHistory] = useState([]);
+    const [serviceRevisions, setServiceRevisions] = useState([]);
+    const [fetchingRevisionId, setFetchingRevisionId] = useState(null);
+    const [revisionDetails, setRevisionDetails] = useState({}); // Stores fetched archival dates
     const [scheduleTarget, setScheduleTarget] = useState(null);
     const [confirmModal, setConfirmModal] = useState({
         open: false,
@@ -183,6 +273,8 @@ function ECSServices() {
 
     // Revision State
     const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+    const [isServiceSelectionModalOpen, setIsServiceSelectionModalOpen] = useState(false);
+    const [lastSyncedAt, setLastSyncedAt] = useState(null);
     const [availableDates, setAvailableDates] = useState([]);
     const [isRevisionLoading, setIsRevisionLoading] = useState(false);
 
@@ -221,18 +313,65 @@ function ECSServices() {
         return new Date(d.getFullYear(), d.getMonth(), d.getDate()); // local midnight
     };
 
+    const handleSelectionSubmit = async (selection) => {
+        try {
+            // selection is mapping of serviceName -> boolean
+            const enabledServices = Object.keys(selection).filter(name => selection[name]);
+
+            console.log(`Submitting schedule for ${enabledServices.length} services in cluster ${clusterName}`);
+
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Finally close everything and reset
+            setIsScheduleModalOpen(false);
+            setIsServiceSelectionModalOpen(false);
+            setScheduleTarget(null);
+
+            // Reload EVERYTHING to reflect the new state
+            await Promise.all([
+                fetchServicesForCluster(),
+                fetchServiceSchedules(),
+                fetchScheduleForCluster()
+            ]);
+
+            setSuccessMessage(`Schedule applied successfully to ${enabledServices.length} services.`);
+
+        } catch (err) {
+            console.error('Bulk service schedule update failed:', err);
+            setError('Failed to apply bulk selection. Please try again.');
+        }
+    };
+
     const fetchInventoryDates = async () => {
         try {
             setIsRevisionLoading(true);
 
-            const response = await axiosClient.get("/ecs/inventory/dates", {
-                params: { clusterName }
-            });
+            // Dummy dates for testing purposes
+            const today = new Date();
+            const formatDate = (d) => d.toISOString().split('T')[0];
+            const dummyDates = [
+                formatDate(today),
+                formatDate(new Date(today.getTime() - 86400000)), // yesterday
+                formatDate(new Date(today.getTime() - 172800000)), // 2 days ago
+            ];
 
-            if (response.data?.success) {
-                setAvailableDates(response.data.data.available_dates || []);
-                setIsRevisionModalOpen(true);
+            try {
+                const response = await axiosClient.get("/ecs/inventory/dates", {
+                    params: { clusterName }
+                });
+
+                if (response.data?.success) {
+                    setAvailableDates(response.data.data.available_dates || dummyDates);
+                } else {
+                    setAvailableDates(dummyDates);
+                }
+            } catch (err) {
+                console.warn("Backend unavailable, using dummy dates.");
+                setAvailableDates(dummyDates);
             }
+
+            setIsRevisionModalOpen(true);
 
         } catch (err) {
             console.error("Failed to fetch inventory dates:", err);
@@ -369,6 +508,7 @@ function ECSServices() {
                     vcpu: service.vcpu || (index === 0 ? '4 vCPU' : index === 1 ? '2 vCPU' : '8 vCPU'),
                     memory: service.memory || (index === 0 ? '16 GB' : index === 1 ? '8 GB' : '32 GB'),
                     runningTasks: service.running_tasks_count || (index === 0 ? 12 : index === 1 ? 5 : 0),
+                    pendingTasks: service.pending_tasks_count || (index === 0 ? 2 : 0),
                     status: service.current_status || service.status,
                     isActive: (service.desired_value !== undefined ? service.desired_value : service.desired) > 0,
                     isScheduled: service.is_scheduled || service.isScheduled,
@@ -392,6 +532,7 @@ function ECSServices() {
                     vcpu: service.vcpu || (index === 0 ? '4 vCPU' : index === 1 ? '2 vCPU' : '8 vCPU'),
                     memory: service.memory || (index === 0 ? '16 GB' : index === 1 ? '8 GB' : '32 GB'),
                     runningTasks: service.running_tasks_count || (index === 0 ? 12 : index === 1 ? 5 : 0),
+                    pendingTasks: service.pending_tasks_count || (index === 0 ? 2 : 0),
                     status: service.current_status || service.status,
                     isActive: (service.desired_value !== undefined ? service.desired_value : service.desired) > 0,
                     isScheduled: service.is_scheduled || service.isScheduled,
@@ -551,6 +692,7 @@ function ECSServices() {
             stopped,
             total: services.length,
             totalRunningTasks: services.reduce((sum, s) => sum + (s.runningTasks || 0), 0),
+            totalPendingTasks: services.reduce((sum, s) => sum + (s.pendingTasks || 0), 0),
             schedules
         };
     }, [services]);
@@ -838,6 +980,7 @@ function ECSServices() {
 
             try {
                 if (scheduleTarget.scope === "cluster") {
+                    /* COMMENTED OUT FOR MANUAL VERIFICATION OF SELECTION MODAL
                     await axiosClient.post(
                         "/ecs/schedules/cluster",
                         { from_date, to_date, from_time, to_time },
@@ -847,6 +990,7 @@ function ECSServices() {
                     // ✅ Backend is truth
                     await fetchScheduleForCluster();
                     await fetchServiceSchedules();
+                    */
                 }
 
                 // ✅ Service Schedule Save
@@ -861,9 +1005,14 @@ function ECSServices() {
                     await fetchServiceSchedules();
                 }
 
-                // Close modal
-                setIsScheduleModalOpen(false);
-                setScheduleTarget(null);
+                // Close ScheduleModal and open selection modal for cluster scope
+                if (scheduleTarget.scope === 'cluster') {
+                    setIsScheduleModalOpen(false);
+                    setIsServiceSelectionModalOpen(true);
+                } else {
+                    setIsScheduleModalOpen(false);
+                    setScheduleTarget(null);
+                }
 
             } catch (err) {
                 console.error("❌ Schedule save failed:", err);
@@ -1001,6 +1150,19 @@ function ECSServices() {
             setServiceHistory([]);
         }
 
+        // Setup Mock Revisions
+        const mockRevisions = Array.from({ length: 25 }, (_, i) => {
+            const revNum = 45 - i;
+            return {
+                revision: revNum,
+                family: service.name,
+                image: `123456789012.dkr.ecr.us-east-1.amazonaws.com/${service.name}:v1.2.${revNum}`,
+                registered_at: new Date(Date.now() - (i * 86400000 * 2)).toISOString(),
+                is_current: i === 0
+            };
+        });
+        setServiceRevisions(mockRevisions);
+
         setIsEditModalOpen(true);
     };
 
@@ -1008,6 +1170,7 @@ function ECSServices() {
 
     const handleCloseEditModal = useCallback(() => {
         setIsEditModalOpen(false);
+        setModalTab('configure');
     }, []);
 
     const handleStartService = async (service) => {
@@ -1359,9 +1522,9 @@ function ECSServices() {
         { key: 'min', label: 'Min', widthPercent: 6, minWidth: 60 },
         { key: 'desired', label: 'Desired', widthPercent: 6, minWidth: 60 },
         { key: 'max', label: 'Max', widthPercent: 6, minWidth: 60 },
-        { key: 'vcpu', label: 'vCPU', widthPercent: 8, minWidth: 100 },
-        { key: 'memory', label: 'Memory', widthPercent: 8, minWidth: 100 },
-        { key: 'runningTasks', label: 'Running Tasks', widthPercent: 10, minWidth: 120 },
+        { key: 'vcpu', label: 'vCPU', sortable: true, widthPercent: 8, minWidth: 100 },
+        { key: 'memory', label: 'Memory', sortable: true, widthPercent: 8, minWidth: 100 },
+        { key: 'runningTasks', label: 'Tasks', subLabel: 'PEND | HLT | RUN', sortable: true, widthPercent: 12, minWidth: 160 },
         { key: 'currentStatus', label: 'Current Status', widthPercent: 12, minWidth: 140 },
         { key: 'desiredStatus', label: 'Enabled', widthPercent: 8, minWidth: 120 },
         { key: 'actions', label: 'Actions', widthPercent: 12, minWidth: 200 },
@@ -1629,6 +1792,17 @@ function ECSServices() {
 
                 <div className="svcs-stat-card">
                     <div className="svcs-stat-header">
+                        <span className="svcs-stat-title">Pending Tasks</span>
+                        <div className="svcs-stat-icon-wrapper svcs-cyan">
+                            <Clock size={22} />
+                        </div>
+                    </div>
+                    <h3 className="svcs-stat-value svcs-cyan-text">{stats.totalPendingTasks}</h3>
+                    <div className="svcs-stat-shimmer"></div>
+                </div>
+
+                <div className="svcs-stat-card">
+                    <div className="svcs-stat-header">
                         <span className="svcs-stat-title">Total Schedules</span>
                         <div className="svcs-stat-icon-wrapper svcs-purple">
                             <Calendar size={22} />
@@ -1733,9 +1907,18 @@ function ECSServices() {
 
                             case 'runningTasks':
                                 return (
-                                    <div className="svcs-running-tasks-count">
-                                        <Zap size={14} />
-                                        <span>{service.runningTasks}</span>
+                                    <div className="tasks-capsule">
+                                        <div className="tasks-pending" title="Pending Tasks">
+                                            {service.pendingTasks || 0}
+                                        </div>
+                                        <div className="tasks-divider"></div>
+                                        <div className="tasks-healthy" title="Healthy Tasks">
+                                            {service.healthyTasks || service.runningTasks}
+                                        </div>
+                                        <div className="tasks-divider"></div>
+                                        <div className="tasks-running" title="Running Tasks">
+                                            {service.runningTasks}
+                                        </div>
                                     </div>
                                 );
 
@@ -1844,180 +2027,412 @@ function ECSServices() {
                 )}
             </div>
 
-            {/* Edit Modal */}
+            {/* Edit Modal - Compact Tabbed Design */}
             {isEditModalOpen && (
-                <div className="modal-overlay">
-                    <div className="modal-minimal-content">
-                        <div className="modal-minimal-header">
-                            <span className="modal-sublabel">Configuration</span>
-                            <h2 className="service-minimal-title">{selectedService?.name}</h2>
-                            <button onClick={handleCloseEditModal} className="close-minimal-btn">
-                                <X size={24} />
+                <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && handleCloseEditModal()}>
+                    <div className="em-shell">
+
+                        {/* Ambient glow */}
+                        <div className="em-glow" />
+
+                        {/* Header */}
+                        <div className="em-header">
+                            <div className="em-service-info">
+                                <div className="em-service-icon">
+                                    <Server size={16} />
+                                </div>
+                                <div>
+                                    <p className="em-service-label">Service Configuration</p>
+                                    <p className="em-service-name">{selectedService?.name}</p>
+                                </div>
+                            </div>
+                            <button onClick={handleCloseEditModal} className="em-close-btn">
+                                <X size={18} />
                             </button>
                         </div>
 
-                        <div className="modal-scroll-content">
+                        {/* Tab Bar */}
+                        <div className="em-tab-bar">
+                            <button
+                                className={`em-tab ${modalTab === 'configure' ? 'em-tab-active' : ''}`}
+                                onClick={() => setModalTab('configure')}
+                            >
+                                <Settings size={13} />
+                                Configure
+                            </button>
+                            <button
+                                className={`em-tab ${modalTab === 'history' ? 'em-tab-active' : ''}`}
+                                onClick={() => setModalTab('history')}
+                            >
+                                <RotateCcw size={13} />
+                                History
+                                {serviceHistory.length > 0 && (
+                                    <span className="em-tab-badge">{serviceHistory.length}</span>
+                                )}
+                            </button>
+                            <button
+                                className={`em-tab ${modalTab === 'taskDef' ? 'em-tab-active' : ''}`}
+                                onClick={() => setModalTab('taskDef')}
+                            >
+                                <Layers size={13} />
+                                Task Definition
+                            </button>
+                            <div className={`em-tab-indicator em-tab-pos-${modalTab === 'configure' ? '1' : modalTab === 'history' ? '2' : '3'}`} />
+                        </div>
 
-                            <div className="modal-stepper-body">
-                                {/* Minimum */}
-                                <div className="stepper-row highlight-row margin-min-max">
-                                    <div className="edit-min-max-container">
-                                        <div className="stepper-label-group">
-                                            <span className="step-label">Minimum</span>
-                                            <span className="step-desc">Lowest scaling limit</span>
-                                        </div>
-                                        <div className="stepper-control">
-                                            <button className="step-btn" onClick={handleMinDecrement}>
-                                                <Minus size={18} />
-                                            </button>
-                                            <input
-                                                type="number"
-                                                className="step-input"
-                                                value={editForm.min}
-                                                onChange={(e) => handleMinChange(e.target.value)}
-                                                onFocus={(e) => e.target.select()}
-                                            />
+                        {/* Tab Content */}
+                        <div className="em-content">
+                            {modalTab === 'configure' && (
+                                <div className="em-configure-pane em-split">
 
-                                            <button className="step-btn" onClick={handleMinIncrement}>
-                                                <Plus size={18} />
-                                            </button>
+                                    {/* ══ LEFT PANEL: Scaling Limits ══ */}
+                                    <div className="em-panel em-panel-scaling">
+                                        <div className="em-panel-header">
+                                            <div className="em-section-dot em-dot-scaling" />
+                                            <div>
+                                                <span className="em-section-title">Scaling Limits</span>
+                                                <span className="em-section-desc">Floor &amp; ceiling</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="edit-min-max-container">
-                                        <div className="stepper-label-group">
-                                            <span className="step-label">Maximum</span>
-                                            <span className="step-desc">Highest scaling limit</span>
-                                        </div>
-                                        <div className="stepper-control">
-                                            <button className="step-btn" onClick={handleMaxDecrement}>
-                                                <Minus size={18} />
-                                            </button>
-                                            <input
-                                                type="number"
-                                                className="step-input"
-                                                value={editForm.max}
-                                                onChange={(e) => handleMaxChange(e.target.value)}
-                                                onFocus={(e) => e.target.select()}
-                                            />
-                                            <button className="step-btn" onClick={handleMaxIncrement}>
-                                                <Plus size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="modal-minimal-footer">
-                                        <button
-                                            onClick={handleMinMaxClick}
-                                            className={`btn-save-minimal ${!isFormValid ? 'disabled' : ''}`}
-                                            disabled={!isFormValid}
-                                        >
-                                            <span>Save Changes</span>
-                                            <ArrowRight size={18} />
-                                        </button>
 
-                                    </div>
-                                    {/* Show error ONLY if min > max */}
-                                    {editForm.min !== "" &&
-                                        editForm.max !== "" &&
-                                        Number(editForm.min) > Number(editForm.max) && (
-                                            <div className="stepper-error-message">
-                                                <AlertCircle size={16} />
-                                                <span>Minimum must be less than or equal to Maximum.</span>
+                                        <div className="em-panel-body">
+                                            {/* Min */}
+                                            <div className="em-vfield em-vfield-min">
+                                                <span className="em-fb-label">Minimum</span>
+                                                <div className="em-stepper em-stepper-scaling">
+                                                    <button className="em-step-btn em-step-scaling" onClick={handleMinDecrement}><Minus size={12} /></button>
+                                                    <input
+                                                        type="number"
+                                                        className="em-step-val em-panel-val"
+                                                        value={editForm.min}
+                                                        onChange={(e) => handleMinChange(e.target.value)}
+                                                        onFocus={(e) => e.target.select()}
+                                                    />
+                                                    <button className="em-step-btn em-step-scaling" onClick={handleMinIncrement}><Plus size={12} /></button>
+                                                </div>
+                                                <span className="em-fb-hint">Floor</span>
+                                            </div>
+
+                                            {/* Range connector */}
+                                            <div className="em-range-conn">
+                                                <div className="em-rc-line" />
+                                                <div className="em-rc-badge">
+                                                    <ArrowUpDown size={11} strokeWidth={3} />
+                                                </div>
+                                                <div className="em-rc-line" />
+                                            </div>
+
+                                            {/* Max */}
+                                            <div className="em-vfield em-vfield-max">
+                                                <span className="em-fb-label">Maximum</span>
+                                                <div className="em-stepper em-stepper-scaling">
+                                                    <button className="em-step-btn em-step-scaling" onClick={handleMaxDecrement}><Minus size={12} /></button>
+                                                    <input
+                                                        type="number"
+                                                        className="em-step-val em-panel-val"
+                                                        value={editForm.max}
+                                                        onChange={(e) => handleMaxChange(e.target.value)}
+                                                        onFocus={(e) => e.target.select()}
+                                                    />
+                                                    <button className="em-step-btn em-step-scaling" onClick={handleMaxIncrement}><Plus size={12} /></button>
+                                                </div>
+                                                <span className="em-fb-hint">Ceiling</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Validation error */}
+                                        {editForm.min !== "" && editForm.max !== "" && Number(editForm.min) > Number(editForm.max) && (
+                                            <div className="em-error em-error-sm">
+                                                <AlertCircle size={12} />
+                                                <span>Min cannot exceed Max</span>
                                             </div>
                                         )}
 
-                                </div>
-                            </div>
-
-                            {/* Desired */}
-                            <div className="stepper-row highlight-row">
-                                <div className="edit-min-max-container">
-                                    <div className="stepper-label-group">
-                                        <span className="step-label">Desired</span>
-                                        <span className="step-desc">Target task count</span>
-                                    </div>
-                                    <div className="stepper-control">
-                                        <button className="step-btn" onClick={handleDesiredDecrement}>
-                                            <Minus size={18} />
-                                        </button>
-                                        <input
-                                            type="number"
-                                            className="step-input"
-                                            value={editForm.desired}
-                                            onChange={(e) => handleDesiredChange(e.target.value)}
-                                            onFocus={(e) => e.target.select()}
-                                        />
-
-                                        <button className="step-btn" onClick={handleDesiredIncrement}>
-                                            <Plus size={18} />
+                                        <button
+                                            onClick={handleMinMaxClick}
+                                            className={`em-panel-save em-panel-save-scaling ${!isFormValid ? 'em-disabled' : ''}`}
+                                            disabled={!isFormValid}
+                                        >
+                                            Apply <ArrowRight size={13} />
                                         </button>
                                     </div>
-                                </div>
-                                <div className="modal-minimal-footer">
-                                    <button
-                                        onClick={handleDesiredSaveWithConfirm}
-                                        className="btn-save-minimal"
-                                    >
-                                        <span>Save Changes</span>
-                                        <ArrowRight size={18} />
-                                    </button>
+
+                                    {/* ══ VERTICAL DIVIDER ══ */}
+                                    <div className="em-vert-div">
+                                        <div className="em-vd-rail" />
+                                        <div className="em-vd-chip">or</div>
+                                        <div className="em-vd-rail" />
+                                    </div>
+
+                                    {/* ══ RIGHT PANEL: Desired Count ══ */}
+                                    <div className="em-panel em-panel-desired">
+                                        <div className="em-panel-header">
+                                            <div className="em-section-dot em-dot-desired" />
+                                            <div>
+                                                <span className="em-section-title">Desired Count</span>
+                                                <span className="em-section-desc">Target tasks</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="em-panel-body">
+                                            <div className="em-vfield em-vfield-desired">
+                                                <span className="em-fb-label">Target Count</span>
+                                                <div className="em-stepper em-stepper-desired">
+                                                    <button className="em-step-btn em-step-tab-desired" onClick={handleDesiredDecrement}><Minus size={12} /></button>
+                                                    <input
+                                                        type="number"
+                                                        className="em-step-val em-panel-val"
+                                                        value={editForm.desired}
+                                                        onChange={(e) => handleDesiredChange(e.target.value)}
+                                                        onFocus={(e) => e.target.select()}
+                                                    />
+                                                    <button className="em-step-btn em-step-tab-desired" onClick={handleDesiredIncrement}><Plus size={12} /></button>
+                                                </div>
+                                                <span className="em-fb-hint">Tasks</span>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={handleDesiredSaveWithConfirm}
+                                            className="em-panel-save em-panel-save-desired"
+                                        >
+                                            Apply <ArrowRight size={13} />
+                                        </button>
+                                    </div>
 
                                 </div>
-                            </div>
+                            )}
 
-                            {/* History Div */}
-                            <div className="history-card">
-                                <div className="history-header">
-                                    Previous Updates
-                                </div>
-
-                                <div className="history-table-wrapper">
-                                    <table className="history-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Min</th>
-                                                <th>Desired</th>
-                                                <th>Max</th>
-                                                <th>Modified At</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {serviceHistory.map(item => (
-                                                <tr key={item.id}>
-                                                    <td>{item.min_value}</td>
-                                                    <td>{item.desired_value}</td>
-                                                    <td>{item.max_value}</td>
-                                                    <td>{new Date(item.changed_at).toLocaleString()}</td>
-                                                </tr>
+                            {modalTab === 'history' && (
+                                <div className="em-history-pane">
+                                    {(serviceHistory.length === 0 ? [
+                                        {
+                                            id: 'mock-1',
+                                            changed_at: new Date(Date.now() - 3600000).toISOString(),
+                                            min_value: 2,
+                                            desired_value: 4,
+                                            max_value: 8
+                                        },
+                                        {
+                                            id: 'mock-2',
+                                            changed_at: new Date(Date.now() - 86400000).toISOString(),
+                                            min_value: 1,
+                                            desired_value: 2,
+                                            max_value: 5
+                                        },
+                                        {
+                                            id: 'mock-3',
+                                            changed_at: new Date(Date.now() - 172800000).toISOString(),
+                                            min_value: 1,
+                                            desired_value: 1,
+                                            max_value: 4
+                                        }
+                                    ] : serviceHistory).length === 0 ? (
+                                        <div className="em-history-empty-wrap">
+                                            <div className="em-history-empty">
+                                                <RotateCcw size={36} className="em-empty-icon" />
+                                                <p>No configuration history yet</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="em-timeline">
+                                            {(serviceHistory.length === 0 ? [
+                                                {
+                                                    id: 'mock-1',
+                                                    changed_at: new Date(Date.now() - 3600000).toISOString(),
+                                                    min_value: 2,
+                                                    desired_value: 4,
+                                                    max_value: 8
+                                                },
+                                                {
+                                                    id: 'mock-2',
+                                                    changed_at: new Date(Date.now() - 86400000).toISOString(),
+                                                    min_value: 1,
+                                                    desired_value: 2,
+                                                    max_value: 5
+                                                },
+                                                {
+                                                    id: 'mock-3',
+                                                    changed_at: new Date(Date.now() - 172800000).toISOString(),
+                                                    min_value: 1,
+                                                    desired_value: 1,
+                                                    max_value: 4
+                                                }
+                                            ] : serviceHistory).map((item, idx, arr) => (
+                                                <div key={item.id} className="em-timeline-item">
+                                                    <div className="em-timeline-dot" />
+                                                    {idx < arr.length - 1 && <div className="em-timeline-line" />}
+                                                    <div className="em-timeline-card">
+                                                        <div className="em-timeline-meta">
+                                                            <span className="em-timeline-time">
+                                                                {new Date(item.changed_at).toLocaleString('en-GB', {
+                                                                    day: '2-digit', month: 'short', year: 'numeric',
+                                                                    hour: '2-digit', minute: '2-digit'
+                                                                })}
+                                                            </span>
+                                                            {idx === 0 && item.id !== 'mock-1' && (
+                                                                <span className="em-timeline-latest">Latest</span>
+                                                            )}
+                                                            {item.id.toString().startsWith('mock') && (
+                                                                <span className="em-timeline-preview">Preview</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="em-timeline-values">
+                                                            <div className="em-tv-chip em-tv-min">
+                                                                <div className="em-tv-head">
+                                                                    <ArrowDown size={10} />
+                                                                    <span className="em-tv-key">Min</span>
+                                                                </div>
+                                                                <span className="em-tv-val">{item.min_value}</span>
+                                                            </div>
+                                                            <div className="em-tv-chip em-tv-desired">
+                                                                <div className="em-tv-head">
+                                                                    <Target size={10} />
+                                                                    <span className="em-tv-key">Desired</span>
+                                                                </div>
+                                                                <span className="em-tv-val">{item.desired_value}</span>
+                                                            </div>
+                                                            <div className="em-tv-chip em-tv-max">
+                                                                <div className="em-tv-head">
+                                                                    <ArrowUp size={10} />
+                                                                    <span className="em-tv-key">Max</span>
+                                                                </div>
+                                                                <span className="em-tv-val">{item.max_value}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             ))}
-                                        </tbody>
-                                    </table>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                            )}
+
+                            {modalTab === 'taskDef' && (
+                                <div className="em-revision-pane">
+                                    {/* CURRENT ACTIVE REVISION HERO */}
+                                    <div className="em-rev-section">
+                                        <div className="em-rev-section-label">Current Revision</div>
+                                        {serviceRevisions.slice(0, 1).map(rev => (
+                                            <div key={rev.revision} className="em-rev-hero">
+                                                <div className="em-rev-hero-header">
+                                                    <div className="em-rev-hero-title">
+                                                        <span className="em-family">{rev.family}</span>
+                                                        <span className="em-revision-num"> : {rev.revision}</span>
+                                                    </div>
+                                                    <span className="em-status-pill em-pill-active">Active</span>
+                                                </div>
+                                                <div className="em-rev-hero-body">
+                                                    <div className="em-rev-stat">
+                                                        <span className="em-rev-stat-label">Image</span>
+                                                        <span className="em-rev-stat-value em-code">{rev.image}</span>
+                                                    </div>
+                                                    <div className="em-rev-stat">
+                                                        <span className="em-rev-stat-label">Registered At</span>
+                                                        <span className="em-rev-stat-value">
+                                                            {new Date(rev.registered_at).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* RECENT REVISIONS (Next 5) */}
+                                    <div className="em-rev-section">
+                                        <div className="em-rev-section-label">Recent Revisions</div>
+                                        <div className="em-rev-list">
+                                            {serviceRevisions.slice(1, 6).map(rev => (
+                                                <div key={rev.revision} className="em-rev-card">
+                                                    <div className="em-rev-card-left">
+                                                        <span className="em-rev-card-num">{rev.revision}</span>
+                                                        <div className="em-rev-card-info">
+                                                            <span className="em-rev-card-image">{rev.image.split(':').pop()}</span>
+                                                            <span className="em-rev-card-date">
+                                                                {new Date(rev.registered_at).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        className="em-rev-card-action"
+                                                        onClick={() => {
+                                                            setConfirmModal({
+                                                                open: true,
+                                                                message: `Deploy revision ${rev.revision} to ${rev.family}?`,
+                                                                onConfirm: () => {
+                                                                    setSuccessMessage(`Deployment initiated: ${rev.family}:${rev.revision}`);
+                                                                    setIsEditModalOpen(false);
+                                                                    closeConfirmModal();
+                                                                }
+                                                            });
+                                                        }}
+                                                    >
+                                                        Deploy <ArrowRight size={12} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* ARCHIVE GRID (Older) */}
+                                    <div className="em-rev-section">
+                                        <div className="em-rev-section-label">Archived Revisions</div>
+                                        <div className="em-rev-grid">
+                                            {serviceRevisions.slice(6).map(rev => (
+                                                <div key={rev.revision} className="em-rev-archive-item">
+                                                    <span className="em-rev-archive-num">{rev.revision}</span>
+                                                    {revisionDetails[rev.revision] ? (
+                                                        <span className="em-rev-archive-date">{revisionDetails[rev.revision]}</span>
+                                                    ) : (
+                                                        <button
+                                                            className="em-rev-archive-btn"
+                                                            onClick={async () => {
+                                                                // Simulated API fetch
+                                                                setFetchingRevisionId(rev.revision);
+                                                                await new Promise(r => setTimeout(r, 800));
+                                                                setRevisionDetails(prev => ({
+                                                                    ...prev,
+                                                                    [rev.revision]: new Date(rev.registered_at).toLocaleDateString()
+                                                                }));
+                                                                setFetchingRevisionId(null);
+                                                            }}
+                                                        >
+                                                            {fetchingRevisionId === rev.revision ? <RefreshCw size={10} className="spinning" /> : 'Check Date'}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
-            )
-            }
+            )}
 
             {/* Schedule Modal */}
 
 
             <ScheduleModal
                 isOpen={isScheduleModalOpen}
-                onClose={() => {
-                    setIsScheduleModalOpen(false);
-                    setScheduleTarget(null);
-                }}
+                onClose={() => setIsScheduleModalOpen(false)}
                 target={scheduleTarget}
                 initialRange={
                     scheduleTarget
-                        ? scheduleTarget.scope === 'cluster'
-                            ? scheduledRange || null  // <-- use fetched backend state
-                            : serviceSchedules[scheduleTarget.identifiers?.serviceName] || null
+                        ? clusterSchedules[clusterName]
                         : null
                 }
                 onConfirm={handleConfirmSchedule}
                 onRemove={handleRemoveScheduleWithConfirm}
+            />
+
+            <ServiceSelectionModal
+                isOpen={isServiceSelectionModalOpen}
+                onClose={() => setIsServiceSelectionModalOpen(false)}
+                clusterName={clusterName}
+                services={services}
+                onSubmit={handleSelectionSubmit}
             />
 
 
@@ -2043,14 +2458,14 @@ function ECSServices() {
                 onCancel={closeConfirmModal}
             />
 
-            {/* <RevisionCalendarModal
+            <RevisionCalendarModal
                 isOpen={isRevisionModalOpen}
                 availableDates={availableDates}
                 onClose={() => setIsRevisionModalOpen(false)}
                 onSubmit={(date) => {
                     applyRevisionForDate(date);
                 }}
-            /> */}
+            />
 
 
 

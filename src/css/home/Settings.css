@@ -11,7 +11,7 @@
 /* ============================================
    PAGE HEADER WITH EMBEDDED TABS
    ============================================ */
-.page-header-modern {
+.page-header-modern-set {
     margin-bottom: 2rem;
     padding: 2rem 2.5rem 0;
     background: linear-gradient(135deg, var(--surface-glass) 0%, var(--surface-elevated) 100%);
