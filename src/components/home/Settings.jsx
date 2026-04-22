@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import '../../css/home/Settings.css';
 import Logs from './Logs';
+import AccountTab from './AccountTab';
 
 const Settings = () => {
     const [activeTab, setActiveTab] = useState('schedulers');
@@ -63,7 +64,7 @@ const Settings = () => {
     const tabs = [
         { id: 'schedulers', label: 'Schedulers', icon: Calendar },
         { id: 'logs', label: 'Logs', icon: ScrollText },
-        { id: 'account', label: 'Account', icon: User, disabled: true },
+        { id: 'account', label: 'Account', icon: User },
     ];
 
     return (
@@ -217,11 +218,10 @@ const Settings = () => {
                     </div>
                 )}
 
-                {/* ACCOUNT TAB (disabled, won't render normally) */}
+                {/* ACCOUNT TAB */}
                 {activeTab === 'account' && (
-                    <div className="placeholder-view">
-                        <h2>Account Settings</h2>
-                        <p>This module is currently in development.</p>
+                    <div className="account-view">
+                        <AccountTab />
                     </div>
                 )}
             </div>
