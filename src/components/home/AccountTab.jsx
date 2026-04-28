@@ -1,29 +1,122 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import {
     Users, UserPlus, Trash2,
-    ShieldCheck, ShieldAlert, Eye, Clock,
+    ShieldCheck, ShieldAlert, Eye, Clock, Wrench, BarChart3,
     CheckCircle2, AlertCircle, X, Search,
     Loader2, Mail, UserCircle2,
     Pencil, Shield,
 } from 'lucide-react';
 import '../../css/home/AccountTab.css';
 
-/* ─── Role config ─────────────────────────────────────────── */
-const ROLES = [
-    { value: 'admin',     label: 'Admin',     icon: ShieldAlert, color: '#F87171', bg: 'rgba(248,113,113,0.13)', border: 'rgba(248,113,113,0.35)', desc: 'Full system access'   },
-    { value: 'editor',    label: 'Editor',    icon: ShieldCheck, color: '#60A5FA', bg: 'rgba(96,165,250,0.13)',  border: 'rgba(96,165,250,0.35)',  desc: 'Read + write access' },
-    { value: 'viewer',    label: 'Viewer',    icon: Eye,         color: '#34D399', bg: 'rgba(52,211,153,0.13)', border: 'rgba(52,211,153,0.35)', desc: 'Read-only access'    },
-    { value: 'scheduler', label: 'Scheduler', icon: Clock,       color: '#FBBF24', bg: 'rgba(251,191,36,0.13)', border: 'rgba(251,191,36,0.35)', desc: 'Scheduler access only' },
-];
-const ROLE_MAP = Object.fromEntries(ROLES.map(r => [r.value, r]));
+/* ─── Theme-aware portal — syncs data-theme from .layout-container ── */
+function useTheme() {
+    const [theme, setTheme] = useState(() => {
+        return document.querySelector('.layout-container')?.dataset?.theme || 'light';
+    });
+    useEffect(() => {
+        const el = document.querySelector('.layout-container');
+        if (!el) return;
+        const obs = new MutationObserver(() => {
+            setTheme(el.dataset?.theme || 'light');
+        });
+        obs.observe(el, { attributes: true, attributeFilter: ['data-theme'] });
+        return () => obs.disconnect();
+    }, []);
+    return theme;
+}
+
+function ThemePortal({ children }) {
+    const theme = useTheme();
+    return ReactDOM.createPortal(
+        <div className="layout-container acc-portal-root" data-theme={theme}>
+            {children}
+        </div>,
+        document.body
+    );
+}
+
+/* ─── Role Categories with Colors & Icons ─────────────────── */
+const ROLE_CATEGORIES = {
+    admin: {
+        icon: ShieldAlert,
+        color: '#F87171',
+        bg: 'rgba(248,113,113,0.13)',
+        border: 'rgba(248,113,113,0.35)',
+        desc: 'Administrative access',
+    },
+    manager: {
+        icon: Wrench,
+        color: '#60A5FA',
+        bg: 'rgba(96,165,250,0.13)',
+        border: 'rgba(96,165,250,0.35)',
+        desc: 'Resource management access',
+    },
+    analytics: {
+        icon: BarChart3,
+        color: '#A78BFA',
+        bg: 'rgba(167,139,250,0.13)',
+        border: 'rgba(167,139,250,0.35)',
+        desc: 'Analytics and reporting access',
+    },
+    read_only: {
+        icon: Eye,
+        color: '#34D399',
+        bg: 'rgba(52,211,153,0.13)',
+        border: 'rgba(52,211,153,0.35)',
+        desc: 'Read-only access',
+    },
+};
+
+/* ─── Categorize role by name ────────────────────────────── */
+function getCategoryForRole(roleName) {
+    const name = (roleName || '').toLowerCase();
+    if (name.includes('admin')) return 'admin';
+    if (name.includes('manager')) return 'manager';
+    if (name.includes('analytics')) return 'analytics';
+    if (name.includes('read') || name.includes('viewer') || name.includes('readonly')) return 'read_only';
+    return 'manager'; // default fallback
+}
+
+/* ─── Get role display config ────────────────────────────── */
+function getRoleConfig(roleName) {
+    const category = getCategoryForRole(roleName);
+    const config = ROLE_CATEGORIES[category];
+    return {
+        ...config,
+        label: formatRoleName(roleName),
+        value: roleName,
+    };
+}
+
+/* ─── Format role name for display ───────────────────────── */
+function formatRoleName(roleName) {
+    return (roleName || '')
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
 
 /* ─── Mock users (roles is now an array) ─────────────────── */
 const MOCK_USERS = [
-    { id: 1, name: 'Darsh Shah',     email: 'darsh@company.com',       roles: ['admin'],              lastSignedIn: '2026-04-19T06:00:00Z' },
-    { id: 2, name: 'Priya Mehta',    email: 'priya.mehta@company.com', roles: ['editor', 'scheduler'],lastSignedIn: '2026-04-18T14:22:00Z' },
-    { id: 3, name: 'Rahul Joshi',    email: 'rahul.j@company.com',     roles: ['viewer'],             lastSignedIn: '2026-04-17T09:15:00Z' },
-    { id: 4, name: 'Ananya Kapoor',  email: 'ananya@company.com',      roles: ['scheduler'],          lastSignedIn: '2026-04-15T16:45:00Z' },
-    { id: 5, name: 'Siddharth Nair', email: 'sid.nair@company.com',    roles: ['editor'],             lastSignedIn: '2026-04-12T11:30:00Z' },
+    { id: 1, name: 'Darsh Shah', email: 'darsh@company.com', roles: ['super_admin'], lastSignedIn: '2026-04-19T06:00:00Z' },
+    { id: 2, name: 'Priya Mehta', email: 'priya.mehta@company.com', roles: ['ec2_manager', 'ecs_manager'], lastSignedIn: '2026-04-18T14:22:00Z' },
+    { id: 3, name: 'Rahul Joshi', email: 'rahul.j@company.com', roles: ['read_only'], lastSignedIn: '2026-04-17T09:15:00Z' },
+    { id: 4, name: 'Ananya Kapoor', email: 'ananya@company.com', roles: ['analytics_viewer'], lastSignedIn: '2026-04-15T16:45:00Z' },
+    { id: 5, name: 'Siddharth Nair', email: 'sid.nair@company.com', roles: ['rds_manager'], lastSignedIn: '2026-04-12T11:30:00Z' },
+];
+
+/* ─── Available Roles (from backend) ──────────────────────── */
+const AVAILABLE_ROLES = [
+    { role_id: 1, role_name: 'super_admin', description: 'Full system access with all permissions' },
+    { role_id: 9, role_name: 'admin', description: 'Full access to all modules except admin-specific operations' },
+    { role_id: 3, role_name: 'ec2_manager', description: 'Full EC2 operations and analytics access' },
+    { role_id: 4, role_name: 'ecs_manager', description: 'Full ECS operations and analytics access' },
+    { role_id: 5, role_name: 'eks_manager', description: 'Full EKS operations and analytics access' },
+    { role_id: 6, role_name: 'rds_manager', description: 'Full RDS operations and analytics access' },
+    { role_id: 7, role_name: 'asg_manager', description: 'Full ASG operations and analytics access' },
+    { role_id: 8, role_name: 'analytics_viewer', description: 'Analytics read-only access' },
+    { role_id: 2, role_name: 'read_only', description: 'Read-only access to all modules' },
 ];
 
 /* ─── Helpers ─────────────────────────────────────────────── */
@@ -49,18 +142,29 @@ function avatarGrad(id) {
     return `linear-gradient(135deg, ${a}, ${b})`;
 }
 
-/* ─── Role Badge ──────────────────────────────────────────── */
-function RoleBadge({ roleValue }) {
-    const r = ROLE_MAP[roleValue];
-    if (!r) return null;
-    const Icon = r.icon;
+/* ─── Role Badge ──────────────────────────────────── */
+function RoleBadge({ roleValue, onRemove }) {
+    if (!roleValue) return null;
+    const config = getRoleConfig(roleValue);
+    const Icon = config.icon;
     return (
         <span
-            className="acc-role-badge"
-            style={{ color: r.color, background: r.bg, borderColor: r.border }}
+            className={`acc-role-badge ${onRemove ? 'removable' : ''}`}
+            style={{ color: config.color, background: config.bg, borderColor: config.border }}
         >
-            <Icon size={10} />
-            {r.label}
+            <Icon size={11} />
+            {config.label}
+            {onRemove && (
+                <button
+                    type="button"
+                    className="acc-badge-remove"
+                    onClick={e => { e.stopPropagation(); onRemove(roleValue); }}
+                    aria-label={`Remove ${config.label}`}
+                    style={{ '--badge-color': config.color }}
+                >
+                    <X size={9} />
+                </button>
+            )}
         </span>
     );
 }
@@ -93,93 +197,115 @@ function AssignRolesModal({ user, onClose, onSave }) {
         [...selected].every(v => (user.roles || []).includes(v));
 
     return (
-        <div className="acc-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-            <div className="acc-roles-modal">
-                {/* Modal header */}
-                <div className="acc-roles-modal-hd">
-                    <div className="acc-roles-modal-hd-left">
-                        <div className="acc-roles-avatar" style={{ background: avatarGrad(user.id) }}>
-                            {initials(user.name)}
+        <ThemePortal>
+            <div className="acc-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+                <div className="acc-roles-modal">
+                    {/* Modal header */}
+                    <div className="acc-roles-modal-hd">
+                        <div className="acc-roles-modal-hd-left">
+                            <div className="acc-roles-avatar" style={{ background: avatarGrad(user.id) }}>
+                                {initials(user.name)}
+                            </div>
+                            <div>
+                                <h3>Manage Roles</h3>
+                                <p>{user.name} · {user.email}</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3>Manage Roles</h3>
-                            <p>{user.name} · {user.email}</p>
-                        </div>
-                    </div>
-                    <button className="acc-modal-x" onClick={onClose}><X size={16} /></button>
-                </div>
-
-                {/* Instructions strip */}
-                <div className="acc-roles-hint">
-                    <Shield size={13} />
-                    <span>Select one or more roles to assign. Click a role to toggle it.</span>
-                </div>
-
-                {/* Role cards grid */}
-                <div className="acc-roles-modal-body">
-                    <div className="acc-multi-role-grid">
-                        {ROLES.map(r => {
-                            const RIcon = r.icon;
-                            const sel = selected.has(r.value);
-                            return (
-                                <button
-                                    key={r.value}
-                                    type="button"
-                                    className={`acc-mrcard ${sel ? 'sel' : ''}`}
-                                    style={sel ? { borderColor: r.border, background: r.bg } : {}}
-                                    onClick={() => toggle(r.value)}
-                                >
-                                    {/* Check indicator */}
-                                    <div className={`acc-mrcard-check ${sel ? 'checked' : ''}`}
-                                        style={sel ? { background: r.color, borderColor: r.color } : {}}>
-                                        {sel && <CheckCircle2 size={11} color="white" />}
-                                    </div>
-
-                                    {/* Icon */}
-                                    <div className="acc-mrcard-icon-wrap"
-                                        style={sel ? { background: r.bg, borderColor: r.border } : {}}>
-                                        <RIcon size={22} style={{ color: sel ? r.color : 'var(--text-muted)' }} />
-                                    </div>
-
-                                    {/* Text */}
-                                    <span className="acc-mrcard-label"
-                                        style={sel ? { color: r.color } : {}}>
-                                        {r.label}
-                                    </span>
-                                    <span className="acc-mrcard-desc">{r.desc}</span>
-                                </button>
-                            );
-                        })}
+                        <button className="acc-modal-x" onClick={onClose}><X size={16} /></button>
                     </div>
 
-                    {/* Selected summary */}
-                    <div className="acc-roles-summary">
-                        <span className="acc-roles-summary-label">
+                    {/* Instructions strip */}
+                    <div className="acc-roles-hint">
+                        <Shield size={13} />
+                        <span>Select one or more roles to assign. Click a role to toggle it.</span>
+                    </div>
+
+                    {/* Role cards grid */}
+                    <div className="acc-roles-modal-body">
+                        {/* Scrollable card area — capped height, scrolls internally */}
+                        <div className="acc-roles-cards-scroll">
+                            <div className="acc-multi-role-grid">
+                                {AVAILABLE_ROLES.map(role => {
+                                    const config = getRoleConfig(role.role_name);
+                                    const RIcon = config.icon;
+                                    const sel = selected.has(role.role_name);
+                                    return (
+                                        <button
+                                            key={role.role_id}
+                                            type="button"
+                                            className={`acc-mrcard ${sel ? 'sel' : ''}`}
+                                            style={sel ? { borderColor: config.border, background: config.bg } : {}}
+                                            onClick={() => toggle(role.role_name)}
+                                        >
+                                            {/* Check indicator */}
+                                            <div className={`acc-mrcard-check ${sel ? 'checked' : ''}`}
+                                                style={sel ? { background: config.color, borderColor: config.color } : {}}>
+                                                {sel && <CheckCircle2 size={11} color="white" />}
+                                            </div>
+
+                                            {/* Icon */}
+                                            <div className="acc-mrcard-icon-wrap"
+                                                style={sel ? { background: config.bg, borderColor: config.border } : {}}>
+                                                <RIcon size={22} style={{ color: sel ? config.color : 'var(--text-muted)' }} />
+                                            </div>
+
+                                            {/* Text */}
+                                            <span className="acc-mrcard-label"
+                                                style={sel ? { color: config.color } : {}}>
+                                                {config.label}
+                                            </span>
+                                            <span className="acc-mrcard-desc">{role.description}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Selected summary — NOT inside the scroll wrapper, expands freely */}
+                        <div className="acc-roles-summary">
+                            {/* Left — label + count */}
+                            <div className="acc-roles-summary-left">
+                                <span className="acc-roles-summary-label">Roles</span>
+                                {selected.size > 0 && (
+                                    <span className="acc-roles-summary-count">{selected.size}</span>
+                                )}
+                            </div>
+
+                            {/* Thin divider */}
+                            <div className="acc-roles-summary-divider" />
+
+                            {/* Right — 4-per-row badge grid */}
                             {selected.size === 0
-                                ? 'No roles selected — select at least one'
-                                : `${selected.size} role${selected.size > 1 ? 's' : ''} selected:`}
-                        </span>
-                        <div className="acc-roles-summary-pills">
-                            {[...selected].map(v => <RoleBadge key={v} roleValue={v} />)}
+                                ? <span className="acc-roles-summary-empty">None selected — pick at least one</span>
+                                : <div className="acc-roles-summary-grid">
+                                    {[...selected].map(v => (
+                                        <RoleBadge
+                                            key={v}
+                                            roleValue={v}
+                                            onRemove={() => toggle(v)}
+                                        />
+                                    ))}
+                                </div>
+                            }
                         </div>
                     </div>
-                </div>
 
-                {/* Footer */}
-                <div className="acc-modal-ft">
-                    <button type="button" className="acc-btn-ghost" onClick={onClose}>Cancel</button>
-                    <button
-                        type="button"
-                        className="acc-btn-primary"
-                        onClick={handleSave}
-                        disabled={saving || selected.size === 0 || noChange}
-                    >
-                        {saving ? <Loader2 size={15} className="acc-spin" /> : <CheckCircle2 size={15} />}
-                        {saving ? 'Saving…' : 'Apply Roles'}
-                    </button>
+                    {/* Footer */}
+                    <div className="acc-modal-ft">
+                        <button type="button" className="acc-btn-ghost" onClick={onClose}>Cancel</button>
+                        <button
+                            type="button"
+                            className="acc-btn-primary"
+                            onClick={handleSave}
+                            disabled={saving || selected.size === 0 || noChange}
+                        >
+                            {saving ? <Loader2 size={15} className="acc-spin" /> : <CheckCircle2 size={15} />}
+                            {saving ? 'Saving…' : 'Apply Roles'}
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </ThemePortal>
     );
 }
 
@@ -219,16 +345,16 @@ function RemoveButton({ user, onConfirm, loading }) {
 
 /* ─── Add Member Modal ────────────────────────────────────── */
 function AddUserModal({ onClose, onAdded }) {
-    const [form, setForm]     = useState({ firstName: '', lastName: '', email: '', roles: new Set(['viewer']) });
+    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', roles: new Set(['read_only']) });
     const [errors, setErrors] = useState({});
-    const [busy, setBusy]     = useState(false);
+    const [busy, setBusy] = useState(false);
     const [apiErr, setApiErr] = useState('');
 
     const validate = () => {
         const e = {};
         if (!form.firstName.trim()) e.firstName = 'Required';
-        if (!form.lastName.trim())  e.lastName  = 'Required';
-        if (!form.email.trim())     e.email = 'Required';
+        if (!form.lastName.trim()) e.lastName = 'Required';
+        if (!form.email.trim()) e.email = 'Required';
         else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email';
         return e;
     };
@@ -267,93 +393,96 @@ function AddUserModal({ onClose, onAdded }) {
     const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErrors(p => ({ ...p, [k]: undefined })); };
 
     return (
-        <div className="acc-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-            <div className="acc-modal">
-                <div className="acc-modal-hd">
-                    <div className="acc-modal-hd-icon"><UserPlus size={20} /></div>
-                    <div>
-                        <h3>Add New Member</h3>
-                        <p>Invite someone to your workspace</p>
+        <ThemePortal>
+            <div className="acc-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+                <div className="acc-modal">
+                    <div className="acc-modal-hd">
+                        <div className="acc-modal-hd-icon"><UserPlus size={20} /></div>
+                        <div>
+                            <h3>Add New Member</h3>
+                            <p>Invite someone to your workspace</p>
+                        </div>
+                        <button className="acc-modal-x" onClick={onClose}><X size={16} /></button>
                     </div>
-                    <button className="acc-modal-x" onClick={onClose}><X size={16} /></button>
+
+                    <form onSubmit={handleSubmit} noValidate>
+                        <div className="acc-modal-body">
+                            <div className="acc-field-row">
+                                <div className={`acc-field ${errors.firstName ? 'err' : ''}`}>
+                                    <label htmlFor="af-fn">First Name</label>
+                                    <input id="af-fn" type="text" placeholder="e.g. Darsh" value={form.firstName} onChange={e => set('firstName', e.target.value)} />
+                                    {errors.firstName && <span className="acc-ferr"><AlertCircle size={11} />{errors.firstName}</span>}
+                                </div>
+                                <div className={`acc-field ${errors.lastName ? 'err' : ''}`}>
+                                    <label htmlFor="af-ln">Last Name</label>
+                                    <input id="af-ln" type="text" placeholder="e.g. Shah" value={form.lastName} onChange={e => set('lastName', e.target.value)} />
+                                    {errors.lastName && <span className="acc-ferr"><AlertCircle size={11} />{errors.lastName}</span>}
+                                </div>
+                            </div>
+
+                            <div className={`acc-field ${errors.email ? 'err' : ''}`}>
+                                <label htmlFor="af-em">Email Address</label>
+                                <div className="acc-input-icon">
+                                    <Mail size={14} className="acc-inp-ico" />
+                                    <input id="af-em" type="email" placeholder="user@company.com" value={form.email} onChange={e => set('email', e.target.value)} />
+                                </div>
+                                {errors.email && <span className="acc-ferr"><AlertCircle size={11} />{errors.email}</span>}
+                            </div>
+
+                            <div className="acc-field">
+                                <label>Assign Roles <span className="acc-field-sub">(select one or more)</span></label>
+                                <div className="acc-role-grid">
+                                    {AVAILABLE_ROLES.map(role => {
+                                        const config = getRoleConfig(role.role_name);
+                                        const RIcon = config.icon;
+                                        const sel = form.roles.has(role.role_name);
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={role.role_id}
+                                                className={`acc-rcard ${sel ? 'sel' : ''}`}
+                                                style={sel ? { borderColor: config.border, background: config.bg } : {}}
+                                                onClick={() => toggleRole(role.role_name)}
+                                            >
+                                                <span className="acc-rcard-ico" style={{ color: sel ? config.color : undefined }}><RIcon size={18} /></span>
+                                                <span className="acc-rcard-lbl" style={{ color: sel ? config.color : undefined }}>{config.label}</span>
+                                                <span className="acc-rcard-desc">{role.description}</span>
+                                                {sel && <CheckCircle2 size={11} className="acc-rcard-chk" style={{ color: config.color }} />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {apiErr && (
+                                <div className="acc-api-err">
+                                    <AlertCircle size={13} /><span>{apiErr}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="acc-modal-ft">
+                            <button type="button" className="acc-btn-ghost" onClick={onClose}>Cancel</button>
+                            <button type="submit" className="acc-btn-primary" disabled={busy}>
+                                {busy ? <Loader2 size={15} className="acc-spin" /> : <UserPlus size={15} />}
+                                {busy ? 'Adding…' : 'Add Member'}
+                            </button>
+                        </div>
+                    </form>
                 </div>
-
-                <form onSubmit={handleSubmit} noValidate>
-                    <div className="acc-modal-body">
-                        <div className="acc-field-row">
-                            <div className={`acc-field ${errors.firstName ? 'err' : ''}`}>
-                                <label htmlFor="af-fn">First Name</label>
-                                <input id="af-fn" type="text" placeholder="e.g. Darsh" value={form.firstName} onChange={e => set('firstName', e.target.value)} />
-                                {errors.firstName && <span className="acc-ferr"><AlertCircle size={11} />{errors.firstName}</span>}
-                            </div>
-                            <div className={`acc-field ${errors.lastName ? 'err' : ''}`}>
-                                <label htmlFor="af-ln">Last Name</label>
-                                <input id="af-ln" type="text" placeholder="e.g. Shah" value={form.lastName} onChange={e => set('lastName', e.target.value)} />
-                                {errors.lastName && <span className="acc-ferr"><AlertCircle size={11} />{errors.lastName}</span>}
-                            </div>
-                        </div>
-
-                        <div className={`acc-field ${errors.email ? 'err' : ''}`}>
-                            <label htmlFor="af-em">Email Address</label>
-                            <div className="acc-input-icon">
-                                <Mail size={14} className="acc-inp-ico" />
-                                <input id="af-em" type="email" placeholder="user@company.com" value={form.email} onChange={e => set('email', e.target.value)} />
-                            </div>
-                            {errors.email && <span className="acc-ferr"><AlertCircle size={11} />{errors.email}</span>}
-                        </div>
-
-                        <div className="acc-field">
-                            <label>Assign Roles <span className="acc-field-sub">(select one or more)</span></label>
-                            <div className="acc-role-grid">
-                                {ROLES.map(r => {
-                                    const RIcon = r.icon;
-                                    const sel = form.roles.has(r.value);
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={r.value}
-                                            className={`acc-rcard ${sel ? 'sel' : ''}`}
-                                            style={sel ? { borderColor: r.border, background: r.bg } : {}}
-                                            onClick={() => toggleRole(r.value)}
-                                        >
-                                            <span className="acc-rcard-ico" style={{ color: sel ? r.color : undefined }}><RIcon size={18} /></span>
-                                            <span className="acc-rcard-lbl" style={{ color: sel ? r.color : undefined }}>{r.label}</span>
-                                            <span className="acc-rcard-desc">{r.desc}</span>
-                                            {sel && <CheckCircle2 size={11} className="acc-rcard-chk" style={{ color: r.color }} />}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {apiErr && (
-                            <div className="acc-api-err">
-                                <AlertCircle size={13} /><span>{apiErr}</span>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="acc-modal-ft">
-                        <button type="button" className="acc-btn-ghost" onClick={onClose}>Cancel</button>
-                        <button type="submit" className="acc-btn-primary" disabled={busy}>
-                            {busy ? <Loader2 size={15} className="acc-spin" /> : <UserPlus size={15} />}
-                            {busy ? 'Adding…' : 'Add Member'}
-                        </button>
-                    </div>
-                </form>
             </div>
-        </div>
+        </ThemePortal>
     );
 }
 
 /* ─── Main Component ──────────────────────────────────────── */
 export default function AccountTab() {
-    const [users, setUsers]       = useState([]);
-    const [loading, setLoading]   = useState(true);
-    const [search, setSearch]     = useState('');
-    const [showAdd, setShowAdd]   = useState(false);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [showAdd, setShowAdd] = useState(false);
     const [removing, setRemoving] = useState({});
-    const [toast, setToast]       = useState(null);
+    const [toast, setToast] = useState(null);
     const [editingUser, setEditingUser] = useState(null); // user whose roles modal is open
 
     useEffect(() => {
@@ -437,7 +566,6 @@ export default function AccountTab() {
                     <div className="acc-th col-email">Email</div>
                     <div className="acc-th col-signin">Last Signed In</div>
                     <div className="acc-th col-roles">Assigned Roles</div>
-                    <div className="acc-th col-modify">Modify Roles</div>
                     <div className="acc-th col-actions">Actions</div>
                 </div>
 
@@ -478,19 +606,15 @@ export default function AccountTab() {
                                 </div>
                             </div>
 
-                            {/* Modify Roles button */}
-                            <div className="acc-td col-modify">
-                                <button
-                                    className="acc-assign-btn"
-                                    onClick={() => setEditingUser(user)}
-                                >
-                                    <Pencil size={12} />
-                                    <span>Assign Roles</span>
-                                </button>
-                            </div>
-
                             {/* Actions */}
                             <div className="acc-td col-actions">
+                                <button
+                                    className="acc-edit-btn"
+                                    onClick={() => setEditingUser(user)}
+                                    title="Edit roles"
+                                >
+                                    <Pencil size={14} />
+                                </button>
                                 <RemoveButton user={user} onConfirm={() => onRemove(user.id)} loading={!!removing[user.id]} />
                             </div>
                         </div>
@@ -500,13 +624,13 @@ export default function AccountTab() {
 
             {/* Role Legend */}
             <div className="acc-legend">
-                {ROLES.map(r => {
-                    const Icon = r.icon;
+                {Object.entries(ROLE_CATEGORIES).map(([key, config]) => {
+                    const Icon = config.icon;
                     return (
-                        <span key={r.value} className="acc-legend-item" style={{ color: r.color }}>
+                        <span key={key} className="acc-legend-item" style={{ color: config.color }}>
                             <Icon size={12} />
-                            <strong>{r.label}</strong>
-                            <em>— {r.desc}</em>
+                            <strong>{formatRoleName(key)}</strong>
+                            <em>— {config.desc}</em>
                         </span>
                     );
                 })}
